@@ -1,0 +1,1 @@
+excludeDirectories = "{$excludeDirectories,docs/rdoc,coverage,log}"
