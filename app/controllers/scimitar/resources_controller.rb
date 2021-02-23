@@ -34,13 +34,13 @@ module Scimitar
         handle_scim_error(ErrorResponse.new(status: 400, detail: 'id is not a valid parameter for create'))
         return
       end
-      with_scim_resource(resource_type()) do |resource|
+      with_scim_resource() do |resource|
         render json: yield(resource, is_create: true), status: :created
       end
     end
 
     def update(&block)
-      with_scim_resource(resource_type()) do |resource|
+      with_scim_resource() do |resource|
         render json: yield(resource)
       end
     end
@@ -54,13 +54,6 @@ module Scimitar
     end
 
     protected
-
-      # Declare which SCIM resource you're handling. This is currently only
-      # used to DRY up code in this example, but the base controller migth
-      #
-      def resource_type
-        raise NotImplementedError
-      end
 
       # The class including Scimitar::Resources::Mixin which declares mappings
       # to the entity you return in #resource_type.
@@ -77,10 +70,13 @@ module Scimitar
         end
       end
 
-      def with_scim_resource(resource_type())
-        validate_request
+      def with_scim_resource
+        validate_request()
+
+        resource_type = storage_class().scim_resource_type() # See Scimitar::Resources::Mixin
+
         begin
-          resource = resource_type().new(resource_params.to_h)
+          resource = resource_type.new(resource_params.to_h)
           unless resource.valid?
             raise Scimitar::ErrorResponse.new(status: 400,
                                                 detail: "Invalid resource: #{resource.errors.full_messages.join(', ')}.",

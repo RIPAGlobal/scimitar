@@ -125,13 +125,6 @@ module Scim
         raise ScimEngine::ResourceInvalidError.new()
       end
 
-      # Declare which SCIM resource you're handling. This is currently only
-      # used to DRY up code in this example, but the base controller migth
-      #
-      def resource_type
-        ScimEngine::Resources::User
-      end
-
       # The class including Scimitar::Resources::Mixin which declares mappings
       # to the entity you return in #resource_type.
       #

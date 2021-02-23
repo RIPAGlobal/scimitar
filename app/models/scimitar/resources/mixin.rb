@@ -11,29 +11,19 @@ module Scimitar
     #
     #
     #
-    # == scim_schemas
+    # == scim_resource_type
     #
-    # Define this method to return an Array of Strings giving the SCIM schemas
-    # against which your class will map attributes (see ::scim_attributes_map).
+    # Define this method to return the Scimitar resource class that corresponds
+    # to the mixing-in class.
     #
-    # For a user-like class mapping to the SCIM standard User, this would be
-    # <tt>['urn:ietf:params:scim:schemas:core:2.0:User']</tt>. If you included
-    # extra attributes from the Enterprise extension, you would add in
-    # <tt>''</tt> to that Array.
+    # For example, if you have an ActiveRecord "User" class that maps to a SCIM
+    # "User" resource type:
     #
-    # For a group-of-users-like class mapping to the SCIM standard Group, this
-    # would be <tt>['urn:ietf:params:scim:schemas:core:2.0:Group']</tt>.
-    #
-    # For a custom class, you'd need to define and list one or more custom
-    # schema URNs or an Array with an empty string if the intended clients for
-    # your API don't require a schema URN when dealing with your custom type.
-    # That's well beyond the scope of the Scimitar gem's remit.
-    #
-    # Example:
-    #
-    #     def self.scim_schemas
-    #       return ['urn:ietf:params:scim:schemas:core:2.0:User']
+    #     def self.scim_resource_type
+    #       return Scimitar::Resources::User
     #     end
+    #
+    # This is used to render SCIM JSON data via #to_scim.
     #
     #
     #
@@ -68,7 +58,7 @@ module Scimitar
     #
     #
     #
-    # == scim_mutable_attrbutes
+    # == scim_mutable_attributes
     #
     # Define this method to return a Set (preferred) or Array of names
     # of attributes which may be written in the mixing-in class.
@@ -80,7 +70,7 @@ module Scimitar
     # For example, if everything in ::scim_attributes_map with a write
     # accessor is to be mutable over SCIM:
     #
-    #    def self.scim_mutable_attrbutes
+    #    def self.scim_mutable_attributes
     #      return nil
     #    end
     #
@@ -104,52 +94,93 @@ module Scimitar
 
       included do
         %w{
-          scim_schemas
+          scim_resource_type
           scim_attributes_map
-          scim_mutable_attrbutes
+          scim_mutable_attributes
           scim_queryable_attributes
         }.each do | required_class_method_name |
           raise "You must define ::#{required_class_method_name} in #{self}" unless self.respond_to?(required_class_method_name)
         end
 
         # Render self as a SCIM object using ::scim_attributes_map.
-
+        #
         def to_scim(location:)
-          schema = self.class.scim_attributes_map()
-          return to_scim_backend(object)
+          schema     = self.class.scim_attributes_map()
+          attrs_hash = to_scim_backend(schema)
+          resource   = self.class.scim_resource_type().new(attrs_hash)
+
+          return resource.to_json()
         end
 
-        # A recursive method that takes a Hash mapping SCIM attributes to the
-        # mixing in class's attributes and via ::scim_attributes_map replaces
-        # symbols in the schema with the corresponding value from the user.
+        # An instance-level method which calls ::scim_mutable_attributes and
+        # either uses its returned array of mutable attribute names or reads
+        # ::scim_attributes_map and determines the list from that. Caches
+        # the result in an instance variable.
         #
-        # Given a schema with symbols, this method will search through the
-        # object for the symbols, send those symbols to the model, and replace
-        # the symbol with the return value.
-        #
-        def to_scim_backend(object)
-          case object
-            when Hash
-              object.each.with_object({}) do |(key, value), hash|
-                hash[key] = to_scim_backend(value)
-              end
+        def scim_mutable_attributes
+          @scim_mutable_attributes ||= self.class.scim_mutable_attributes()
 
-            when Array
-              object.map do |value|
-                to_scim_backend(value)
-              end
+          if @scim_mutable_attributes.nil?
+            @scim_mutable_attributes = []
 
-            when Symbol
-              if self.respond_to?(object) # A read-accessor exists
-                self.public_send(object)
-              else
-                nil
+            # Variant of https://stackoverflow.com/a/49315255
+            #
+            extractor = ->(enum) do
+              enum.each do |key, value|
+                enum = [key, value].detect(&Enumerable.method(:===))
+                if enum.nil?
+                  @scim_mutable_attributes << value if value.is_a?(Symbol) && self.respond_to?("#{value}=")
+                else
+                  extractor.call(enum)
+                end
               end
-
-            else
-              object
+            end
           end
         end
+
+        # An instance level method which calls ::scim_queryable_attributes and
+        # caches the result in an instance variable, for symmetry with
+        # #scim_mutable_attributes and to permit potential future enhancements
+        # for how the return value of ::scim_queryable_attributes is handled.
+        #
+        def scim_queryable_attributes
+          @scim_queryable_attributes = self.class.scim_queryable_attributes()
+        end
+
+        private
+
+          # A recursive method that takes a Hash mapping SCIM attributes to the
+          # mixing in class's attributes and via ::scim_attributes_map replaces
+          # symbols in the schema with the corresponding value from the user.
+          #
+          # Given a schema with symbols, this method will search through the
+          # object for the symbols, send those symbols to the model and replace
+          # the symbol with the return value.
+          #
+          def to_scim_backend(object)
+            case object
+              when Hash
+                object.each.with_object({}) do |(key, value), hash|
+                  hash[key] = to_scim_backend(value)
+                end
+
+              when Array
+                object.map do |value|
+                  to_scim_backend(value)
+                end
+
+              when Symbol
+                if self.respond_to?(object) # A read-accessor exists
+                  self.public_send(object)
+                else
+                  nil
+                end
+
+              else
+                object
+            end
+          end
+
       end
     end
   end
