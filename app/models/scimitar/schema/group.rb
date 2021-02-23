@@ -1,6 +1,6 @@
 module Scimitar
   module Schema
-    # Represnts the schema for the Group resource
+    # Represents the schema for the Group resource
     # @see Scimitar::Resources::Group
     class Group < Base
 

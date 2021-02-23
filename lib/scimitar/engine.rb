@@ -8,9 +8,6 @@ module Scimitar
       JSON.parse(body)
     end
 
-    mattr_accessor :username
-    mattr_accessor :password
-
     def self.resources
       default_resources + custom_resources
     end

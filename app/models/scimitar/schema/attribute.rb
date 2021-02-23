@@ -1,24 +1,35 @@
 module Scimitar
   module Schema
     # Represents an attribute of a SCIM resource that is declared in its schema.
-    # Attributes can be simple or complex. A complex attribute needs to have its own schema that is passed to the initilize method when the attribute is instantiated.
+    # Attributes can be simple or complex. A complex attribute needs to have its own schema that is passed to the initialize method when the attribute is instantiated.
     # @example
     #  Attribute.new(name: 'userName', type: 'string', uniqueness: 'server')
     #  Attribute.new(name: 'name', complexType: Scimitar::ComplexTypes::Name)
     class Attribute
       include ActiveModel::Model
       include Scimitar::Errors
-      attr_accessor :name, :type, :multiValued, :required, :caseExact, :mutability, :returned, :uniqueness, :subAttributes, :complexType, :canonicalValues
+
+      attr_accessor :name,
+                    :type,
+                    :multiValued,
+                    :required,
+                    :caseExact,
+                    :mutability,
+                    :returned,
+                    :uniqueness,
+                    :subAttributes,
+                    :complexType,
+                    :canonicalValues
 
       # @param options [Hash] a hash of values to be used for instantiating the attribute object. Some of the instance variables of the objects will have default values if this hash does not contain anything for them.
       def initialize(options = {})
         defaults = {
-          multiValued: false,
-          required: true,
-          caseExact: false,
-          mutability: 'readWrite',
-          uniqueness: 'none',
-          returned: 'default',
+          multiValued:     false,
+          required:        true,
+          caseExact:       false,
+          mutability:      'readWrite',
+          uniqueness:      'none',
+          returned:        'default',
           canonicalValues: []
         }
 
@@ -45,13 +56,13 @@ module Scimitar
 
       def valid_blank?
         return true unless self.required
-        errors.add(self.name, "is required")
+        errors.add(self.name, 'is required')
         false
       end
 
       def valid_complex_type?(value)
         if !value.class.respond_to?(:schema) || value.class.schema != complexType.schema
-          errors.add(self.name, "has to follow the complexType format.")
+          errors.add(self.name, 'has to follow the complexType format.')
           return false
         end
         value.class.schema.valid?(value)

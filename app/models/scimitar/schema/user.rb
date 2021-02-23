@@ -1,6 +1,6 @@
 module Scimitar
   module Schema
-    # Represnts the schema for the User resource
+    # Represents the schema for the User resource
     # @see Scimitar::Resources::User
     class User < Base
 

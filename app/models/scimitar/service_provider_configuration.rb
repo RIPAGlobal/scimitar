@@ -1,5 +1,11 @@
 module Scimitar
-  # Represnts the service provider info. Used by the /ServiceProviderConfig endpoint to privide specification compliance, authentication schemes, data models.
+
+  # Represents the service provider info. Used by the /ServiceProviderConfig
+  # endpoint to provide specification compliance, authentication schemes and
+  # data models. Renders to JSON as a SCIM ServiceProviderConfig type.
+  #
+  # See config/initializers/scimitar.rb for more information.
+  #
   class ServiceProviderConfiguration
     include ActiveModel::Model
 
@@ -9,21 +15,28 @@ module Scimitar
 
     def initialize(attributes = {})
       defaults = {
-        bulk: Supportable.unsupported,
-        patch: Supportable.unsupported,
-        filter: Supportable.unsupported,
+        bulk:           Supportable.unsupported,
+        patch:          Supportable.unsupported,
+        filter:         Supportable.unsupported,
         changePassword: Supportable.unsupported,
-        sort: Supportable.unsupported,
-        etag: Supportable.unsupported,
+        sort:           Supportable.unsupported,
+        etag:           Supportable.unsupported,
+
         schemas: ["urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"],
+
         meta: Meta.new(
           resourceType: 'ServiceProviderConfig',
-          created: Time.now,
+          created:      Time.now,
           lastModified: Time.now,
-          version: '1'
+          version:      '1'
         ),
-        authenticationSchemes: [AuthenticationScheme.basic]
+
+        authenticationSchemes: [
+          AuthenticationScheme.basic,
+          AuthenticationScheme.bearer
+        ]
       }
+
       super(defaults.merge(attributes))
     end
 

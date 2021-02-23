@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-mit-blue.svg)](https://opensource.org/licenses/MIT)
 
-Comprehensive SCIM v2 support for Users and Groups in Ruby On Rails.
+SCIM v2 support for Users and Groups in Ruby On Rails.
 
 
 
@@ -51,6 +51,106 @@ All three are provided under the MIT license. Scimitar is too.
 
 
 ## Usage
+
+
+Some of the stuff to do here:
+
+* Setting up what authentication method you use
+* Building an example subclass to do basic User operations
+* How to map to/from your own User records and a Scimitar::User
+* Likewise, groups
+* Bulk operations and filters
+
+
+Scimitar neither enforces nor presumes any kind of encoding for bearer tokens. You can use anything you like, including encoding/encrypting JWTs if you so wish - https://rubygems.org/gems/jwt may be useful. The way in which a client might integrate with your SCIM service varies by client and you will have to check documentation to see how a token gets conveyed to that client in the first place (e.g. a full OAuth flow with your application, or just a static token generated in some UI which an administrator copies and pastes into their client's SCIM configuration UI).
+
+
+
+
+
+
+
+
+
+```ruby
+# app/controllers/scim/users_controller.rb
+
+module Scim
+
+  # ScimEngine::ResourcesController uses a template method so that the
+  # subclasses can provide the fillers with minimal effort solely focused on
+  # application code leaving the SCIM protocol and schema specific code within the
+  # engine.
+
+  class UsersController < ScimEngine::ResourcesController
+    def show
+      super do |user_id|
+        user = find_user(user_id)
+        user.to_scim(location: url_for(action: :show, id: user_id))
+      end
+    end
+
+    def create
+      super(&method(:save))
+    end
+
+    def update
+      super(&method(:save))
+    end
+
+    def destroy
+      super do |user_id|
+        user = find_user(user_id)
+        user.delete
+      end
+    end
+
+    class Bar < Foo
+      protected
+      def bar
+        puts "Protected 'bar' subclass"
+      end
+    end
+
+
+
+
+    protected
+
+      def save(scim_user, is_create: false)
+        #convert the ScimEngine::Resources::User to your application object
+        #and save
+      rescue ActiveRecord::RecordInvalid => exception
+        # Map the enternal errors to a ScimEngine error
+        raise ScimEngine::ResourceInvalidError.new()
+      end
+
+      # Declare which SCIM resource you're handling. This is currently only
+      # used to DRY up code in this example, but the base controller migth
+      #
+      def resource_type
+        ScimEngine::Resources::User
+      end
+
+      # The class including Scimitar::Resources::Mixin which declares mappings
+      # to the entity you return in #resource_type.
+      #
+      def storage_class
+        User
+      end
+
+      # Find your user. The +external_id+ parameter is a SCIM external entity
+      # ID, not e.g. an ActiveRecord database ID for one of your User records.
+      #
+      def find_user(external_id)
+        # Find your #associated_class (User) by external ID here
+      end
+
+  end
+end
+
+```
+
 
 ```
 GREAT

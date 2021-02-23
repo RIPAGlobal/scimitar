@@ -11,4 +11,13 @@ module Scimitar
     @service_provider_configuration.meta.location = location
     @service_provider_configuration
   end
+
+  def self.engine_configuration=(custom_configuration)
+    @engine_configuration = custom_configuration
+  end
+
+  def self.engine_configuration
+    @engine_configuration ||= EngineConfiguration.new
+    @engine_configuration
+  end
 end

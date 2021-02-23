@@ -5,7 +5,7 @@ module Scimitar
       set_schema Schema::User
 
       def self.endpoint
-        "/Users"
+        '/Users'
       end
 
     end

@@ -103,7 +103,7 @@ module Scimitar
         self.meta = Meta.new unless self.meta
         meta.resourceType = self.class.resource_type_id
         original_hash = super(options).except('errors')
-        original_hash.merge!("schemas" => self.class.schemas.map(&:id))
+        original_hash.merge!('schemas' => self.class.schemas.map(&:id))
         self.class.extended_schemas.each do |extension_schema|
           extension_attributes = extension_schema.scim_attributes.map(&:name)
           original_hash.merge!(extension_schema.id => original_hash.extract!(*extension_attributes))

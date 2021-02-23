@@ -8,7 +8,7 @@ module Scimitar
 
       def initialize(options = {})
         super
-        @meta = Meta.new(resourceType: "Schema")
+        @meta = Meta.new(resourceType: 'Schema')
       end
 
       # Converts the schema to its json representation that will be returned by /SCHEMAS end-point of a SCIM service provider.

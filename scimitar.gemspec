@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
   s.version     = Scimitar::VERSION
   s.date        = Scimitar::DATE
   s.summary     = 'SCIM v2 for Rails'
-  s.description = 'Comprehensive SCIM v2 support for Users and Groups in Ruby On Rails'
+  s.description = 'SCIM v2 support for Users and Groups in Ruby On Rails'
   s.authors     = ['RIP Global', 'Andrew David Hodgkinson']
   s.email       = ['andrew@ripglobal.com']
   s.license     = 'MIT'

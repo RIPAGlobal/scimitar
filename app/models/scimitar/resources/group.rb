@@ -5,7 +5,7 @@ module Scimitar
       set_schema Schema::Group
 
       def self.endpoint
-        "/Groups"
+        '/Groups'
       end
 
     end
