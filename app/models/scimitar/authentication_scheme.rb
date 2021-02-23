@@ -13,5 +13,6 @@ module Scimitar
       new type:        'oauthbearertoken',
           name:        'OAuth Bearer Token',
           description: 'Authentication scheme using the OAuth Bearer Token Standard'
+    end
   end
 end
