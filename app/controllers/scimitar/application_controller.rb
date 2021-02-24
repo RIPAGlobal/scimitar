@@ -7,12 +7,12 @@ module Scimitar
     protected
 
       def authenticated?
-        result = if Scimitar.engine_configuration.basic_authenticaton.present?
-          authenticate_with_http_basic(Scimitar.engine_configuration.basic_authenticaton)
+        result = if Scimitar.engine_configuration.basic_authenticator.present?
+          authenticate_with_http_basic(Scimitar.engine_configuration.basic_authenticator)
         end
 
-        result ||= if Scimitar.engine_configuration.token_authentication.present?
-          authenticate_with_http_token(Scimitar.engine_configuration.token_authentication)
+        result ||= if Scimitar.engine_configuration.token_authenticator.present?
+          authenticate_with_http_token(Scimitar.engine_configuration.token_authenticator)
         end
 
         return result

@@ -68,6 +68,22 @@ Scimitar neither enforces nor presumes any kind of encoding for bearer tokens. Y
 
 
 
+For each resource you support, add something along these lines to your `routes.rb`:
+
+```ruby
+namespace :scim do
+  mount Scimitar::Engine => '/'
+
+  get    'Users',     to: 'users#index'
+  get    'Users/:id', to: 'users#show', as: :user
+  post   'Users',     to: 'users#create'
+  put    'Users/:id', to: 'users#update'
+  patch  'Users/:id', to: 'users#update'
+  delete 'Users/:id', to: 'users#destroy'
+end
+```
+
+...note that both `put` and `patch` operations are declared, both mapping to `#update`.
 
 
 
@@ -83,6 +99,12 @@ module Scim
   # engine.
 
   class UsersController < ScimEngine::ResourcesController
+    def index
+      super(user_scope) do | user |
+        user.to_scim(location: url_for(action: :show, id: user.id))
+      end
+    end
+
     def show
       super do |user_id|
         user = find_user(user_id)
@@ -112,9 +134,6 @@ module Scim
       end
     end
 
-
-
-
     protected
 
       def save(scim_user, is_create: false)
@@ -130,6 +149,12 @@ module Scim
       #
       def storage_class
         User
+      end
+
+      # Return an index (list) ActiveRecord::Relation scope for User records.
+      #
+      def user_scope
+        # Return a User scope here - e.g. User.all, Company.users...
       end
 
       # Find your user. The +external_id+ parameter is a SCIM external entity
