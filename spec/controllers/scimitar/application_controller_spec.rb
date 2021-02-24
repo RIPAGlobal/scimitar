@@ -2,10 +2,13 @@ require 'spec_helper'
 
 RSpec.describe Scimitar::ApplicationController do
 
-  context 'custom authentication' do
+  context 'basic authentication' do
     before do
-      allow(Scimitar::Engine).to receive(:username) { 'A' }
-      allow(Scimitar::Engine).to receive(:password) { 'B' }
+      Scimitar.engine_configuration = Scimitar::EngineConfiguration.new(
+        basic_authenticator: Proc.new do | username, password |
+          username == 'A' && password == 'B'
+        end
+      )
     end
 
     controller do
@@ -51,8 +54,57 @@ RSpec.describe Scimitar::ApplicationController do
       get :index, params: { format: :scim }
       expect(response).not_to be_ok
     end
+
+    it 'renders failure with missing header' do
+      get :index, params: { format: :scim }
+      expect(response).not_to be_ok
+    end
   end
 
+  context 'token authentication' do
+    before do
+      Scimitar.engine_configuration = Scimitar::EngineConfiguration.new(
+        token_authenticator: Proc.new do | token, options |
+          token == 'A'
+        end
+      )
+    end
+
+    controller do
+      rescue_from StandardError, with: :handle_resource_not_found
+
+      def index
+        render json: { 'message' => 'cool, cool!' }, format: :scim
+      end
+    end
+
+    it 'renders success when valid creds are given' do
+      request.env['HTTP_AUTHORIZATION'] = 'Bearer A'
+
+      get :index, params: { format: :scim }
+      expect(response).to be_ok
+      expect(JSON.parse(response.body)).to eql({ 'message' => 'cool, cool!' })
+    end
+
+    it 'renders failure with bad token' do
+      request.env['HTTP_AUTHORIZATION'] = 'Bearer Invalid'
+
+      get :index, params: { format: :scim }
+      expect(response).not_to be_ok
+    end
+
+    it 'renders failure with blank token' do
+      request.env['HTTP_AUTHORIZATION'] = 'Bearer'
+
+      get :index, params: { format: :scim }
+      expect(response).not_to be_ok
+    end
+
+    it 'renders failure with missing header' do
+      get :index, params: { format: :scim }
+      expect(response).not_to be_ok
+    end
+  end
 
   context 'authenticated' do
     controller do

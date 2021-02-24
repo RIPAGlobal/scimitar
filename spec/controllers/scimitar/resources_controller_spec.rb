@@ -1,11 +1,51 @@
 require 'spec_helper'
 
 RSpec.describe Scimitar::ResourcesController do
+  class FakeGroup
+    include ActiveModel::Model
 
-  before(:each) { allow(controller).to receive(:authenticated?).and_return(true) }
+    attr_accessor :scim_id
+    attr_accessor :display_name
+    attr_accessor :member_names
+
+    def self.scim_resource_type
+      return Scimitar::Resources::Group
+    end
+
+    def self.scim_attributes_map
+      return {
+        id:          :id,
+        externalId:  :scim_id,
+        displayName: :display_name,
+        members:     :member_names
+      }
+    end
+
+    def self.scim_mutable_attributes
+      return nil
+    end
+
+    def self.scim_queryable_attributes
+      return { displayName: display_name }
+    end
+
+    include Scimitar::Resources::Mixin
+  end
+
   let(:response_body) { JSON.parse(response.body, symbolize_names: true) }
 
+  before(:each) do
+    allow(controller).to receive(:authenticated?).and_return(true)
+    allow(FakeGroup ).to receive(:all).and_return(double('ActiveRecord::Relation', where: []))
+  end
+
   controller do
+    def index
+      super(FakeGroup.all) do | fake_group |
+        fake_group
+      end
+    end
+
     def show
       super do |id|
         Scimitar::Resources::Group.new(id: id)
@@ -13,13 +53,13 @@ RSpec.describe Scimitar::ResourcesController do
     end
 
     def create
-      super(Scimitar::Resources::Group) do |resource|
+      super do |resource|
         resource
       end
     end
 
     def update
-      super(Scimitar::Resources::Group) do |resource|
+      super do |resource|
         resource
       end
     end
@@ -30,9 +70,15 @@ RSpec.describe Scimitar::ResourcesController do
       end
     end
 
-    def successful_delete?
+    def successful_delete? # Just a test hook
       true
     end
+
+    protected
+
+      def storage_class
+        FakeGroup
+      end
   end
 
   context 'GET show' do

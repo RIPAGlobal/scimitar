@@ -127,13 +127,6 @@ module Scim
       end
     end
 
-    class Bar < Foo
-      protected
-      def bar
-        puts "Protected 'bar' subclass"
-      end
-    end
-
     protected
 
       def save(scim_user, is_create: false)

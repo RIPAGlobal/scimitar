@@ -102,7 +102,7 @@ module Scimitar
     #
     #     def self.scim_queryable_attributes
     #       return {
-    #         'emails' => :email_address
+    #         emails: :email_address
     #       }
     #     end
     #
