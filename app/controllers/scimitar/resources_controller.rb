@@ -3,22 +3,30 @@ require_dependency "scimitar/application_controller"
 module Scimitar
   class ResourcesController < ApplicationController
 
-    def index(&block)
+    def index(base_scope, &block)
+      query = if params[:filter].present?
+        parser = ::Scimitar::Lists::QueryParser.new(params[:filter], base_scope)
+        parser.to_activerecord_query(base_scope)
+      else
+        base_scope
+      end
 
-      # Do all the count and filter stuff...
+      counts = ::Scimitar::Lists::Count.new(
+        start_index: params[:startIndex],
+        limit:       params[:count],
+        total:       query.count()
+      )
 
-      results = yield resource_params
+      results = query.offset(counts.offset).limit(counts.limit).to_a
 
       render json: {
-        "schemas": [
-            "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+        schemas: [
+            'urn:ietf:params:scim:api:messages:2.0:ListResponse'
         ],
-        "totalResults": results.total,
-        "startIndex":   results.start_index,
-        "itemsPerPage": results.limit,
-        "Resources":    results.objects.map do | scim_user |
-          user.to_scim(location: url_for(action: :show, id: user_id))
-        end
+        totalResults: results.total,
+        startIndex:   results.start_index,
+        itemsPerPage: results.limit,
+        Resources:    results.map(&block)
       }
     end
 

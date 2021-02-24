@@ -43,7 +43,7 @@ Scimitar uses [semantic versioning](https://semver.org) so you can be confident 
 Scimitar borrow heavily - to the point of cut-and-paste - from:
 
 * [Scimitar](https://github.com/Cisco-AMP/scimitar) for the Rails controllers and resource-agnostic subclassing approach that makes supporting User and/or Group, along with custom resource types if you need them, quite easy.
-* [ScimRails](https://github.com/lessonly/scim_rails) for the bearer token support, 'index' actions and filter support.
+* [Scimitar](https://github.com/lessonly/scim_rails) for the bearer token support, 'index' actions and filter support.
 * [Scim::Kit](https://github.com/xlgmokha/scim-kit) as a handy, formalised way to convert to/from SCIM JSON schema and your own records (be they persisted via ActiveRecord or any other means).
 
 All three are provided under the MIT license. Scimitar is too.

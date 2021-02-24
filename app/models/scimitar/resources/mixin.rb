@@ -7,7 +7,9 @@ module Scimitar
     # that model.
     #
     # Your class becomes responsible for implementing various *class methods*
-    # as described below.
+    # as described below. YOU MUST DECLARE THESE **BEFORE** YOU INCLUDE THE
+    # MIXIN MODULE because Ruby parses classes top-down and the mixin checks to
+    # make sure that required methods exist, so these must be defined *first*.
     #
     #
     #
@@ -60,33 +62,48 @@ module Scimitar
     #
     # == scim_mutable_attributes
     #
-    # Define this method to return a Set (preferred) or Array of names
-    # of attributes which may be written in the mixing-in class.
+    # Define this method to return a Set (preferred) or Array of names of
+    # attributes which may be written in the mixing-in class.
     #
     # If you return +nil+, it is assumed that +all+ attributes mapped by
     # ::scim_attributes_map that have write accessors are eligible for
     # assignment during SCIM creation or update operations.
     #
-    # For example, if everything in ::scim_attributes_map with a write
-    # accessor is to be mutable over SCIM:
+    # For example, if everything in ::scim_attributes_map with a write accessor
+    # is to be mutable over SCIM:
     #
-    #    def self.scim_mutable_attributes
-    #      return nil
-    #    end
+    #     def self.scim_mutable_attributes
+    #       return nil
+    #     end
+    #
+    # Note that as a common special case, any mapped attribute of the Symbol
+    # value ":id" will be removed from the list, as it is assumed to be e.g. a
+    # primary key or similar. So, even though it'll have a write accessor, it
+    # is not something that should be mutable over SCIM - it's taken to be your
+    # internal record ID. If you do want :id included as mutable or if you have
+    # a different primary key attribute name, you'll just need to return the
+    # mutable attribute list directly in your ::scim_mutable_attributes method
+    # rather than relying on the list extracted from ::scim_attributes_map.
     #
     #
     #
     # == scim_queryable_attributes
     #
-    # Define this method to return a Set (preferred) or Array of names of
-    # attributes which may be queried via SCIM in the mixing-in class. If
-    # +nil+, filtering is not supported in the ResouceController subclass
-    # which declares that it maps to the mixing-in class.
+    # Define this method to return a Hash that maps field names you wish to
+    # support in SCIM filter queries to corresponding attributes in the in the
+    # mixing-in class. If +nil+ then filtering is not supported in the
+    # ResouceController subclass which declares that it maps to the mixing-in
+    # class. If not +nil+ but a SCIM filter enquiry is made for an unmapped
+    # attribute, that part of the filter will be ignored.
     #
-    # For example:
+    # For example, the SCIM 'emails' attribute has an array value with its own
+    # set of properties for each entry therein, but is just searched in SCIM
+    # via key "emails".
     #
     #     def self.scim_queryable_attributes
-    #       return nil
+    #       return {
+    #         'emails' => :email_address
+    #       }
     #     end
     #
     module Mixin
@@ -121,7 +138,7 @@ module Scimitar
           @scim_mutable_attributes ||= self.class.scim_mutable_attributes()
 
           if @scim_mutable_attributes.nil?
-            @scim_mutable_attributes = []
+            @scim_mutable_attributes = Set.new
 
             # Variant of https://stackoverflow.com/a/49315255
             #
@@ -135,7 +152,12 @@ module Scimitar
                 end
               end
             end
+
+            extractor.call(self.class.scim_attributes_map())
+            @scim_mutable_attributes.delete(:id)
           end
+
+          @scim_mutable_attributes
         end
 
         # An instance level method which calls ::scim_queryable_attributes and
