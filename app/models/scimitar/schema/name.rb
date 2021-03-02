@@ -6,9 +6,12 @@ module Scimitar
 
       def self.scim_attributes
         @scim_attributes ||= [
-          Attribute.new(name: 'familyName', type: 'string'),
-          Attribute.new(name: 'givenName',  type: 'string'),
-          Attribute.new(name: 'formatted',  type: 'string', required: false)
+          Attribute.new(name: 'familyName',       type: 'string'),
+          Attribute.new(name: 'givenName',        type: 'string'),
+          Attribute.new(name: 'middleName',       type: 'string'),
+          Attribute.new(name: 'formatted',        type: 'string'),
+          Attribute.new(name: 'honorificPrefix',  type: 'string'),
+          Attribute.new(name: 'honorificSuffix',  type: 'string'),
         ]
       end
 

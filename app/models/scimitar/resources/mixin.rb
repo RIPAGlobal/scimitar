@@ -40,7 +40,7 @@ module Scimitar
     # the keys are case-sensitive attributes from the SCIM schema and values
     # are either Symbols, giving a corresponding read/write accessor name in
     # the mixing-in class, Hashes for nested SCIM schema data as shown below or
-    # for Array entries, special structures described later. 
+    # for Array entries, special structures described later.
     #
     # For example, for a User model <-> SCIM user:
     #
@@ -90,7 +90,7 @@ module Scimitar
     #     ]
     #
     # ...then we could extend the above attributes map example thus:
-    #    
+    #
     #     def self.scim_attributes_map
     #       # ...
     #       emails: [
@@ -274,6 +274,7 @@ module Scimitar
                 end
 
               when Array
+
                 object.map do |value|
                   to_scim_backend(value)
                 end

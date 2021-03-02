@@ -25,7 +25,7 @@ module Scimitar
       def initialize(options = {})
         defaults = {
           multiValued:     false,
-          required:        true,
+          required:        false,
           caseExact:       false,
           mutability:      'readWrite',
           uniqueness:      'none',

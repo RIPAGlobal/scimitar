@@ -1,11 +1,15 @@
 module Scimitar
   module ComplexTypes
-    # Represents the complex email type.
+
+    # Represents the complex Email type.
+    #
     # @see Scimitar::Schema::Email
+    #
     class Email < Base
       set_schema Scimitar::Schema::Email
 
-      # Returns the json representation of an email.
+      # Returns the JSON representation of an Email.
+      #
       def as_json(options = {})
         {'type' => 'work', 'primary' => true}.merge(super(options))
       end
