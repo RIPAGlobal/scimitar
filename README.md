@@ -155,11 +155,14 @@ module Scim
         # Return a User scope here - e.g. User.all, Company.users...
       end
 
-      # Find your user. The +external_id+ parameter is a SCIM external entity
-      # ID, not e.g. an ActiveRecord database ID for one of your User records.
+      # Find your user. The +id+ parameter is one of YOUR identifiers, which
+      # are returned in "id" fields in JSON responses via SCIM schema. If the
+      # remote caller (client) doesn't want to remember your IDs and hold a
+      # mapping to their IDs, then they do an index with filter on their own
+      # "externalId" value and retrieve your "id" from that response.
       #
-      def find_user(external_id)
-        # Find your #associated_class (User) by external ID here
+      def find_user(id)
+        # Find your #associated_class (User) by your ID here
       end
 
   end
