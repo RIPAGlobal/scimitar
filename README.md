@@ -68,14 +68,14 @@ Scimitar neither enforces nor presumes any kind of encoding for bearer tokens. Y
 
 
 
-For each resource you support, add something along these lines to your `routes.rb`:
+For each resource you support, add these lines to your `routes.rb`:
 
 ```ruby
 namespace :scim do
-  mount Scimitar::Engine => '/'
+  mount Scimitar::Engine, at: '/'
 
   get    'Users',     to: 'users#index'
-  get    'Users/:id', to: 'users#show', as: :user
+  get    'Users/:id', to: 'users#show'
   post   'Users',     to: 'users#create'
   put    'Users/:id', to: 'users#update'
   patch  'Users/:id', to: 'users#update'
@@ -83,8 +83,7 @@ namespace :scim do
 end
 ```
 
-...note that both `put` and `patch` operations are declared, both mapping to `#update`.
-
+...noting that both `put` and `patch` operations are declared, both mapping to `#update`. All routes then will be available at `https://.../scim/...`.
 
 
 
@@ -99,6 +98,12 @@ module Scim
   # engine.
 
   class UsersController < ScimEngine::ResourcesController
+
+    # If you have any filters you need to run BEFORE authentication done in
+    # the superclass (typically set up in config/initializers/scimitar.rb),
+    # then use "prepend_before_filter to declare these - else Scimitar's
+    # own authorisation before-action filter would always run first.
+
     def index
       super(user_scope) do | user |
         user.to_scim(location: url_for(action: :show, id: user.id))

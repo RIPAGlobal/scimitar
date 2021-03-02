@@ -23,9 +23,9 @@ module Scimitar
         schemas: [
             'urn:ietf:params:scim:api:messages:2.0:ListResponse'
         ],
-        totalResults: results.total,
-        startIndex:   results.start_index,
-        itemsPerPage: results.limit,
+        totalResults: counts.total,
+        startIndex:   counts.start_index,
+        itemsPerPage: counts.limit,
         Resources:    results.map(&block)
       }
     end

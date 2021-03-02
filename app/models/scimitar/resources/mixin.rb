@@ -36,7 +36,11 @@ module Scimitar
     #
     # Define read-only, write-only or read-write attributes here. Scimitar will
     # check for an appropriate accessor depending on whether SCIM operations
-    # are read or write and acts accordingly.
+    # are read or write and acts accordingly. At each level of the Ruby Hash,
+    # the keys are case-sensitive attributes from the SCIM schema and values
+    # are either Symbols, giving a corresponding read/write accessor name in
+    # the mixing-in class, Hashes for nested SCIM schema data as shown below or
+    # for Array entries, special structures described later. 
     #
     # For example, for a User model <-> SCIM user:
     #
@@ -49,15 +53,96 @@ module Scimitar
     #           givenName:  :given_name,
     #           familyName: :last_name
     #         },
-    #         emails: [
-    #           {
-    #             value: :email
-    #           },
-    #         ],
     #         active: :is_active?
     #       }
     #     end
     #
+    # This omits things like "email" because in SCIM those are specified in an
+    # Array, where each entry has a "type" field - e.g. "home", "work". Within
+    # SCIM this is common but there are also just free lists of data, such as
+    # the list of Members in a Group. This makes the mapping description more
+    # complex. You can provide two kinds of mapping data:
+    #
+    # * One where a specific SCIM attribute is present in each array entry and
+    #   can contain only a set of specific, discrete values; your mapping
+    #   defines entries for each value of interest. E-mail is an example here,
+    #   where "type" is the SCIM attribute and you might map "work" and "home".
+    #
+    # For discrete matches, you declare the Array containing Hashes with key
+    # "match", where the value gives the name of the SCIM attribute to read or
+    # write for each array entry; "with", where the value gives the thing to
+    # match at this attribute; then "using", where the value is a Hash giving
+    # a mapping schema just as described herein (schema can nest as deeply as
+    # you like).
+    #
+    # Given that e-mails in SCIM look something like this:
+    #
+    #     "emails": [
+    #       {
+    #         "value": "bjensen@example.com",
+    #         "type": "work",
+    #         "primary": true
+    #       },
+    #       {
+    #         "value": "babs@jensen.org",
+    #         "type": "home"
+    #       }
+    #     ]
+    #
+    # ...then we could extend the above attributes map example thus:
+    #    
+    #     def self.scim_attributes_map
+    #       # ...
+    #       emails: [
+    #         {
+    #           match: "type",
+    #           with: "work",
+    #           using: {
+    #             value: :work_email_address,
+    #             primary: true
+    #           }
+    #         },
+    #         {
+    #           match: "type",
+    #           with: "home",
+    #           using: { value: :work_home_address }
+    #         }
+    #       ],
+    #       # ...
+    #     end
+    #
+    # ...where the including class would have a #work_email_address accessor
+    # and we're hard-coding this as the primary (preferred) address (but could
+    # just as well map this to another accessor, e.g. :work_email_is_primary?).
+    #
+    # * One where a SCIM array contains just a list of arbitrary entries, each
+    #   with a known schema, and these map attribute-by-attribute to same-index
+    #   items in a corresponding array in the mixing-in model. Group members
+    #   are the example use case here.
+    #
+    # For things like a group's list of members, again include an array in the
+    # attribute map as above but this time have a key "list" with a value that
+    # is the attribute accessor in your mixing in model that returns an
+    # Enumerable of values to map, then as above, "using" which provides the
+    # nested schema saying how each of those objects should be mapped.
+    #
+    # Suppose you were mixing this module into a Team class and there was an
+    # association Team#users that provided an Enumerable of team member User
+    # objects:
+    #
+    #     def self.scim_attributes_map
+    #       # ...
+    #       groups: [
+    #         {
+    #           list: :users,
+    #           using: {
+    #             value:   :id,        <-- i.e. Team.users[n].id
+    #             display: :full_name  <-- i.e. Team.users[n].full_name
+    #           }
+    #         }
+    #       ],
+    #       #...
+    #     end
     #
     #
     # == scim_mutable_attributes
@@ -65,8 +150,8 @@ module Scimitar
     # Define this method to return a Set (preferred) or Array of names of
     # attributes which may be written in the mixing-in class.
     #
-    # If you return +nil+, it is assumed that +all+ attributes mapped by
-    # ::scim_attributes_map that have write accessors are eligible for
+    # If you return +nil+, it is assumed that +any+ attribute mapped by
+    # ::scim_attributes_map which has a write accessor will be eligible for
     # assignment during SCIM creation or update operations.
     #
     # For example, if everything in ::scim_attributes_map with a write accessor
@@ -84,7 +169,6 @@ module Scimitar
     # a different primary key attribute name, you'll just need to return the
     # mutable attribute list directly in your ::scim_mutable_attributes method
     # rather than relying on the list extracted from ::scim_attributes_map.
-    #
     #
     #
     # == scim_queryable_attributes
@@ -106,6 +190,9 @@ module Scimitar
     #       }
     #     end
     #
+    # Filtering is currently limited and searching within e.g. arrays of data
+    # is not supported; only simple top-level keys can be mapped.
+    #
     module Mixin
       extend ActiveSupport::Concern
 
@@ -126,7 +213,7 @@ module Scimitar
           attrs_hash = to_scim_backend(schema)
           resource   = self.class.scim_resource_type().new(attrs_hash)
 
-          return resource.to_json()
+          return resource
         end
 
         # An instance-level method which calls ::scim_mutable_attributes and
@@ -193,7 +280,9 @@ module Scimitar
 
               when Symbol
                 if self.respond_to?(object) # A read-accessor exists
-                  self.public_send(object)
+                  value = self.public_send(object)
+                  value = value.to_s if value.is_a?(Numeric)
+                  value
                 else
                   nil
                 end
