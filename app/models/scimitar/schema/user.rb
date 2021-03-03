@@ -38,6 +38,7 @@ module Scimitar
           Attribute.new(name: 'emails',           multiValued: true, complexType: Scimitar::ComplexTypes::Email),
           Attribute.new(name: 'phoneNumbers',     multiValued: true, complexType: Scimitar::ComplexTypes::PhoneNumber),
           Attribute.new(name: 'ims',              multiValued: true, complexType: Scimitar::ComplexTypes::Ims),
+          Attribute.new(name: 'photos',           multiValued: true, complexType: Scimitar::ComplexTypes::Photo),
           Attribute.new(name: 'addresses',        multiValued: true, complexType: Scimitar::ComplexTypes::Address),
           Attribute.new(name: 'groups',           multiValued: true, complexType: Scimitar::ComplexTypes::Reference, mutability: 'immutable'),
           Attribute.new(name: 'entitlements',     multiValued: true, complexType: Scimitar::ComplexTypes::Entitlement),

@@ -14,6 +14,7 @@ RSpec.describe Scimitar::Schema::User do
         "name": "userName",
         "type": "string"
       },
+
       {
         "multiValued": false,
         "required": false,
@@ -51,14 +52,148 @@ RSpec.describe Scimitar::Schema::User do
             "mutability": "readWrite",
             "uniqueness": "none",
             "returned": "default",
+            "name": "middleName",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
             "name": "formatted",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "honorificPrefix",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "honorificSuffix",
             "type": "string"
           }
         ]
       },
+
+      {
+        "multiValued": false,
+        "required": false,
+        "caseExact": false,
+        "mutability": "readWrite",
+        "uniqueness": "none",
+        "returned": "default",
+        "name": "displayName",
+        "type": "string"
+      },
+      {
+        "multiValued": false,
+        "required": false,
+        "caseExact": false,
+        "mutability": "readWrite",
+        "uniqueness": "none",
+        "returned": "default",
+        "name": "nickName",
+        "type": "string"
+      },
+      {
+        "multiValued": false,
+        "required": false,
+        "caseExact": false,
+        "mutability": "readWrite",
+        "uniqueness": "none",
+        "returned": "default",
+        "name": "profileUrl",
+        "type": "string"
+      },
+      {
+        "multiValued": false,
+        "required": false,
+        "caseExact": false,
+        "mutability": "readWrite",
+        "uniqueness": "none",
+        "returned": "default",
+        "name": "title",
+        "type": "string"
+      },
+      {
+        "multiValued": false,
+        "required": false,
+        "caseExact": false,
+        "mutability": "readWrite",
+        "uniqueness": "none",
+        "returned": "default",
+        "name": "userType",
+        "type": "string"
+      },
+      {
+        "multiValued": false,
+        "required": false,
+        "caseExact": false,
+        "mutability": "readWrite",
+        "uniqueness": "none",
+        "returned": "default",
+        "name": "preferredLanguage",
+        "type": "string"
+      },
+      {
+        "multiValued": false,
+        "required": false,
+        "caseExact": false,
+        "mutability": "readWrite",
+        "uniqueness": "none",
+        "returned": "default",
+        "name": "locale",
+        "type": "string"
+      },
+      {
+        "multiValued": false,
+        "required": false,
+        "caseExact": false,
+        "mutability": "readWrite",
+        "uniqueness": "none",
+        "returned": "default",
+        "name": "timezone",
+        "type": "string"
+      },
+
+      {
+        "multiValued": false,
+        "required": false,
+        "caseExact": false,
+        "mutability": "readWrite",
+        "uniqueness": "none",
+        "returned": "default",
+        "name": "active",
+        "type": "boolean"
+      },
+
+      {
+        "multiValued": false,
+        "required": false,
+        "caseExact": false,
+        "mutability": "writeOnly",
+        "uniqueness": "none",
+        "returned": "never",
+        "name": "password",
+        "type": "string"
+      },
+
       {
         "multiValued": true,
-        "required": true,
+        "required": false,
         "caseExact": false,
         "mutability": "readWrite",
         "uniqueness": "none",
@@ -80,11 +215,11 @@ RSpec.describe Scimitar::Schema::User do
             "multiValued": false,
             "required": false,
             "caseExact": false,
-            "mutability": "readWrite",
+            "mutability": "readOnly",
             "uniqueness": "none",
             "returned": "default",
-            "name": "primary",
-            "type": "boolean"
+            "name": "display",
+            "type": "string"
           },
           {
             "multiValued": false,
@@ -95,24 +230,34 @@ RSpec.describe Scimitar::Schema::User do
             "returned": "default",
             "name": "type",
             "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "primary",
+            "type": "boolean"
           }
         ]
       },
       {
         "multiValued": true,
-        "required": true,
+        "required": false,
         "caseExact": false,
-        "mutability": "immutable",
+        "mutability": "readWrite",
         "uniqueness": "none",
         "returned": "default",
-        "name": "groups",
+        "name": "phoneNumbers",
         "type": "complex",
         "subAttributes": [
           {
             "multiValued": false,
             "required": true,
             "caseExact": false,
-            "mutability": "readOnly",
+            "mutability": "readWrite",
             "uniqueness": "none",
             "returned": "default",
             "name": "value",
@@ -127,6 +272,410 @@ RSpec.describe Scimitar::Schema::User do
             "returned": "default",
             "name": "display",
             "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "type",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "primary",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "multiValued": true,
+        "required": false,
+        "caseExact": false,
+        "mutability": "readWrite",
+        "uniqueness": "none",
+        "returned": "default",
+        "name": "ims",
+        "type": "complex",
+        "subAttributes": [
+          {
+            "multiValued": false,
+            "required": true,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "value",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readOnly",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "display",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "type",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "primary",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "multiValued": true,
+        "required": false,
+        "caseExact": false,
+        "mutability": "readWrite",
+        "uniqueness": "none",
+        "returned": "default",
+        "name": "photos",
+        "type": "complex",
+        "subAttributes": [
+          {
+            "multiValued": false,
+            "required": true,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "value",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readOnly",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "display",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "type",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "primary",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "multiValued": true,
+        "required": false,
+        "caseExact": false,
+        "mutability": "readWrite",
+        "uniqueness": "none",
+        "returned": "default",
+        "name": "addresses",
+        "type": "complex",
+        "subAttributes": [
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "type",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "formatted",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "streetAddress",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "locality",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "region",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "postalCode",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "country",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "multiValued": true,
+        "required": false,
+        "caseExact": false,
+        "mutability": "immutable",
+        "uniqueness": "none",
+        "returned": "default",
+        "name": "groups",
+        "type": "complex",
+        "subAttributes": [
+          {
+            "multiValued": false,
+            "required": true,
+            "caseExact": false,
+            "mutability": "immutable",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "value",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "immutable",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "display",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "immutable",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "type",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "multiValued": true,
+        "required": false,
+        "caseExact": false,
+        "mutability": "readWrite",
+        "uniqueness": "none",
+        "returned": "default",
+        "name": "entitlements",
+        "type": "complex",
+        "subAttributes": [
+          {
+            "multiValued": false,
+            "required": true,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "value",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readOnly",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "display",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "type",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "primary",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "multiValued": true,
+        "required": false,
+        "caseExact": false,
+        "mutability": "readWrite",
+        "uniqueness": "none",
+        "returned": "default",
+        "name": "roles",
+        "type": "complex",
+        "subAttributes": [
+          {
+            "multiValued": false,
+            "required": true,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "value",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readOnly",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "display",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "type",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "primary",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "multiValued": true,
+        "required": false,
+        "caseExact": false,
+        "mutability": "readWrite",
+        "uniqueness": "none",
+        "returned": "default",
+        "name": "x509Certificates",
+        "type": "complex",
+        "subAttributes": [
+          {
+            "multiValued": false,
+            "required": true,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "value",
+            "type": "binary"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readOnly",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "display",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "type",
+            "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "primary",
+            "type": "boolean"
           }
         ]
       }
@@ -134,7 +683,5 @@ RSpec.describe Scimitar::Schema::User do
     EOJ
 
     expect(JSON.parse(expected_json)).to eql(JSON.parse(Scimitar::Schema::User.scim_attributes.to_json))
-
   end
-
 end
