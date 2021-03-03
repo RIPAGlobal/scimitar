@@ -1,8 +1,8 @@
 require 'spec_helper'
 
 RSpec.describe Scimitar::Schema::User do
-  it 'returns User schema as JSON' do
-    expected_json = <<-EOJ
+  let(:expected_attributes) {
+    <<-EOJ
     [
       {
         "multiValued": false,
@@ -681,7 +681,30 @@ RSpec.describe Scimitar::Schema::User do
       }
     ]
     EOJ
+  }
 
-    expect(JSON.parse(expected_json)).to eql(JSON.parse(Scimitar::Schema::User.scim_attributes.to_json))
+  let(:expected_full_schema) {
+    <<-EOJ
+      {
+        "name": "User",
+        "id": "urn:ietf:params:scim:schemas:core:2.0:User",
+        "description": "Represents a User",
+        "meta": {
+          "resourceType": "Schema",
+          "location": "/scimitar/Schemas?name=urn%3Aietf%3Aparams%3Ascim%3Aschemas%3Acore%3A2.0%3AUser"
+        },
+        "attributes": #{expected_attributes()}
+      }
+    EOJ
+  }
+
+  it 'returns User schema as JSON' do
+    actual_full_schema = Scimitar::Schema::User.new
+    expect(JSON.parse(expected_full_schema())).to eql(JSON.parse(actual_full_schema.to_json))
+  end
+
+  it 'returns the schema attributes as JSON' do
+    actual_attributes = Scimitar::Schema::User.scim_attributes
+    expect(JSON.parse(expected_attributes())).to eql(JSON.parse(actual_attributes.to_json))
   end
 end
