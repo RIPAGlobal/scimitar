@@ -57,6 +57,11 @@ module Scimitar
     #       }
     #     end
     #
+    # Note that providing storage and filter (search) support for externalId is
+    # VERY STRONGLY recommended (bordering on mandatory) for your service to
+    # provide adequate support for typical clients to function smoothly. See
+    # "scim_queryable_attributes" below for filtering.
+    #
     # This omits things like "email" because in SCIM those are specified in an
     # Array, where each entry has a "type" field - e.g. "home", "work". Within
     # SCIM this is common but there are also just free lists of data, such as
@@ -186,7 +191,8 @@ module Scimitar
     #
     #     def self.scim_queryable_attributes
     #       return {
-    #         emails: :email_address
+    #         externalId: :scim_external_id,
+    #         emails:     :work_email_address
     #       }
     #     end
     #

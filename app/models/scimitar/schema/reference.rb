@@ -5,9 +5,9 @@ module Scimitar
     class Reference < Base
       def self.scim_attributes
         @scim_attributes ||= [
-          Attribute.new(name: 'value',   type: 'string', mutability: 'readOnly', required: true),
-          Attribute.new(name: 'display', type: 'string', mutability: 'readOnly'),
-          Attribute.new(name: 'type',    type: 'string', mutability: 'readOnly'),
+          Attribute.new(name: 'value',   type: 'string', mutability: 'immutable', required: true),
+          Attribute.new(name: 'display', type: 'string', mutability: 'immutable'),
+          Attribute.new(name: 'type',    type: 'string', mutability: 'immutable'),
         ]
       end
     end

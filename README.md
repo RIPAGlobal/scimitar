@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-mit-blue.svg)](https://opensource.org/licenses/MIT)
 
-SCIM v2 support for Users and Groups in Ruby On Rails.
+A SCIM v2 API endpoint implementation for Ruby On Rails.
 
 
 
@@ -135,10 +135,10 @@ module Scim
     protected
 
       def save(scim_user, is_create: false)
-        #convert the ScimEngine::Resources::User to your application object
-        #and save
+        # Convert the ScimEngine::Resources::User to your application object
+        # and save. IMPORTANT: Make sure you store the 'externalId' value.
       rescue ActiveRecord::RecordInvalid => exception
-        # Map the enternal errors to a ScimEngine error
+        # Map the enternal errors to a ScimEngine error.
         raise ScimEngine::ResourceInvalidError.new()
       end
 
@@ -162,7 +162,7 @@ module Scim
       # "externalId" value and retrieve your "id" from that response.
       #
       def find_user(id)
-        # Find your #associated_class (User) by your ID here
+        # Find your #associated_class (User) by your ID here.
       end
 
   end
@@ -222,6 +222,16 @@ LINKS FOR
 https://techcommunity.microsoft.com/t5/identity-standards-blog/provisioning-with-scim-design-build-and-test-your-scim-endpoint/ba-p/1204883
 https://docs.microsoft.com/en-us/azure/active-directory/app-provisioning/how-provisioning-works
 https://docs.microsoft.com/en-us/azure/active-directory/app-provisioning/use-scim-to-provision-users-and-groups#integrate-your-scim-endpoint-with-the-aad-scim-client
+
+
+
+## Specification versus implementation
+
+* The `name` complex type of a User has `givenName` and `familyName` fields which [the RFC 7643 core schema](https://tools.ietf.org/html/rfc7643#section-8.7.1) describes as optional. Scimitar marks these as required, in the belief that most user synchronisation scenarios between clients and a Scimitar-based provider would require at least those names for basic user management on the provider side, in conjunction with the in-spec-required `userName` field.
+
+* The `displayName` of a Group is described in [RFC 7643 section 4.2](https://tools.ietf.org/html/rfc7643#section-4.2) and in the free-text schema `description` field as required, but the schema nonetheless states `"required" : false` in the formal definition. We consider this to be an error and mark the property as `"required" : true`.
+
+* In the `members` section of a [`Group` in the RFC 7643 core schema](https://tools.ietf.org/html/rfc7643#page-69), any member's `value` is noted as _not_ required but [the RFC also says](https://tools.ietf.org/html/rfc7643#section-4.2) "Service providers MAY require clients to provide a non-empty value by setting the "required" attribute characteristic of a sub-attribute of the "members" attribute in the "Group" resource schema". Scimitar does this. The `value` field would contain the `id` of a SCIM resource, which is the primary key on "our side" as a service provider. Just as we must store `externalId` values to maintain a mapping on "our side", we in turn _do_ require clients to provide our ID in group member lists via the `value` field.
 
 
 

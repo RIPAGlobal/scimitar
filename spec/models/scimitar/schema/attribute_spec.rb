@@ -5,7 +5,7 @@ RSpec.describe Scimitar::Schema::Attribute do
     it 'sets the default properties' do
       attribute = described_class.new
       expect(attribute.multiValued).to be(false)
-      expect(attribute.required).to be(true)
+      expect(attribute.required).to be(false)
       expect(attribute.caseExact).to be(false)
       expect(attribute.mutability).to eql('readWrite')
       expect(attribute.uniqueness).to eql('none')

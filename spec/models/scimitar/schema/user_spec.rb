@@ -16,7 +16,7 @@ RSpec.describe Scimitar::Schema::User do
       },
       {
         "multiValued": false,
-        "required": true,
+        "required": false,
         "caseExact": false,
         "mutability": "readWrite",
         "uniqueness": "none",
