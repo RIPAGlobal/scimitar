@@ -134,7 +134,7 @@ module Scimitar
         if safe_value.nil? && operator.nil? # Presence ("pr") assumed
           query = query.where.not(safe_column_name => ['', nil])
         elsif safe_value.present? && operator.present? # Everything else
-          query = query.where("\"#{safe_column_name}\" #{operator} (?)", safe_value)
+          query = query.where("#{safe_column_name} #{operator} (?)", safe_value)
         else
           raise Scimitar::FilterError
         end
