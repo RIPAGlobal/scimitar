@@ -285,7 +285,7 @@ module Scimitar
                 end
 
               when Array # Static or dynamic mapping against lists in data source
-                nested_in_first = false
+                built_dynamic_list = false
                 mapped_array = attrs_map_or_leaf_value.map do |value|
                   if ! value.is_a?(Hash) # Unknown type, just treat as flat value
                     to_scim_backend(data_source: data_source, attrs_map_or_leaf_value: value)
@@ -296,7 +296,7 @@ module Scimitar
                     static_hash
 
                   elsif value.key?(:list) # Dynamic mapping of each complex list item
-                    nested_in_first = true
+                    built_dynamic_list = true
                     list = data_source.public_send(value[:list])
                     list.map do |list_entry|
                       to_scim_backend(data_source: list_entry, attrs_map_or_leaf_value: value[:using])
@@ -308,7 +308,10 @@ module Scimitar
                   end
                 end
 
-                mapped_array = mapped_array.first if nested_in_first
+                # If a dynamic list was generated, it's sitting as a nested
+                # Array in the first index of the mapped result; pull it out.
+                #
+                mapped_array = mapped_array.first if built_dynamic_list
                 mapped_array
 
               when Symbol # Leaf node, Symbol -> reader method to call on data source
