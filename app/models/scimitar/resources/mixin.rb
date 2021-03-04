@@ -277,6 +277,13 @@ module Scimitar
           # object for the symbols, send those symbols to the model and replace
           # the symbol with the return value.
           #
+          # +data_source+::             The source of data. At the top level,
+          #                             this is "self" (an instance of the
+          #                             class mixing in this module).
+          #
+          # +attrs_map_or_leaf_value+:: The attribute map. At the top level,
+          #                             this is from ::scim_attributes_map.
+          #
           def to_scim_backend(data_source:, attrs_map_or_leaf_value:)
             case attrs_map_or_leaf_value
               when Hash # Expected at top-level of any map, or nested within
