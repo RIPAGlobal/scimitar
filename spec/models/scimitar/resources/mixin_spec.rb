@@ -81,8 +81,8 @@ RSpec.describe Scimitar::Resources::Mixin do
           'userName'    => 'foo',
           'name'        => {'givenName'=>'Foo', 'familyName'=>'Bar'},
           'active'      => true,
-          'emails'      => [{'type'=>'work', 'primary'=>true, 'value'=>'foo.bar@test.com'}], # Note, 'type' and 'primary' present
-          'phoneNumbers'=> [{'type'=>'work', 'primary'=>true, 'value'=>'+642201234567'   }], # Note, 'type' and 'primary' present
+          'emails'      => [{'type'=>'work', 'primary'=>true,  'value'=>'foo.bar@test.com'}], # Note, 'type' present
+          'phoneNumbers'=> [{'type'=>'work', 'primary'=>false, 'value'=>'+642201234567'   }], # Note, 'type' present
           'id'          => '23', # Note, String
           'externalId'  => 'AA02984',
           'meta'        => {'resourceType'=>'User'},
@@ -90,13 +90,134 @@ RSpec.describe Scimitar::Resources::Mixin do
         })
       end
 
-      xcontext 'with arrays' do
-        it 'handles static mappings' do
-        end
+      context 'with arrays' do
+        context 'using static mappings' do
+          class StaticMapTest
+            include ActiveModel::Model
 
-        it 'handles dynamic lists' do
-        end
-      end # context 'with arrays' do
+            attr_accessor :work_email_address,
+                          :home_email_address
+
+            def self.scim_resource_type
+              return Scimitar::Resources::User
+            end
+
+            def self.scim_attributes_map
+              return {
+                emails: [
+                  {
+                    match: 'type',
+                    with:  'work',
+                    using: {
+                      value:   :work_email_address,
+                      primary: false
+                    }
+                  },
+                  {
+                    match: 'type',
+                    with:  'home',
+                    using: { value: :home_email_address }
+                  }
+                ]
+              }
+            end
+
+            def self.scim_mutable_attributes
+              return nil
+            end
+
+            def self.scim_queryable_attributes
+              return nil
+            end
+
+            include Scimitar::Resources::Mixin
+          end
+
+          it 'converts to a SCIM representation' do
+            instance = StaticMapTest.new(work_email_address: 'work@test.com', home_email_address: 'home@test.com')
+            scim     = instance.to_scim(location: 'https://test.com/static_map_test')
+            json     = scim.to_json()
+            hash     = JSON.parse(json)
+
+            expect(hash).to eql({
+              'emails' => [
+                {'type'=>'work', 'primary'=>false, 'value'=>'work@test.com'},
+                {'type'=>'home',                   'value'=>'home@test.com'},
+              ],
+
+              'meta'    => {'resourceType'=>'User'},
+              'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User']
+            })
+          end
+
+          xit 'converts from a SCIM representation' do
+          end
+        end # "context 'using static mappings' do"
+
+        context 'using dynamic lists' do
+          class DynamicMapTest
+            include ActiveModel::Model
+
+            attr_accessor :groups
+
+            def self.scim_resource_type
+              return Scimitar::Resources::User
+            end
+
+            def self.scim_attributes_map
+              return {
+                groups: [
+                  {
+                    list:  :groups,
+                    using: {
+                      value:   :id,        # <-- i.e. DynamicMapTest.groups[n].id
+                      display: :full_name  # <-- i.e. DynamicMapTest.groups[n].full_name
+                    }
+                  }
+                ]
+              }
+            end
+
+            def self.scim_mutable_attributes
+              return nil
+            end
+
+            def self.scim_queryable_attributes
+              return nil
+            end
+
+            include Scimitar::Resources::Mixin
+          end
+
+          it 'converts to a SCIM representation' do
+            group  = Struct.new(:id, :full_name, keyword_init: true)
+            groups = [
+              group.new(id: 1, full_name: 'Group 1'),
+              group.new(id: 2, full_name: 'Group 2'),
+              group.new(id: 3, full_name: 'Group 3'),
+            ]
+
+            instance = DynamicMapTest.new(groups: groups)
+            scim     = instance.to_scim(location: 'https://test.com/static_map_test')
+            json     = scim.to_json()
+            hash     = JSON.parse(json)
+
+            expect(hash).to eql({
+              'groups' => [
+                {'display'=>'Group 1', 'value'=>'1'},
+                {'display'=>'Group 2', 'value'=>'2'},
+                {'display'=>'Group 3', 'value'=>'3'},
+              ],
+
+              'meta'    => {'resourceType'=>'User'},
+              'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User']
+            })
+          end
+
+          xit 'converts from a SCIM representation' do
+          end
+        end # "context 'using dynamic lists' do"
+      end # "context 'with arrays' do"
     end # "context '#to_scim' do"
   end # "context 'with good class definitons' do"
 end # "RSpec.describe Scimitar::Resources::Mixin do"

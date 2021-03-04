@@ -7,12 +7,6 @@ module Scimitar
     #
     class PhoneNumber < Base
       set_schema Scimitar::Schema::PhoneNumber
-
-      # Returns the JSON representation of a PhoneNumber.
-      #
-      def as_json(options = {})
-        {'type' => 'work', 'primary' => true}.merge(super(options))
-      end
     end
   end
 end

@@ -39,13 +39,23 @@ class MockUser < ActiveRecord::Base
       },
       emails: [
         {
-          value: :work_email_address
-        }
+          match: 'type',
+          with:  'work',
+          using: {
+            value:   :work_email_address,
+            primary: true
+          }
+        },
       ],
       phoneNumbers: [
         {
-          value: :work_phone_number
-        }
+          match: 'type',
+          with:  'work',
+          using: {
+            value:   :work_phone_number,
+            primary: false
+          }
+        },
       ],
       active: :is_active
     }

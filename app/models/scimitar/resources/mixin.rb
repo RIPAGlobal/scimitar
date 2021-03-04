@@ -100,17 +100,17 @@ module Scimitar
     #       # ...
     #       emails: [
     #         {
-    #           match: "type",
-    #           with: "work",
+    #           match: 'type',
+    #           with:  'work',
     #           using: {
-    #             value: :work_email_address,
+    #             value:   :work_email_address,
     #             primary: true
     #           }
     #         },
     #         {
-    #           match: "type",
-    #           with: "home",
-    #           using: { value: :work_home_address }
+    #           match: 'type',
+    #           with:  'home',
+    #           using: { value: :home_email_address }
     #         }
     #       ],
     #       # ...
@@ -139,15 +139,20 @@ module Scimitar
     #       # ...
     #       groups: [
     #         {
-    #           list: :users,
+    #           list: :users,          # <-- i.e. Team.users
     #           using: {
-    #             value:   :id,        <-- i.e. Team.users[n].id
-    #             display: :full_name  <-- i.e. Team.users[n].full_name
+    #             value:   :id,        # <-- i.e. Team.users[n].id
+    #             display: :full_name  # <-- i.e. Team.users[n].full_name
     #           }
     #         }
     #       ],
     #       #...
     #     end
+    #
+    # The mixing-in class _must+ implement the read accessor identified by the
+    # value of the "list" key, returning any indexed, Enumerable collection
+    # (e.g. an Array or ActiveRecord::Relation instance).
+    #
     #
     #
     # == scim_mutable_attributes
@@ -215,8 +220,8 @@ module Scimitar
         # Render self as a SCIM object using ::scim_attributes_map.
         #
         def to_scim(location:)
-          schema     = self.class.scim_attributes_map()
-          attrs_hash = to_scim_backend(schema)
+          map        = self.class.scim_attributes_map()
+          attrs_hash = to_scim_backend(data_source: self, attrs_map_or_leaf_value: map)
           resource   = self.class.scim_resource_type().new(attrs_hash)
 
           return resource
@@ -272,30 +277,51 @@ module Scimitar
           # object for the symbols, send those symbols to the model and replace
           # the symbol with the return value.
           #
-          def to_scim_backend(object)
-            case object
-              when Hash
-                object.each.with_object({}) do |(key, value), hash|
-                  hash[key] = to_scim_backend(value)
+          def to_scim_backend(data_source:, attrs_map_or_leaf_value:)
+            case attrs_map_or_leaf_value
+              when Hash # Expected at top-level of any map, or nested within
+                attrs_map_or_leaf_value.each.with_object({}) do |(key, value), hash|
+                  hash[key] = to_scim_backend(data_source: data_source, attrs_map_or_leaf_value: value)
                 end
 
-              when Array
+              when Array # Static or dynamic mapping against lists in data source
+                nested_in_first = false
+                mapped_array = attrs_map_or_leaf_value.map do |value|
+                  if ! value.is_a?(Hash) # Unknown type, just treat as flat value
+                    to_scim_backend(data_source: data_source, attrs_map_or_leaf_value: value)
 
-                object.map do |value|
-                  to_scim_backend(value)
+                  elsif value.key?(:match) # Static map
+                    static_hash = { value[:match] => value[:with] }
+                    static_hash.merge!(to_scim_backend(data_source: data_source, attrs_map_or_leaf_value: value[:using]))
+                    static_hash
+
+                  elsif value.key?(:list) # Dynamic mapping of each complex list item
+                    nested_in_first = true
+                    list = data_source.public_send(value[:list])
+                    list.map do |list_entry|
+                      to_scim_backend(data_source: list_entry, attrs_map_or_leaf_value: value[:using])
+                    end
+
+                  else # Unknown type, just treat as flat values
+                    to_scim_backend(value)
+
+                  end
                 end
 
-              when Symbol
-                if self.respond_to?(object) # A read-accessor exists
-                  value = self.public_send(object)
+                mapped_array = mapped_array.first if nested_in_first
+                mapped_array
+
+              when Symbol # Leaf node, Symbol -> reader method to call on data source
+                if data_source.respond_to?(attrs_map_or_leaf_value) # A read-accessor exists?
+                  value = data_source.public_send(attrs_map_or_leaf_value)
                   value = value.to_s if value.is_a?(Numeric)
                   value
                 else
                   nil
                 end
 
-              else
-                object
+              else # Leaf node, other type -> literal static value to use
+                attrs_map_or_leaf_value
             end
           end
 
