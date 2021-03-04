@@ -5,6 +5,10 @@ RSpec.describe Scimitar::Lists::Count do
     @instance = described_class.new
   end
 
+  # ===========================================================================
+  # LIMIT
+  # ===========================================================================
+
   context '#limit' do
     it 'defaults to 100' do
       expect(@instance.limit).to eql(100)
@@ -13,6 +17,16 @@ RSpec.describe Scimitar::Lists::Count do
     it 'converts input strings to integers' do
       @instance.limit = '50'
       expect(@instance.limit).to eql(50)
+    end
+
+    it 'ignores "nil"' do
+      expect { @instance.limit = nil }.to_not raise_error
+      expect(@instance.limit).to eql(100)
+    end
+
+    it 'ignores blank' do
+      expect { @instance.limit = ' ' }.to_not raise_error
+      expect(@instance.limit).to eql(100)
     end
 
     context 'error checking' do
@@ -31,6 +45,10 @@ RSpec.describe Scimitar::Lists::Count do
     end # "context 'on-read error checking' do"
   end # "context '#limit' do"
 
+  # ===========================================================================
+  # START INDEX
+  # ===========================================================================
+
   context '#start_index' do
     it 'defaults to 1' do
       expect(@instance.start_index).to eql(1)
@@ -46,6 +64,16 @@ RSpec.describe Scimitar::Lists::Count do
       expect(@instance.start_index).to eql(1)
     end
 
+    it 'ignores "nil"' do
+      expect { @instance.start_index = nil }.to_not raise_error
+      expect(@instance.start_index).to eql(1)
+    end
+
+    it 'ignores blank' do
+      expect { @instance.start_index = ' ' }.to_not raise_error
+      expect(@instance.start_index).to eql(1)
+    end
+
     context 'error checking' do
       it 'complains about attempts to set non-numeric values' do
 
@@ -57,6 +85,10 @@ RSpec.describe Scimitar::Lists::Count do
       end
     end # "context 'on-read error checking' do"
   end # "context '#start_index' do"
+
+  # ===========================================================================
+  # OFFSET
+  # ===========================================================================
 
   context '#offset' do
     it 'defaults to 0' do
@@ -73,6 +105,10 @@ RSpec.describe Scimitar::Lists::Count do
     end
   end # "context '#offset' do"
 
+  # ===========================================================================
+  # TOTAL
+  # ===========================================================================
+
   context '#total' do
     it 'defaults to "nil" as "unknown"' do
       expect(@instance.total).to be_nil
@@ -83,6 +119,10 @@ RSpec.describe Scimitar::Lists::Count do
       expect(@instance.total).to eql(23)
     end
   end # "context '#total' do"
+
+  # ===========================================================================
+  # INSTANTIATION
+  # ===========================================================================
 
   context 'instantiation' do
     it 'instantiates with parameters' do

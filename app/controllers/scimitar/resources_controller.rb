@@ -2,10 +2,14 @@ require_dependency "scimitar/application_controller"
 
 module Scimitar
   class ResourcesController < ApplicationController
+    rescue_from ActiveRecord::RecordNotFound, with: :handle_resource_not_found
 
     def index(base_scope, &block)
       query = if params[:filter].present?
-        parser = ::Scimitar::Lists::QueryParser.new(params[:filter], base_scope)
+        parser = ::Scimitar::Lists::QueryParser.new(
+          storage_class().new.scim_queryable_attributes(),
+          params[:filter]
+        )
         parser.to_activerecord_query(base_scope)
       else
         base_scope
@@ -57,7 +61,11 @@ module Scimitar
       if yield(resource_params[:id]) != false
         head :no_content
       else
-        handle_scim_error(ErrorResponse.new(status: 500, detail: "Failed to delete the resource with id '#{params[:id]}'. Please try again later"))
+        five_hundred = ErrorResponse.new(
+          status: 500,
+          detail: "Failed to delete the resource with id '#{params[:id]}'. Please try again later."
+        )
+        handle_scim_error(five_hundred)
       end
     end
 
@@ -86,14 +94,16 @@ module Scimitar
         begin
           resource = resource_type.new(resource_params.to_h)
           unless resource.valid?
-            raise Scimitar::ErrorResponse.new(status: 400,
-                                                detail: "Invalid resource: #{resource.errors.full_messages.join(', ')}.",
-                                                scimType: 'invalidValue')
+            raise Scimitar::ErrorResponse.new(
+              status:   400,
+              detail:   "Invalid resource: #{resource.errors.full_messages.join(', ')}.",
+              scimType: 'invalidValue'
+            )
           end
 
           yield(resource)
         rescue NoMethodError => error
-          Rails.logger.error error
+          Rails.logger.error(error)
           raise Scimitar::ErrorResponse.new(status: 400, detail: 'invalid request')
         end
       rescue Scimitar::ErrorResponse => error

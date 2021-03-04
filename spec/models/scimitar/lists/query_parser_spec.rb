@@ -180,4 +180,19 @@ RSpec.describe Scimitar::Lists::QueryParser do
     xit 'escapes values sent into LIKE statements' do
     end
   end # "context '#to_activerecord_query' do"
+
+  # ===========================================================================
+  # INSTANTIATION
+  # ===========================================================================
+
+  context 'instantiation' do
+    it 'complains if not given a String for the query, which can in particular happen if "params" is handled improperly in the controller' do
+      expect {
+        described_class.new(
+          MockUser.new.scim_queryable_attributes(),
+          {'filter' => 'familyName eq BAZ'}
+        )
+      }.to raise_error(RuntimeError, /#{Regexp.escape('Hash passed')}/)
+    end
+  end # "context 'instantiation' do"
 end

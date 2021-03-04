@@ -259,7 +259,7 @@ module Scimitar
         # for how the return value of ::scim_queryable_attributes is handled.
         #
         def scim_queryable_attributes
-          @scim_queryable_attributes = self.class.scim_queryable_attributes()
+          @scim_queryable_attributes ||= self.class.scim_queryable_attributes()
         end
 
         private

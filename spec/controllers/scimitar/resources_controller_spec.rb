@@ -172,7 +172,7 @@ RSpec.describe Scimitar::ResourcesController do
       allow(controller).to receive(:successful_delete?).and_return(false)
       delete :destroy, params: { id: 'group-id', format: :scim }
       expect(response).to have_http_status(:internal_server_error)
-      expect(response_body[:detail]).to eql("Failed to delete the resource with id 'group-id'. Please try again later")
+      expect(response_body[:detail]).to eql("Failed to delete the resource with id 'group-id'. Please try again later.")
     end
   end
 end

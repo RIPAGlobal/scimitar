@@ -56,6 +56,10 @@ module Scimitar
       # +query_string+::  Query string from inbound HTTP request.
       #
       def initialize(attribute_map, query_string)
+        unless query_string.is_a?(String)
+          raise "Scimitar::Lists::QueryParser#new: #{query_string.class} passed instead of string"
+        end
+
         @attribute_map  = attribute_map
         @query_elements = query_string.split(" ")
       end

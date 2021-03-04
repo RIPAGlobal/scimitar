@@ -161,7 +161,9 @@ module Scim
       # "externalId" value and retrieve your "id" from that response.
       #
       def find_user(id)
-        # Find your #associated_class (User) by your ID here.
+        # Find your #associated_class (User) by your ID here. If you throw
+        # ActiveRecord::RecordNotFound, it'll be caught by Scimitar and
+        # returned as an appropriately-formatted JSON response.
       end
 
   end
