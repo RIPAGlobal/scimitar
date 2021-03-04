@@ -83,4 +83,15 @@ RSpec.describe Scimitar::Lists::Count do
       expect(@instance.total).to eql(23)
     end
   end # "context '#total' do"
+
+  context 'instantiation' do
+    it 'instantiates with parameters' do
+      instance = described_class.new(start_index: '5', total: 45)
+
+      expect(instance.limit      ).to eql(100)
+      expect(instance.start_index).to eql(5)
+      expect(instance.offset     ).to eql(4)
+      expect(instance.total      ).to eql(45)
+    end
+  end # "context 'instantiation' do"
 end # "RSpec.describe Scimitar::Lists::Count do"

@@ -6,9 +6,11 @@ module Scimitar
       attr_accessor :limit, :start_index, :total
       attr_reader   :offset
 
-      def initialize
+      def initialize(*args)
         @limit       = 100
         @start_index = 1
+
+        super(*args)
       end
 
       # Set a limit (page size) value.
