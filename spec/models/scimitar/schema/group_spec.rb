@@ -68,7 +68,7 @@ RSpec.describe Scimitar::Schema::Group do
         "description": "Represents a Group",
         "meta": {
           "resourceType": "Schema",
-          "location": "/scimitar/Schemas?name=urn%3Aietf%3Aparams%3Ascim%3Aschemas%3Acore%3A2.0%3AGroup"
+          "location": "/scim/Schemas?name=urn%3Aietf%3Aparams%3Ascim%3Aschemas%3Acore%3A2.0%3AGroup"
         },
         "attributes": #{expected_attributes()}
       }

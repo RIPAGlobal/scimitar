@@ -1,8 +1,7 @@
-class MockUser
-  include ActiveModel::Model
+class MockUser < ActiveRecord::Base
 
   # ===========================================================================
-  # MOCK ATTRIBUTES
+  # TEST ATTRIBUTES - see db/migrate/20210304014602_create_mock_users.rb etc.
   # ===========================================================================
 
   READWRITE_ATTRS = %w{
@@ -14,8 +13,6 @@ class MockUser
     work_email_address
     work_phone_number
   }
-
-  attr_accessor(*READWRITE_ATTRS)
 
   # A fixed value read-only attribute, in essence.
   #

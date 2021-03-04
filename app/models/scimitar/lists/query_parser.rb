@@ -70,39 +70,33 @@ module Scimitar
       # TODO: Support more than one filter entry!
       #
       def attribute
-        attribute = self.query_elements()[0]
+        scim_attr = self.scim_attribute()
 
-        raise Scimitar::FilterError if attribute.blank?
+        raise Scimitar::FilterError if scim_attr.blank?
 
-        attribute = attribute.to_sym
-        mapped    = self.attribute_map()[attribute]
+        scim_attr   = scim_attr.to_sym
+        mapped_attr = self.attribute_map()[scim_attr]
 
-        raise Scimitar::FilterError if mapped.blank?
+        raise Scimitar::FilterError if mapped_attr.blank?
 
-        return mapped
+        return mapped_attr
       end
 
       # Returns an SQL operator equivalent to that given in the filter string.
       #
-      # Raises Scimitar::FilterError if the filter cannot be
-      # handled. The most likely case is for "pr" (presence), which has no
-      # simple generic (ish) SQL equivalent. Note that "LIKE" is returned for
-      # "co", "sw" and "ew" (contains, starts-with, ends-with).
+      # Raises Scimitar::FilterError if the filter cannot be handled. The most
+      # likely case is for "pr" (presence), which has no simple generic (ish)
+      # SQL equivalent. Note that "LIKE" is returned for "co", "sw" and "ew"
+      # (contains, starts-with, ends-with).
       #
       # TODO: Support more than one filter entry!
       #
       def operator
-        scim_operator = self.query_elements()[1]
+        scim_op = self.query_elements()[1]
+        sql_op  = self.sql_comparison_operator(scim_operator)
 
-        raise Scimitar::FilterError if scim_operator.nil?
-
-        sql_operator = if scim_operator.downcase == 'pr'
-          'IS NOT NULL'
-        else
-          self.sql_comparison_operator(scim_operator) || (raise Scimitar::FilterError)
-        end
-
-        return sql_operator
+        raise Scimitar::FilterError if sql_op.nil?
+        return sql_op
       end
 
       # Return the parameter that you're looking for, from the filter string.
@@ -114,8 +108,8 @@ module Scimitar
       # TODO: Support more than one filter entry!
       #
       def parameter
-        parameter = self.query_elements()[2..-1].join(" ")
-        return parameter.blank? ? '' : parameter
+        scim_param = self.scim_parameter()
+        return scim_param.blank? ? '' : scim_param
       end
 
       # Collates #attribute, #operator and #parameter into an ActiveRecord
@@ -127,22 +121,47 @@ module Scimitar
       #                (e.g. "User.all" or "Company.users").
       #
       def to_activerecord_query(base_scope)
-        safe_column_name = ActiveRecord::Base.connection.quote_column_name(self.attribute())
-        safe_value       = sql_modified_value(self.operator(), self.parameter())
-        query            = base_scope
+        query       = base_scope
+        column_name = self.attribute()
+        safe_value  = sql_modified_value(self.scim_operator(), self.parameter())
 
-        if safe_value.nil? && operator.nil? # Presence ("pr") assumed
-          query = query.where.not(safe_column_name => ['', nil])
-        elsif safe_value.present? && operator.present? # Everything else
-          query = query.where("#{safe_column_name} #{operator} (?)", safe_value)
+        if safe_value.nil? # Presence ("pr") assumed
+          query = query.where.not(column_name => ['', nil])
         else
-          raise Scimitar::FilterError
+          sql_operator = self.operator()
+          if sql_operator.present?
+            safe_column_name = ActiveRecord::Base.connection.quote_column_name(column_name)
+            query = query.where("#{safe_column_name} #{sql_operator} ?", safe_value)
+          else
+            raise Scimitar::FilterError
+          end
         end
 
         return query
       end
 
       private
+
+        # Return the SCIM attribute taken directly from the filter string given
+        # to the constructor, without any translation or mapping.
+        #
+        def scim_attribute
+          self.query_elements()[0]
+        end
+
+        # Return the SCIM operator taken directly from the filter string given
+        # to the constructor, without any translation or mapping.
+        #
+        def scim_operator
+          self.query_elements()[1]
+        end
+
+        # Return the SCIM parameter taken directly from the filter string given
+        # to the constructor, without any translation or mapping.
+        #
+        def scim_parameter
+          self.query_elements()[2..-1].join(' ')
+        end
 
         # TODO: implement and/or/not
         # TODO: implement additional operators?
@@ -154,8 +173,9 @@ module Scimitar
         #
         # If there's no equivalent in generic SQL, returns +nil+.
         #
-        # +element+:: The SCIM operator. It can be upper/lower/mixed case.
-        #             For example - "gE" (greater than or equal to).
+        # +element+:: The SCIM operator. It can be upper/lower/mixed case. For
+        #             example - "gE" (greater than or equal to). Returns +nil+
+        #             if given +nil+.
         #
         def sql_comparison_operator(element)
           SQL_COMPARISON_OPERATOR[element&.downcase]
@@ -167,12 +187,15 @@ module Scimitar
         # or, for "presence", will be returned as +nil+ - note, not blank, as
         # would be returned by #parameter.
         #
-        # +element+:: The SCIM operator. It can be upper/lower/mixed case.
-        #             For example - "gE" (greater than or equal to).
+        # +element+:: The SCIM operator. It can be upper/lower/mixed case. For
+        #             example - "gE" (greater than or equal to). See also e.g.
+        #             #scim_operator.
         #
-        # +value+::   The value to translate. Might be returned as-is, or have
+        # +value+::   Parameter to translate. Might be returned as-is, or have
         #             special characters escaped and wildcards added; or even
-        #             be ignored for "pr" (presence) checks.
+        #             be ignored for "pr" (presence) checks. This should be
+        #             run through SCIM translation prior (if any is needed) by
+        #             obtaining the value through #parameter.
         #
         def sql_modified_value(element, value)
           safe_for_LIKE_value = ActiveRecord::Base.sanitize_sql_like(value)

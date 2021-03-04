@@ -244,7 +244,7 @@ The tests use [RSpec](http://rspec.info) and require SQLite to be installed on y
 
 ```shell
 pushd spec/apps/dummy
-RAILS_ENV=test bundle exec rails db:drop db:create db:migrate
+RAILS_ENV=test bundle exec rails db:drop db:create db:schema:load
 popd
 ```
 
