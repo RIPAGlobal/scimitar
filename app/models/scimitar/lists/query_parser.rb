@@ -29,6 +29,21 @@ module Scimitar
     # to match the filter parameters.
     #
     class QueryParser
+
+      # Map SCIM operators to generic(ish) SQL operators. See #operator.
+      #
+      SQL_COMPARISON_OPERATOR = {
+        'eq' => '=',
+        'ne' => '!=',
+        'gt' => '>',
+        'ge' => '>=',
+        'lt' => '<',
+        'le' => '<=',
+        'co' => 'LIKE',
+        'sw' => 'LIKE',
+        'ew' => 'LIKE'
+      }
+
       attr_reader :query_elements
       attr_reader :attribute_map
 
@@ -46,20 +61,26 @@ module Scimitar
       end
 
       # Returns the mapped-to-your-domain attribute that the filter string is
-      # operating upon.
+      # operating upon. If +nil+, there is no match.
       #
       # TODO: Support more than one filter entry!
       #
       def attribute
-        attribute = query_elements.dig(0)
-        raise Scimitar::ExceptionHandler::InvalidQuery if attribute.blank?
+        attribute = self.query_elements()[0]
+
+        raise Scimitar::FilterError if attribute.blank?
+
         attribute = attribute.to_sym
-        return self.attribute_map[attribute]
+        mapped    = self.attribute_map()[attribute]
+
+        raise Scimitar::FilterError if mapped.blank?
+
+        return mapped
       end
 
       # Returns an SQL operator equivalent to that given in the filter string.
       #
-      # Raises Scimitar::ExceptionHandler::InvalidQuery if the filter cannot be
+      # Raises Scimitar::FilterError if the filter cannot be
       # handled. The most likely case is for "pr" (presence), which has no
       # simple generic (ish) SQL equivalent. Note that "LIKE" is returned for
       # "co", "sw" and "ew" (contains, starts-with, ends-with).
@@ -67,9 +88,17 @@ module Scimitar
       # TODO: Support more than one filter entry!
       #
       def operator
-        operator = sql_comparison_operator(query_elements.dig(1))
-        raise Scimitar::ExceptionHandler::InvalidQuery if operator.blank?
-        return operator
+        scim_operator = self.query_elements()[1]
+
+        raise Scimitar::FilterError if scim_operator.nil?
+
+        sql_operator = if scim_operator.downcase == 'pr'
+          'IS NOT NULL'
+        else
+          self.sql_comparison_operator(scim_operator) || (raise Scimitar::FilterError)
+        end
+
+        return sql_operator
       end
 
       # Return the parameter that you're looking for, from the filter string.
@@ -81,7 +110,7 @@ module Scimitar
       # TODO: Support more than one filter entry!
       #
       def parameter
-        parameter = query_elements[2..-1].join(" ")
+        parameter = self.query_elements()[2..-1].join(" ")
         return parameter.blank? ? '' : parameter
       end
 
@@ -95,7 +124,6 @@ module Scimitar
       #
       def to_activerecord_query(base_scope)
         safe_column_name = ActiveRecord::Base.connection.quote_column_name(self.attribute())
-        operator         = self.sql_comparison_operator(self.operator())
         safe_value       = sql_modified_value(self.operator(), self.parameter())
         query            = base_scope
 
@@ -104,7 +132,7 @@ module Scimitar
         elsif safe_value.present? && operator.present? # Everything else
           query = query.where("\"#{safe_column_name}\" #{operator} (?)", safe_value)
         else
-          raise Scimitar::ExceptionHandler::InvalidQuery
+          raise Scimitar::FilterError
         end
 
         return query
@@ -126,24 +154,7 @@ module Scimitar
         #             For example - "gE" (greater than or equal to).
         #
         def sql_comparison_operator(element)
-          case element&.downcase
-            when 'eq'
-              '='
-            when 'ne'
-              '!='
-            when 'gt'
-              '>'
-            when 'ge'
-              '>='
-            when 'lt'
-              '<'
-            when 'le'
-              '<='
-            when 'co', 'sw', 'ew'
-              'LIKE'
-            else
-              return nil
-          end
+          SQL_COMPARISON_OPERATOR[element&.downcase]
         end
 
         # Takes a parameter value from a SCIM filter string and the filter

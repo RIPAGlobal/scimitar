@@ -40,67 +40,63 @@ RSpec.describe Scimitar::Resources::Mixin do
   # ===========================================================================
   #
   context 'with good class definitons' do
-    class MixinTest
-      def self.scim_resource_type
-        return Scimitar::Resources::User
-      end
 
-      def self.scim_attributes_map
-        return {
-          id:         :id,
-          externalId: :scim_uid,
-          userName:   :email_address,
-          name:       {
-            givenName:  :name,
-            familyName: :surname
-          },
-          emails: [
-            {
-              value: :email_address
-            }
-          ],
-          phoneNumbers: [
-            {
-              value: :phone_number
-            }
-          ],
-          active: :is_active
-        }
-      end
-
-      def self.scim_mutable_attributes
-        return nil
-      end
-
-      def self.scim_queryable_attributes
-        return {
-          givenName:  :name,
-          familyName: :surname,
-          emails:     :email_address,
-        }
-      end
-
-      include Scimitar::Resources::Mixin
-    end
+    require_relative '../../../apps/dummy/app/models/mock_user.rb'
 
     context '#scim_queryable_attributes' do
       it 'exposes queryable attributes as an instance method' do
-        instance_result = MixinTest.new.scim_queryable_attributes()
-        class_result    = MixinTest.scim_queryable_attributes()
+        instance_result = MockUser.new.scim_queryable_attributes()
+        class_result    = MockUser.scim_queryable_attributes()
 
         expect(instance_result).to match_array(class_result)
       end
     end # "context '#scim_queryable_attributes' do"
 
     context '#scim_mutable_attributes' do
-      xit 'self-compiles mutable attributes and exposes them as an instance method' do
-        result = MixinTest.new.scim_mutable_attributes()
+      it 'self-compiles mutable attributes and exposes them as an instance method' do
+        readwrite_attrs = MockUser::READWRITE_ATTRS.map(&:to_sym)
+        readwrite_attrs.delete(:id) # Should never be offered as writable in SCIM
+
+        result = MockUser.new.scim_mutable_attributes()
+        expect(result).to match_array(readwrite_attrs)
       end
     end # "context '#scim_mutable_attributes' do"
 
     context '#to_scim' do
-      xit 'compiles instance attribute values into a SCIM representation' do
+      it 'compiles instance attribute values into a SCIM representation' do
+        instance                    = MockUser.new
+        instance.id                 = 23
+        instance.scim_uid           = 'AA02984'
+        instance.username           = 'foo'
+        instance.first_name         = 'Foo'
+        instance.last_name          = 'Bar'
+        instance.work_email_address = 'foo.bar@test.com'
+        instance.work_phone_number  = '+642201234567'
+
+        scim = instance.to_scim(location: 'https://test.com/mock_users/23')
+        json = scim.to_json()
+        hash = JSON.parse(json)
+
+        expect(hash).to eql({
+          'userName'    => 'foo',
+          'name'        => {'givenName'=>'Foo', 'familyName'=>'Bar'},
+          'active'      => true,
+          'emails'      => [{'type'=>'work', 'primary'=>true, 'value'=>'foo.bar@test.com'}], # Note, 'type' and 'primary' present
+          'phoneNumbers'=> [{'type'=>'work', 'primary'=>true, 'value'=>'+642201234567'   }], # Note, 'type' and 'primary' present
+          'id'          => '23', # Note, String
+          'externalId'  => 'AA02984',
+          'meta'        => {'resourceType'=>'User'},
+          'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User']
+        })
       end
+
+      xcontext 'with arrays' do
+        it 'handles static mappings' do
+        end
+
+        it 'handles dynamic lists' do
+        end
+      end # context 'with arrays' do
     end # "context '#to_scim' do"
   end # "context 'with good class definitons' do"
 end # "RSpec.describe Scimitar::Resources::Mixin do"

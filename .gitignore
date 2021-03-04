@@ -12,6 +12,7 @@ doc/
 **/tmp/*
 !**/log/.keep
 !**/tmp/.keep
+*.sqlite3
 
 /.bundle
 /vendor/bundle

@@ -11,7 +11,7 @@ module Scimitar
       # Returns the JSON representation of a PhoneNumber.
       #
       def as_json(options = {})
-        {'type' => 'work'}.merge(super(options))
+        {'type' => 'work', 'primary' => true}.merge(super(options))
       end
     end
   end
