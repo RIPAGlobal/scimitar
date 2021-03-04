@@ -145,7 +145,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                 {'type'=>'home',                   'value'=>'home@test.com'},
               ],
 
-              'meta'    => {'resourceType'=>'User'},
+              'meta'    => {'location'=>'https://test.com/static_map_test', 'resourceType'=>'User'},
               'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User']
             })
           end
@@ -198,7 +198,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             ]
 
             instance = DynamicMapTest.new(groups: groups)
-            scim     = instance.to_scim(location: 'https://test.com/static_map_test')
+            scim     = instance.to_scim(location: 'https://test.com/dynamic_map_test')
             json     = scim.to_json()
             hash     = JSON.parse(json)
 
@@ -209,7 +209,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                 {'display'=>'Group 3', 'value'=>'3'},
               ],
 
-              'meta'    => {'resourceType'=>'User'},
+              'meta'    => {'location'=>'https://test.com/dynamic_map_test', 'resourceType'=>'User'},
               'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User']
             })
           end

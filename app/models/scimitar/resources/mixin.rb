@@ -220,10 +220,15 @@ module Scimitar
         # Render self as a SCIM object using ::scim_attributes_map.
         #
         def to_scim(location:)
-          map        = self.class.scim_attributes_map()
-          attrs_hash = to_scim_backend(data_source: self, attrs_map_or_leaf_value: map)
-          resource   = self.class.scim_resource_type().new(attrs_hash)
+          map             = self.class.scim_attributes_map()
+          attrs_hash      = to_scim_backend(data_source: self, attrs_map_or_leaf_value: map)
+          resource        = self.class.scim_resource_type().new(attrs_hash)
+          meta_attrs_hash = {location: location}
 
+          meta_attrs_hash[:created     ] = self.created_at.iso8601 if self.respond_to?(:created_at)
+          meta_attrs_hash[:lastModified] = self.updated_at.iso8601 if self.respond_to?(:updated_at)
+
+          resource.meta = Meta.new(meta_attrs_hash)
           return resource
         end
 
