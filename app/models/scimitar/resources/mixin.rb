@@ -204,6 +204,25 @@ module Scimitar
     # Filtering is currently limited and searching within e.g. arrays of data
     # is not supported; only simple top-level keys can be mapped.
     #
+    #
+    # == Optional methods
+    #
+    # === scim_timestamps_map
+    #
+    # If you implement this class method, it should return a Hash with one or
+    # both of the keys 'created' and 'lastModified', as Symbols. The values
+    # should be methods that the including method supports which return a
+    # creation or most-recently-updated time, respectively. The returned object
+    # mustsupport #iso8601 to convert to a String representation. Example for a
+    # typical ActiveRecord object with standard timestamps:
+    #
+    #     def self.scim_timestamps_map
+    #       {
+    #         created:      :created_at,
+    #         lastModified: :updated_at
+    #       }
+    #     end
+    #
     module Mixin
       extend ActiveSupport::Concern
 
@@ -215,21 +234,6 @@ module Scimitar
           scim_queryable_attributes
         }.each do | required_class_method_name |
           raise "You must define ::#{required_class_method_name} in #{self}" unless self.respond_to?(required_class_method_name)
-        end
-
-        # Render self as a SCIM object using ::scim_attributes_map.
-        #
-        def to_scim(location:)
-          map             = self.class.scim_attributes_map()
-          attrs_hash      = to_scim_backend(data_source: self, attrs_map_or_leaf_value: map)
-          resource        = self.class.scim_resource_type().new(attrs_hash)
-          meta_attrs_hash = {location: location}
-
-          meta_attrs_hash[:created     ] = self.created_at.iso8601 if self.respond_to?(:created_at)
-          meta_attrs_hash[:lastModified] = self.updated_at.iso8601 if self.respond_to?(:updated_at)
-
-          resource.meta = Meta.new(meta_attrs_hash)
-          return resource
         end
 
         # An instance-level method which calls ::scim_mutable_attributes and
@@ -272,7 +276,44 @@ module Scimitar
           @scim_queryable_attributes ||= self.class.scim_queryable_attributes()
         end
 
-        private
+        # Render self as a SCIM object using ::scim_attributes_map.
+        #
+        # +location+:: The location (HTTP(S) full URI) of this resource, in the
+        #              domain of the object including this mixin - "your" IDs,
+        #              not the remote SCIM client's external IDs. #url_for is a
+        #              good way to generate this.
+        #
+        def to_scim(location:)
+          map             = self.class.scim_attributes_map()
+          timestamps_map  = self.class.scim_timestamps_map() if self.class.respond_to?(:scim_timestamps_map)
+          attrs_hash      = self.to_scim_backend(data_source: self, attrs_map_or_leaf_value: map)
+          resource        = self.class.scim_resource_type().new(attrs_hash)
+          meta_attrs_hash = { location: location }
+
+          meta_attrs_hash[:created     ] = self.send(timestamps_map[:created     ])&.iso8601(0) if timestamps_map&.key?(:created)
+          meta_attrs_hash[:lastModified] = self.send(timestamps_map[:lastModified])&.iso8601(0) if timestamps_map&.key?(:lastModified)
+
+          resource.meta = Meta.new(meta_attrs_hash)
+          return resource
+        end
+
+        # Update self from a SCIM object using ::scim_attributes_map. This
+        # does not attempt to persist / "save" 'this' instance; it just
+        # sets the attribute values within it.
+        #
+        # +scim_object+:: A Hash that's the result of parsing a JSON payload
+        #                 from an inbound SCIM write-related request.
+        #
+        # Returns 'self', for convenience of e.g. chaining other methods.
+        #
+        def from_scim!(scim_object:)
+          map = self.class.scim_attributes_map()
+
+          self.from_scim_backend!(data_sink: self, attrs_map: map, scim_object_or_leaf_value: scim_object)
+          return self
+        end
+
+        private # (...but note that we're inside "included do" within a mixin)
 
           # A recursive method that takes a Hash mapping SCIM attributes to the
           # mixing in class's attributes and via ::scim_attributes_map replaces
@@ -340,7 +381,119 @@ module Scimitar
             end
           end
 
-      end
-    end
-  end
-end
+          # Given a SCIM resource representation (left) and an attribute map to
+          # an instance of the mixin-including class / 'self' (right), walk the
+          # SCIM resource and look up equivalent JSON paths in the attribute
+          # map to find out what attributes to write, if any, in 'self'.
+          #
+          # * Literal map values like 'true' are for read-time uses; ignored.
+          # * Symbol map values are treated as read accessor method names and a
+          #   write accessor checked for by adding "=". If this method exists,
+          #   a value write is attempted using the SCIM resource data.
+          # * Static and dynamic array mappings perform as documented for
+          #   ::scim_attributes_map.
+          #
+          #     {                                                     | {
+          #       "userName": "foo",                                  |   "id": "id",
+          #       "name": {                                           |   "externalId": :scim_uid",
+          #         "givenName": "Foo",                               |   "userName": :username",
+          #         "familyName": "Bar"                               |   "name": {
+          #       },                                                  |     "givenName": :first_name",
+          #       "active": true,                                     |     "familyName": :last_name"
+          #       "emails": [                                         |   },
+          #         {                                                 |   "emails": [
+          #           "type": "work",                                 |     {
+          #           "primary": true,                                |       "match": "type",
+          #           "value": "foo.bar@test.com"                     |       "with": "work",
+          #         }                                                 |       "using": {
+          #       ],                                                  |         "value": :work_email_address",
+          #       "phoneNumbers": [                                   |         "primary": true
+          #         {                                                 |       }
+          #           "type": "work",                                 |     }
+          #           "primary": false,                               |   ],
+          #           "value": "+642201234567"                        |   "phoneNumbers": [
+          #         }                                                 |     {
+          #       ],                                                  |       "match": "type",
+          #       "id": "42",                                         |       "with": "work",
+          #       "externalId": "AA02984",                            |       "using": {
+          #       "meta": {                                           |         "value": :work_phone_number",
+          #         "location": "https://test.com/mock_users/42",     |         "primary": false
+          #         "resourceType": "User"                            |       }
+          #       },                                                  |     }
+          #       "schemas": [                                        |   ],
+          #         "urn:ietf:params:scim:schemas:core:2.0:User"      |   "active": :is_active"
+          #       ]                                                   | }
+          #     }                                                     |
+          #
+          def from_scim_backend!(
+            data_sink:,
+            attrs_map:,
+            scim_object_or_leaf_value:,
+            path: []
+          )
+            # We get the schema via this instance's class's resource type, even
+            # if we end up in collections of other types - because it's *this*
+            # schema at the top level that defines the attributes of interest
+            # within any collections, not SCIM schema - if any - for the items
+            # within the collection (a User's "groups" per-array-entry schema
+            # is quite different from the Group schema).
+            #
+            resource_class = self.class.scim_resource_type()
+
+            case scim_object_or_leaf_value
+              when Hash # Attrute-value pairs
+                scim_object.each do | scim_attribute, value |
+                  next if scim_attribute.to_s.downcase == 'id' && path.empty?
+                  self.from_scim_backend!(
+                    data_sink:                 data_sink,
+                    attrs_map:                 attrs_map,
+                    scim_object_or_leaf_value: value,
+                    path:                      path + [scim_attribute]
+                  )
+                end
+
+              when Array # Collection to map
+                map_entry = attrs_map.dig(*path)
+                map_entry.each do | mapped_array_entry |
+                  next unless mapped_array_entry.is_a?(Hash)
+
+                  if mapped_array_entry.key?(:match) # Static map
+                    attr_to_match  = mapped_array_entry[:match].to_s
+                    value_to_match = mapped_array_entry[:with]
+                    sub_attrs_map  = mapped_array_entry[:using]
+                    found_entry    = value.find do | scim_array_entry |
+                      scim_array_entry[attr_to_match] == value_to_match
+                    end
+
+                    if found_entry
+                      self.from_scim_backend!(
+                        data_sink:                 data_sink,
+                        attrs_map:                 sub_attrs_map,
+                        scim_object_or_leaf_value: found_entry,
+                        path:                      []
+                      )
+                    end
+
+                    # LOTS TO DO:
+                    # * Use resource_class
+                    # * Find attributes and get mutability, must include 'write'
+
+                  elsif mapped_array_entry.key?(:list) # Dynamic mapping of each complex list item
+                    # EVEN MORE TO DO
+
+                  end
+                end
+
+              else # Value to store
+                map_entry = attrs_map.dig(*path)
+                if map_entry.is_a?(Symbol)
+                  method = "#{map_entry}="
+                  data_sink.public_send(method, value) if data_sink.respond_to?(method)
+                end
+            end
+          end # "def from_scim_backend!..."
+
+      end # "included do"
+    end # "module Mixin"
+  end # "module Resources"
+end # "module Scimitar"

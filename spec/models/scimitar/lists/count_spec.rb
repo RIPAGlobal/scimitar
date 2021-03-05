@@ -101,7 +101,7 @@ RSpec.describe Scimitar::Lists::Count do
     end
 
     it 'is read-only' do
-      expect { @instance.offset = 23 }.to raise_error(NoMethodError)
+      expect { @instance.offset = 42 }.to raise_error(NoMethodError)
     end
   end # "context '#offset' do"
 
@@ -115,8 +115,8 @@ RSpec.describe Scimitar::Lists::Count do
     end
 
     it 'is read/write' do
-      @instance.total = 23
-      expect(@instance.total).to eql(23)
+      @instance.total = 42
+      expect(@instance.total).to eql(42)
     end
   end # "context '#total' do"
 

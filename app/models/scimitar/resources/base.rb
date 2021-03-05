@@ -74,6 +74,25 @@ module Scimitar
         scim_attributes + [:id, :externalId, :meta]
       end
 
+      # Calls to Scimitar::Schema::Base::find_attribute for each of the schemas
+      # in ::schemas, in order returned (so main schema would be first, then
+      # any extended schemas searched next). Returns the first match found, or
+      # +nil+.
+      #
+      # See Scimitar::Schema::Base::find_attribute for details on parameters,
+      # more about the return value and other general information.
+      #
+      def self.find_attribute(*path)
+        found_attribute = nil
+
+        self.schemas.each do | schema |
+          found_attribute = schema.find_attribute(*path)
+          break unless found_attribute.nil?
+        end
+
+        return found_attribute
+      end
+
       def self.complex_scim_attributes
         schema.scim_attributes.select(&:complexType).group_by(&:name)
       end

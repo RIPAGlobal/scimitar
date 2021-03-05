@@ -3,7 +3,6 @@ require 'spec_helper'
 RSpec.describe Scimitar::Resources::Base do
 
   CustomSchema = Class.new(Scimitar::Schema::Base) do
-
     def self.id
       'custom-id'
     end
@@ -72,7 +71,6 @@ RSpec.describe Scimitar::Resources::Base do
       expect(resource.names.first.familyName).to eql(123)
       expect(resource.valid?).to be(false)
     end
-
   end
 
   context '#as_json' do
@@ -86,6 +84,29 @@ RSpec.describe Scimitar::Resources::Base do
       expect(result['schemas']).to eql(['custom-id'])
       expect(result['meta']['resourceType']).to eql('CustomResourse')
       expect(result['errors']).to be_nil
+    end
+  end
+
+  context '.find_attribute' do
+    it 'finds in complex type' do
+      found = CustomResourse.find_attribute('name', 'givenName')
+      expect(found).to be_present
+      expect(found.name).to eql('givenName')
+      expect(found.type).to eql('string')
+    end
+
+    it 'finds in multi-value type, without index' do
+      found = CustomResourse.find_attribute('names', 'givenName')
+      expect(found).to be_present
+      expect(found.name).to eql('givenName')
+      expect(found.type).to eql('string')
+    end
+
+    it 'finds in multi-value type, ignoring index' do
+      found = CustomResourse.find_attribute('names', 42, 'givenName')
+      expect(found).to be_present
+      expect(found.name).to eql('givenName')
+      expect(found.type).to eql('string')
     end
   end
 
@@ -121,7 +142,6 @@ RSpec.describe Scimitar::Resources::Base do
       expect(resource.valid?).to be(true)
     end
 
-
     it 'validates that the provided attributes match their schema' do
       described_class.set_schema CustomSchema
       resource = described_class.new(
@@ -154,7 +174,7 @@ RSpec.describe Scimitar::Resources::Base do
     end
 
 
-    it 'doesnt accept email for a name' do
+    it 'doesn\'t accept email for a name' do
       described_class.set_schema CustomSchema
       resource = described_class.new(
         name: Scimitar::ComplexTypes::Email.new(
@@ -164,7 +184,7 @@ RSpec.describe Scimitar::Resources::Base do
       expect(resource.valid?).to be(false)
     end
 
-    it 'doesnt accept a complex type for a string' do
+    it 'doesn\'t accept a complex type for a string' do
       described_class.set_schema CustomSchema
       resource = described_class.new(
         customField: Scimitar::ComplexTypes::Email.new(
@@ -174,12 +194,11 @@ RSpec.describe Scimitar::Resources::Base do
       expect(resource.valid?).to be(false)
     end
 
-    it 'doesnt accept a string for a boolean' do
+    it 'doesn\'t accept a string for a boolean' do
       described_class.set_schema CustomSchema
       resource = described_class.new(anotherCustomField: 'value')
       expect(resource.valid?).to be(false)
     end
-
   end
 
   context 'schema extension' do
@@ -208,10 +227,10 @@ RSpec.describe Scimitar::Resources::Base do
         set_schema customSchema
         extend_schema extensionSchema
 
-
         def self.endpoint
           '/gaga'
         end
+
         def self.resource_type_id
           'CustomResource'
         end
@@ -242,5 +261,20 @@ RSpec.describe Scimitar::Resources::Base do
       end
     end
 
+    context '.find_attribute' do
+      it 'finds in first schema' do
+        found = resource_class().find_attribute('name') # Defined in customSchema
+        expect(found).to be_present
+        expect(found.name).to eql('name')
+        expect(found.type).to eql('string')
+      end
+
+      it 'finds across schemas' do
+        found = resource_class().find_attribute('relationship') # Defined in extensionSchema
+        expect(found).to be_present
+        expect(found.name).to eql('relationship')
+        expect(found.type).to eql('string')
+      end
+    end
   end
 end
