@@ -454,43 +454,56 @@ module Scimitar
 
               when Array # Collection to map
                 map_entry = attrs_map.dig(*path)
-                map_entry.each do | mapped_array_entry |
+                map_entry&.each do | mapped_array_entry |
                   next unless mapped_array_entry.is_a?(Hash)
 
                   if mapped_array_entry.key?(:match) # Static map
                     attr_to_match  = mapped_array_entry[:match].to_s
                     value_to_match = mapped_array_entry[:with]
                     sub_attrs_map  = mapped_array_entry[:using]
-                    found_entry    = value.find do | scim_array_entry |
+
+                    # Search for the array entry in the SCIM object that
+                    # matches the thing we're looking for via :match & :with.
+                    #
+                    found_entry = scim_object_or_leaf_value.find do | scim_array_entry |
                       scim_array_entry[attr_to_match] == value_to_match
                     end
 
+                    # If found, recursive call to take the contents of that and
+                    # process it through schema to ultimately call one or more
+                    # write accessors in 'data_sink'.
+                    #
                     if found_entry
                       self.from_scim_backend!(
                         data_sink:                 data_sink,
                         attrs_map:                 sub_attrs_map,
                         scim_object_or_leaf_value: found_entry,
-                        path:                      []
+                        path:                      path ## TODO: Not sure about this bit
                       )
                     end
 
-                    # LOTS TO DO:
-                    # * Use resource_class
-                    # * Find attributes and get mutability, must include 'write'
+                    ## TODO: test; is this finished?
 
                   elsif mapped_array_entry.key?(:list) # Dynamic mapping of each complex list item
-                    # EVEN MORE TO DO
+
+                    ## TODO: implement dynamics
 
                   end
                 end
 
               else # Value to store
-                map_entry = attrs_map.dig(*path)
-                if map_entry.is_a?(Symbol)
-                  method = "#{map_entry}="
-                  data_sink.public_send(method, value) if data_sink.respond_to?(method)
+                attribute = resource_class.find_attribute(*path)
+
+                if attribute.mutability == 'readWrite' || attribute.mutability == 'writeOnly'
+                  map_entry = attrs_map.dig(*path)
+
+                  if map_entry.is_a?(Symbol)
+                    method = "#{map_entry}="
+                    data_sink.public_send(method, value) if data_sink.respond_to?(method)
+                  end
                 end
-            end
+
+            end # "case scim_object_or_leaf_value"
           end # "def from_scim_backend!..."
 
       end # "included do"
