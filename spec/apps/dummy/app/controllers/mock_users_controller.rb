@@ -1,6 +1,8 @@
 module Scim
   class MockUsersController < Scimitar::ResourcesController
 
+    skip_before_action :verify_authenticity_token
+
     def index
       super(MockUser.all) do | mock_user |
         mock_user.to_scim(location: url_for(action: :show, id: mock_user.id))
@@ -63,12 +65,15 @@ module Scim
       #               not correspond to an existing record.
       #
       def save(scim_user, is_create: false)
-        puts "*"*80
-        puts "SAVE #{scim_user.inspect}"
-        puts "IS CREATE: #{is_create.inspect}"
+        instance = if is_create
+          MockUser.new
+        else
+          find_user(scim_user['id'])
+        end
 
-        #convert the Scimitar::Resources::User to your application object
-        #and save
+        instance.from_scim!(scim_object: scim_user)
+        instance.save!
+
       rescue ActiveRecord::RecordInvalid => exception
         # Map the enternal errors to a Scimitar error
         raise Scimitar::ResourceInvalidError.new()

@@ -90,6 +90,10 @@ All routes then will be available at `https://.../scim/...`.
 
 module Scim
 
+  # SCIM clients don't use Rails CSRF tokens.
+  #
+  skip_before_action :verify_authenticity_token
+
   # ScimEngine::ResourcesController uses a template method so that the
   # subclasses can provide the fillers with minimal effort solely focused on
   # application code leaving the SCIM protocol and schema specific code within the
