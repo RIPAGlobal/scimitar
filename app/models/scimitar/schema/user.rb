@@ -40,7 +40,7 @@ module Scimitar
           Attribute.new(name: 'ims',              multiValued: true, complexType: Scimitar::ComplexTypes::Ims),
           Attribute.new(name: 'photos',           multiValued: true, complexType: Scimitar::ComplexTypes::Photo),
           Attribute.new(name: 'addresses',        multiValued: true, complexType: Scimitar::ComplexTypes::Address),
-          Attribute.new(name: 'groups',           multiValued: true, complexType: Scimitar::ComplexTypes::Reference, mutability: 'immutable'),
+          Attribute.new(name: 'groups',           multiValued: true, complexType: Scimitar::ComplexTypes::ReferenceGroup, mutability: 'readOnly'),
           Attribute.new(name: 'entitlements',     multiValued: true, complexType: Scimitar::ComplexTypes::Entitlement),
           Attribute.new(name: 'roles',            multiValued: true, complexType: Scimitar::ComplexTypes::Role),
           Attribute.new(name: 'x509Certificates', multiValued: true, complexType: Scimitar::ComplexTypes::X509Certificate),

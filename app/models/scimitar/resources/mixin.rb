@@ -139,11 +139,12 @@ module Scimitar
     #       # ...
     #       groups: [
     #         {
-    #           list: :users,          # <-- i.e. Team.users
+    #           list: :users,          # <-- i.e. Team.users,
     #           using: {
     #             value:   :id,        # <-- i.e. Team.users[n].id
     #             display: :full_name  # <-- i.e. Team.users[n].full_name
-    #           }
+    #           },
+    #           find_with: -> (scim_list_entry) {...} # See below
     #         }
     #       ],
     #       #...
@@ -151,7 +152,24 @@ module Scimitar
     #
     # The mixing-in class _must+ implement the read accessor identified by the
     # value of the "list" key, returning any indexed, Enumerable collection
-    # (e.g. an Array or ActiveRecord::Relation instance).
+    # (e.g. an Array or ActiveRecord::Relation instance). The optional key
+    # ":find_with" is defined with a Proc that's passed the SCIM entry at each
+    # list position. It must use this to look up the equivalent entry for
+    # association via the write accessor described by the ":list" key. In the
+    # example above, "find_with"'s Proc might look at a SCIM entry value which
+    # is expected to be a user ID and find that User. The mapped set of User
+    # data thus found would be written back with "#users=", due to the ":list"
+    # key declaring the method name ":users".
+    #
+    # Note that you can only use either:
+    #
+    # * One or more static maps where each matches some other piece of source
+    #   SCIM data field value, so that specific SCIM array entries are matched
+    #
+    # * A single dynamic list entry which maps app SCIM array entries.
+    #
+    # A mixture of static and dynamic data, or multiple dynamic entries in a
+    # single mapping array value will produce undefined behaviour.
     #
     #
     #
@@ -249,13 +267,22 @@ module Scimitar
 
             # Variant of https://stackoverflow.com/a/49315255
             #
-            extractor = ->(enum) do
+            extractor = ->(enum, from = nil) do
               enum.each do |key, value|
                 enum = [key, value].detect(&Enumerable.method(:===))
                 if enum.nil?
                   @scim_mutable_attributes << value if value.is_a?(Symbol) && self.respond_to?("#{value}=")
                 else
-                  extractor.call(enum)
+                  if enum.is_a?(Hash)
+                    extractor.call(enum, value)
+                  elsif enum.is_a?(Array)
+                    first_map = enum.first
+                    if first_map.key?(:match)
+                      extractor.call(first_map[:using], value)
+                    elsif first_map.key?(:find_with)
+                      @scim_mutable_attributes << from
+                    end
+                  end
                 end
               end
             end
@@ -309,7 +336,7 @@ module Scimitar
         def from_scim!(scim_object:)
           map = self.class.scim_attributes_map()
 
-          self.from_scim_backend!(data_sink: self, attrs_map: map, scim_object_or_leaf_value: scim_object)
+          self.from_scim_backend!(attrs_map_or_leaf_value: map, scim_object_or_leaf_value: scim_object)
           return self
         end
 
@@ -402,8 +429,8 @@ module Scimitar
           #       "active": true,                                     |     "familyName": :last_name"
           #       "emails": [                                         |   },
           #         {                                                 |   "emails": [
-          #           "type": "work",                                 |     {
-          #           "primary": true,                                |       "match": "type",
+          #           "type": "work",                  <------\       |     {
+          #           "primary": true,                         \------+---    "match": "type",
           #           "value": "foo.bar@test.com"                     |       "with": "work",
           #         }                                                 |       "using": {
           #       ],                                                  |         "value": :work_email_address",
@@ -411,26 +438,47 @@ module Scimitar
           #         {                                                 |       }
           #           "type": "work",                                 |     }
           #           "primary": false,                               |   ],
-          #           "value": "+642201234567"                        |   "phoneNumbers": [
+          #           "value": "+642201234567"                        |   groups: [
           #         }                                                 |     {
-          #       ],                                                  |       "match": "type",
-          #       "id": "42",                                         |       "with": "work",
-          #       "externalId": "AA02984",                            |       "using": {
-          #       "meta": {                                           |         "value": :work_phone_number",
-          #         "location": "https://test.com/mock_users/42",     |         "primary": false
-          #         "resourceType": "User"                            |       }
-          #       },                                                  |     }
-          #       "schemas": [                                        |   ],
-          #         "urn:ietf:params:scim:schemas:core:2.0:User"      |   "active": :is_active"
-          #       ]                                                   | }
+          #       ],                                                  |       list:  :groups,
+          #       "id": "42",                                         |       using: {
+          #       "externalId": "AA02984",                            |         value:   :id,
+          #       "meta": {                                           |         display: :full_name
+          #         "location": "https://test.com/mock_users/42",     |       }
+          #         "resourceType": "User"                            |     }
+          #       },                                                  |   ],
+          #       "schemas": [                                        |   "active": :is_active"
+          #         "urn:ietf:params:scim:schemas:core:2.0:User"      | }
+          #       ]                                                   |
           #     }                                                     |
           #
+          # Named attributes:
+          #
+          # +attrs_map_or_leaf_value+::   Attribute map; recursive calls jsut
+          #                               pass in the fragment for recursion,
+          #                               so at the deepest level, this ends
+          #                               up being a leaf node which may have
+          #                               a Symbol method name, used to look
+          #                               for a write accessor; or a read-only
+          #                               literal, which is ignored.
+          #
+          # +scim_object_or_leaf_value+:: Similar to +attrs_map_or_leaf_value+
+          #                               but tracks the SCIM schema data being
+          #                               read as input source material.
+          #
+          # +path+::                      Array of SCIM attribute names giving
+          #                               a path into the SCIM schema where
+          #                               iteration has reached. Used to find
+          #                               the schema attribute definiton and
+          #                               check mutability before writing.
+          #
           def from_scim_backend!(
-            data_sink:,
-            attrs_map:,
+            attrs_map_or_leaf_value:,
             scim_object_or_leaf_value:,
             path: []
           )
+            attrs_map_or_leaf_value = attrs_map_or_leaf_value.with_indifferent_access() if attrs_map_or_leaf_value.instance_of?(Hash)
+
             # We get the schema via this instance's class's resource type, even
             # if we end up in collections of other types - because it's *this*
             # schema at the top level that defines the attributes of interest
@@ -442,19 +490,19 @@ module Scimitar
 
             case scim_object_or_leaf_value
               when Hash # Attrute-value pairs
-                scim_object.each do | scim_attribute, value |
-                  next if scim_attribute.to_s.downcase == 'id' && path.empty?
+                scim_object_or_leaf_value.each do | scim_attribute, value |
+                  sub_attrs_map_or_leaf_value = attrs_map_or_leaf_value[scim_attribute]
+                  next if sub_attrs_map_or_leaf_value.nil? || (scim_attribute.to_s.downcase == 'id' && path.empty?)
+
                   self.from_scim_backend!(
-                    data_sink:                 data_sink,
-                    attrs_map:                 attrs_map,
+                    attrs_map_or_leaf_value:   sub_attrs_map_or_leaf_value,
                     scim_object_or_leaf_value: value,
                     path:                      path + [scim_attribute]
                   )
                 end
 
               when Array # Collection to map
-                map_entry = attrs_map.dig(*path)
-                map_entry&.each do | mapped_array_entry |
+                attrs_map_or_leaf_value.each_with_index do | mapped_array_entry |
                   next unless mapped_array_entry.is_a?(Hash)
 
                   if mapped_array_entry.key?(:match) # Static map
@@ -465,41 +513,54 @@ module Scimitar
                     # Search for the array entry in the SCIM object that
                     # matches the thing we're looking for via :match & :with.
                     #
-                    found_entry = scim_object_or_leaf_value.find do | scim_array_entry |
+                    found_source_list_entry = scim_object_or_leaf_value.find do | scim_array_entry |
                       scim_array_entry[attr_to_match] == value_to_match
                     end
 
                     # If found, recursive call to take the contents of that and
                     # process it through schema to ultimately call one or more
-                    # write accessors in 'data_sink'.
+                    # write accessors in 'self'.
                     #
-                    if found_entry
+                    unless found_source_list_entry.nil?
                       self.from_scim_backend!(
-                        data_sink:                 data_sink,
-                        attrs_map:                 sub_attrs_map,
-                        scim_object_or_leaf_value: found_entry,
-                        path:                      path ## TODO: Not sure about this bit
+                        attrs_map_or_leaf_value:   sub_attrs_map,
+                        scim_object_or_leaf_value: found_source_list_entry,
+                        path:                      path
                       )
                     end
 
-                    ## TODO: test; is this finished?
-
                   elsif mapped_array_entry.key?(:list) # Dynamic mapping of each complex list item
+                    attribute = resource_class.find_attribute(*path)
+                    method    = "#{mapped_array_entry[:list]}="
 
-                    ## TODO: implement dynamics
+                    if (attribute&.mutability == 'readWrite' || attribute&.mutability == 'writeOnly') && self.respond_to?(method)
+                      find_with_proc = mapped_array_entry[:find_with]
 
-                  end
-                end
+                      unless find_with_proc.nil?
+                        mapped_list = scim_object_or_leaf_value.map do | source_list_entry |
+                          find_with_proc.call(source_list_entry)
+                        end
+
+                        mapped_list.compact!
+
+                        self.public_send(method, mapped_list)
+                      end
+                    end
+                  end # "elsif mapped_array_entry.key?(:list)"
+                end # "map_entry&.each do | mapped_array_entry |"
 
               else # Value to store
-                attribute = resource_class.find_attribute(*path)
+                if attrs_map_or_leaf_value.is_a?(Symbol)
+                  if path == ['externalId'] # Special case held only in schema base class
+                    mutable = true
+                  else
+                    attribute = resource_class.find_attribute(*path)
+                    mutable   = attribute&.mutability == 'readWrite' || attribute&.mutability == 'writeOnly'
+                  end
 
-                if attribute.mutability == 'readWrite' || attribute.mutability == 'writeOnly'
-                  map_entry = attrs_map.dig(*path)
-
-                  if map_entry.is_a?(Symbol)
-                    method = "#{map_entry}="
-                    data_sink.public_send(method, value) if data_sink.respond_to?(method)
+                  if mutable
+                    method = "#{attrs_map_or_leaf_value}="
+                    self.public_send(method, scim_object_or_leaf_value) if self.respond_to?(method)
                   end
                 end
 

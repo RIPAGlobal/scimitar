@@ -36,14 +36,14 @@ RSpec.describe Scimitar::Schema::Base do
       found = Scimitar::Schema::User.find_attribute('groups', 'type')
       expect(found).to be_present
       expect(found.name).to eql('type')
-      expect(found.mutability).to eql('immutable')
+      expect(found.mutability).to eql('readOnly')
     end
 
     it 'finds in multi-valued types, ignoring index' do
       found = Scimitar::Schema::User.find_attribute('groups', 42, 'type')
       expect(found).to be_present
       expect(found.name).to eql('type')
-      expect(found.mutability).to eql('immutable')
+      expect(found.mutability).to eql('readOnly')
     end
 
     it 'does not find bad names' do

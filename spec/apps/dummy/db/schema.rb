@@ -10,7 +10,21 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_03_04_014602) do
+ActiveRecord::Schema.define(version: 2021_03_08_044214) do
+
+  create_table "mock_groups", force: :cascade do |t|
+    t.text "scim_uid"
+    t.text "display_name"
+    t.integer "parent_id"
+    t.index ["parent_id"], name: "index_mock_groups_on_parent_id"
+  end
+
+  create_table "mock_groups_users", id: false, force: :cascade do |t|
+    t.integer "mock_group_id", null: false
+    t.integer "mock_user_id", null: false
+    t.index ["mock_group_id", "mock_user_id"], name: "index_mock_groups_users_on_mock_group_id_and_mock_user_id"
+    t.index ["mock_user_id", "mock_group_id"], name: "index_mock_groups_users_on_mock_user_id_and_mock_group_id"
+  end
 
   create_table "mock_users", force: :cascade do |t|
     t.text "scim_uid"

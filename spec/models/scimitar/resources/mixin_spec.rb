@@ -160,6 +160,13 @@ RSpec.describe Scimitar::Resources::Mixin do
         instance.work_email_address = 'foo.bar@test.com'
         instance.work_phone_number  = '+642201234567'
 
+        g1 = MockGroup.create!(display_name: 'Group 1')
+        g2 = MockGroup.create!(display_name: 'Group 2')
+        g3 = MockGroup.create!(display_name: 'Group 3')
+
+        g1.mock_users << instance
+        g3.mock_users << instance
+
         scim = instance.to_scim(location: 'https://test.com/mock_users/42')
         json = scim.to_json()
         hash = JSON.parse(json)
@@ -172,6 +179,7 @@ RSpec.describe Scimitar::Resources::Mixin do
           'phoneNumbers'=> [{'type'=>'work', 'primary'=>false, 'value'=>'+642201234567'   }], # Note, 'type' present
           'id'          => '42', # Note, String
           'externalId'  => 'AA02984',
+          'groups'      => [{'display'=>g1.display_name, 'value'=>g1.id.to_s}, {'display'=>g3.display_name, 'value'=>g3.id.to_s}],
           'meta'        => {'location'=>'https://test.com/mock_users/42', 'resourceType'=>'User'},
           'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User']
         })
@@ -312,81 +320,64 @@ RSpec.describe Scimitar::Resources::Mixin do
     # #from_scim!
     # ===========================================================================
 
-    xcontext '#from_scim!' do
-      it 'writes instance attribute values from a SCIM representation' do
-        # instance                    = MockUser.new
-        # instance.id                 = 42
-        # instance.scim_uid           = 'AA02984'
-        # instance.username           = 'foo'
-        # instance.first_name         = 'Foo'
-        # instance.last_name          = 'Bar'
-        # instance.work_email_address = 'foo.bar@test.com'
-        # instance.work_phone_number  = '+642201234567'
-        #
-        # scim = instance.to_scim(location: 'https://test.com/mock_users/42')
-        # json = scim.to_json()
-        # hash = JSON.parse(json)
-        #
-        # expect(hash).to eql({
-        #   'userName'    => 'foo',
-        #   'name'        => {'givenName'=>'Foo', 'familyName'=>'Bar'},
-        #   'active'      => true,
-        #   'emails'      => [{'type'=>'work', 'primary'=>true,  'value'=>'foo.bar@test.com'}], # Note, 'type' present
-        #   'phoneNumbers'=> [{'type'=>'work', 'primary'=>false, 'value'=>'+642201234567'   }], # Note, 'type' present
-        #   'id'          => '42', # Note, String
-        #   'externalId'  => 'AA02984',
-        #   'meta'        => {'location'=>'https://test.com/mock_users/42', 'resourceType'=>'User'},
-        #   'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User']
-        # })
-      end
+    context '#from_scim!' do
+      context 'writes instance attribute values from a SCIM representation' do
+        it 'ignoring read-only lists' do
+          hash = {
+            'userName'    => 'foo',
+            'name'        => {'givenName'=>'Foo', 'familyName'=>'Bar'},
+            'active'      => true,
+            'emails'      => [{'type'=>'work', 'primary'=>true,  'value'=>'foo.bar@test.com'}],
+            'phoneNumbers'=> [{'type'=>'work', 'primary'=>false, 'value'=>'+642201234567'   }],
+            'groups'      => [{'type'=>'Group', 'value'=>'1'}, {'type'=>'Group', 'value'=>'2'}],
+            'id'          => '42', # Note, String
+            'externalId'  => 'AA02984',
+            'meta'        => {'location'=>'https://test.com/mock_users/42', 'resourceType'=>'User'},
+            'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User']
+          }
 
-      context 'with arrays' do
-        context 'using static mappings' do
-          it 'converts the SCIM data to appropriate attributes' do
-            # instance = StaticMapTest.new(work_email_address: 'work@test.com', home_email_address: 'home@test.com')
-            # scim     = instance.to_scim(location: 'https://test.com/static_map_test')
-            # json     = scim.to_json()
-            # hash     = JSON.parse(json)
-            #
-            # expect(hash).to eql({
-            #   'emails' => [
-            #     {'type'=>'work', 'primary'=>false, 'value'=>'work@test.com'},
-            #     {'type'=>'home',                   'value'=>'home@test.com'},
-            #   ],
-            #
-            #   'meta'    => {'location'=>'https://test.com/static_map_test', 'resourceType'=>'User'},
-            #   'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User']
-            # })
-          end
-        end # "context 'using static mappings' do"
+          instance = MockUser.new
+          instance.from_scim!(scim_object: hash)
 
-        context 'using dynamic lists' do
-          it 'converts the SCIM lists to collections on the appropriate attribute' do
-            # group  = Struct.new(:id, :full_name, keyword_init: true)
-            # groups = [
-            #   group.new(id: 1, full_name: 'Group 1'),
-            #   group.new(id: 2, full_name: 'Group 2'),
-            #   group.new(id: 3, full_name: 'Group 3'),
-            # ]
-            #
-            # instance = DynamicMapTest.new(groups: groups)
-            # scim     = instance.to_scim(location: 'https://test.com/dynamic_map_test')
-            # json     = scim.to_json()
-            # hash     = JSON.parse(json)
-            #
-            # expect(hash).to eql({
-            #   'groups' => [
-            #     {'display'=>'Group 1', 'value'=>'1'},
-            #     {'display'=>'Group 2', 'value'=>'2'},
-            #     {'display'=>'Group 3', 'value'=>'3'},
-            #   ],
-            #
-            #   'meta'    => {'location'=>'https://test.com/dynamic_map_test', 'resourceType'=>'User'},
-            #   'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User']
-            # })
-          end
-        end # "context 'using dynamic lists' do"
-      end # "context 'with arrays' do"
+          expect(instance.scim_uid          ).to eql('AA02984')
+          expect(instance.username          ).to eql('foo')
+          expect(instance.first_name        ).to eql('Foo')
+          expect(instance.last_name         ).to eql('Bar')
+          expect(instance.work_email_address).to eql('foo.bar@test.com')
+          expect(instance.work_phone_number ).to eql('+642201234567')
+        end
+
+        it 'honouring read-write lists' do
+          g1 = MockGroup.create!(display_name: 'Nested group')
+
+          u1 = MockUser.create!(first_name: 'Member 1')
+          u2 = MockUser.create!(first_name: 'Member 2')
+          u3 = MockUser.create!(first_name: 'Member 3')
+
+          hash = {
+            'displayName' => 'Foo Group',
+            'members'     => [
+              {'type'=>'Group', 'value'=>g1.id.to_s},
+              {'type'=>'User',  'value'=>u1.id.to_s},
+              {'type'=>'User',  'value'=>u3.id.to_s}
+            ],
+            'externalId'  => 'GG01536',
+            'meta'        => {'location'=>'https://test.com/mock_groups/1', 'resourceType'=>'Group'},
+            'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:Group']
+          }
+
+          instance = MockGroup.new
+          instance.from_scim!(scim_object: hash)
+
+          expect(instance.scim_uid         ).to eql('GG01536')
+          expect(instance.display_name     ).to eql('Foo Group')
+          expect(instance.mock_users       ).to match_array([u1, u3])
+          expect(instance.child_mock_groups).to match_array([g1])
+
+          instance.save!
+          expect(g1.reload.parent_id).to eql(instance.id)
+        end
+      end # "context 'writes instance attribute values from a SCIM representation' do"
     end # "context '#from_scim!' do"
   end # "context 'with good class definitons' do"
 end # "RSpec.describe Scimitar::Resources::Mixin do"

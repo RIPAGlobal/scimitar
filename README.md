@@ -77,12 +77,11 @@ namespace :scim do
   get    'Users/:id', to: 'users#show'
   post   'Users',     to: 'users#create'
   put    'Users/:id', to: 'users#update'
-  patch  'Users/:id', to: 'users#update'
   delete 'Users/:id', to: 'users#destroy'
 end
 ```
 
-...noting that both `put` and `patch` operations are declared, both mapping to `#update`. All routes then will be available at `https://.../scim/...`.
+All routes then will be available at `https://.../scim/...`.
 
 
 
@@ -218,7 +217,9 @@ Often, you'll find that bearer tokens are in use by SCIM API consumers, but the 
 
 
 
-## Specification versus implementation
+## Limitations
+
+### Specification versus implementation
 
 * The `name` complex type of a User has `givenName` and `familyName` fields which [the RFC 7643 core schema](https://tools.ietf.org/html/rfc7643#section-8.7.1) describes as optional. Scimitar marks these as required, in the belief that most user synchronisation scenarios between clients and a Scimitar-based provider would require at least those names for basic user management on the provider side, in conjunction with the in-spec-required `userName` field. That's only if the whole `name` type is given at all - at the top level, this itself remains optional per spec, but if you're going to bother specifying names at all, Scimitar wants at least those two pieces of data.
 
@@ -227,6 +228,13 @@ Often, you'll find that bearer tokens are in use by SCIM API consumers, but the 
 * The `displayName` of a Group is described in [RFC 7643 section 4.2](https://tools.ietf.org/html/rfc7643#section-4.2) and in the free-text schema `description` field as required, but the schema nonetheless states `"required" : false` in the formal definition. We consider this to be an error and mark the property as `"required" : true`.
 
 * In the `members` section of a [`Group` in the RFC 7643 core schema](https://tools.ietf.org/html/rfc7643#page-69), any member's `value` is noted as _not_ required but [the RFC also says](https://tools.ietf.org/html/rfc7643#section-4.2) "Service providers MAY require clients to provide a non-empty value by setting the "required" attribute characteristic of a sub-attribute of the "members" attribute in the "Group" resource schema". Scimitar does this. The `value` field would contain the `id` of a SCIM resource, which is the primary key on "our side" as a service provider. Just as we must store `externalId` values to maintain a mapping on "our side", we in turn _do_ require clients to provide our ID in group member lists via the `value` field.
+
+
+### Omissions
+
+* Only a single filters are supported ("attribute-operation-value" or "attribute-present"); no multiple entries with "and"/"or"/"not", or support for parentheses indicating precedence.
+
+* Only whole-resource `PUT` is supported for updates, not the complicated `PATCH` mechanism. The mandatory former maps very closely to Rails behaviour while the optional latter would require very extensive extra code, especially around multiple operation types and `path` handling, with its filter-like strings.
 
 
 

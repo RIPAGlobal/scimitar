@@ -14,6 +14,8 @@ class MockUser < ActiveRecord::Base
     work_phone_number
   }
 
+  has_and_belongs_to_many :mock_groups
+
   # A fixed value read-only attribute, in essence.
   #
   def is_active
@@ -56,6 +58,15 @@ class MockUser < ActiveRecord::Base
             primary: false
           }
         },
+      ],
+      groups: [ # NB read-only, so no :find_with key
+        {
+          list:  :mock_groups,
+          using: {
+            value:   :id,
+            display: :display_name
+          }
+        }
       ],
       active: :is_active
     }

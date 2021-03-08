@@ -18,7 +18,7 @@ module Scimitar
       def self.scim_attributes
         [
           Attribute.new(name: 'displayName', type: 'string', required: true),
-          Attribute.new(name: 'members', multiValued: true, complexType: Scimitar::ComplexTypes::Reference, mutability: 'readWrite')
+          Attribute.new(name: 'members', multiValued: true, complexType: Scimitar::ComplexTypes::ReferenceMember, mutability: 'readWrite')
         ]
       end
 
