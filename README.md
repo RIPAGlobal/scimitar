@@ -141,7 +141,7 @@ module Scim
         # and save. IMPORTANT: Make sure you store the 'externalId' value.
       rescue ActiveRecord::RecordInvalid => exception
         # Map the enternal errors to a ScimEngine error.
-        raise ScimEngine::ResourceInvalidError.new()
+        raise ScimEngine::ResourceInvalidError.new(...error message here...)
       end
 
       # The class including Scimitar::Resources::Mixin which declares mappings

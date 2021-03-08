@@ -76,7 +76,7 @@ module Scim
 
       rescue ActiveRecord::RecordInvalid => exception
         # Map the enternal errors to a Scimitar error
-        raise Scimitar::ResourceInvalidError.new()
+        raise Scimitar::ResourceInvalidError.new(instance.errors.full_messages.join('; '))
       end
 
   end # "class UsersController < Scimitar::ResourcesController"
