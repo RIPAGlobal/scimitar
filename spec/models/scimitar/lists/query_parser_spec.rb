@@ -11,127 +11,105 @@ RSpec.describe Scimitar::Lists::QueryParser do
   #
   require_relative '../../../apps/dummy/app/models/mock_user.rb'
 
-  # ===========================================================================
-  # ATTRIBUTES
-  # ===========================================================================
-
-  context '#attribute' do
-    it 'complains if there is no attribute present' do
-      instance = described_class.new(
-        MockUser.new.scim_queryable_attributes(),
-        ''
-      )
-
-      expect { instance.attribute() }.to raise_error(Scimitar::FilterError)
-    end
-
-    it 'complains if there is no attribute mapping available' do
-      instance = described_class.new(
-        MockUser.new.scim_queryable_attributes(),
-        'externalId eq 12345678'
-      )
-
-      expect { instance.attribute() }.to raise_error(Scimitar::FilterError)
-    end
-
-    it 'returns the attribute' do
-      instance = described_class.new(
-        MockUser.new.scim_queryable_attributes(),
-        'familyName eq BAZ'
-      )
-
-      expect(instance.attribute()).to eql(:last_name)
-    end
-  end # "context '#attribute' do"
+  before :each do
+    @instance = described_class.new(MockUser.new.scim_queryable_attributes())
+  end
 
   # ===========================================================================
-  # OPERATORS
+  # PRIVATE METHODS
   # ===========================================================================
 
-  context '#operator' do
-    it 'complains if there is no operator present' do
-      instance = described_class.new(
-        MockUser.new.scim_queryable_attributes(),
-        'familyName'
-      )
+  context 'internal method' do
 
-      expect { instance.operator() }.to raise_error(Scimitar::FilterError)
-    end
+    # =========================================================================
+    # Attributes
+    # =========================================================================
 
-    it 'complains if the operator is unrecognised' do
-      instance = described_class.new(
-        MockUser.new.scim_queryable_attributes(),
-        'familyName zz BAZ'
-      )
-
-      expect { instance.operator() }.to raise_error(Scimitar::FilterError)
-    end
-
-    it 'returns expected operators' do
-
-      # Hand-written instead of using a constant, so we check one set of hand
-      # drawn mappings against another and hopefully increase the chances of
-      # spotting an error.
-      #
-      expected_mapping = {
-        'eq' => '=',
-        'ne' => '!=',
-        'gt' => '>',
-        'ge' => '>=',
-        'lt' => '<',
-        'le' => '<=',
-        'co' => 'LIKE',
-        'sw' => 'LIKE',
-        'ew' => 'LIKE'
-      }
-
-      # Self-check: Is test coverage up to date?
-      #
-      expect(expected_mapping.keys).to match_array(Scimitar::Lists::QueryParser::SQL_COMPARISON_OPERATOR.keys)
-
-      expected_mapping.each do | input, expected_output |
-        instance = described_class.new(
-          MockUser.new.scim_queryable_attributes(),
-          "familyName #{input} BAZ"
-        )
-
-        expect(instance.operator()).to eql(expected_output)
+    context '#activerecord_attribute' do
+      it 'complains if there is no attribute present' do
+        expect { @instance.send(:activerecord_attribute, nil) }.to raise_error(Scimitar::FilterError)
+        expect { @instance.send(:activerecord_attribute, '' ) }.to raise_error(Scimitar::FilterError)
       end
-    end
 
-    it 'is case insensitive' do
-      instance = described_class.new(
-        MockUser.new.scim_queryable_attributes(),
-        'familyName eQ BAZ'
-      )
+      it 'complains if there is no attribute mapping available' do
+        expect { @instance.send(:activerecord_attribute, 'externalId') }.to raise_error(Scimitar::FilterError)
+      end
 
-      expect(instance.operator()).to eql('=')
-    end
-  end # "context '#operator' do"
+      it 'returns the attribute' do
+        expect(@instance.send(:activerecord_attribute, 'familyName')).to eql(:last_name)
+      end
+    end # "context '#activerecord_attribute' do"
 
-  # ===========================================================================
-  # PARAMETERS
-  # ===========================================================================
+    # =========================================================================
+    # Operators
+    # =========================================================================
 
-  context '#parameter' do
-    it 'returns a blank string if a parameter is missing' do
-      instance = described_class.new(
-        MockUser.new.scim_queryable_attributes(),
-        'familyName eq'
-      )
+    context '#activerecord_operator' do
+      it 'complains if there is no operator present' do
+        expect { @instance.send(:activerecord_operator, nil) }.to raise_error(Scimitar::FilterError)
+        expect { @instance.send(:activerecord_operator, '' ) }.to raise_error(Scimitar::FilterError)
+      end
 
-      expect(instance.parameter()).to eql('')
-    end
+      it 'complains if the operator is unrecognised' do
+        @instance = described_class.new(MockUser.new.scim_queryable_attributes())
 
-    it 'returns the parameter if present' do
-      instance = described_class.new(
-        MockUser.new.scim_queryable_attributes(),
-        'familyName eq BAZ'
-      )
+        expect { @instance.send(:activerecord_operator, 'zz') }.to raise_error(Scimitar::FilterError)
+      end
 
-      expect(instance.parameter()).to eql('BAZ')
-    end
-  end # "context '#parameter' do"
+      it 'returns expected operators' do
+
+        # Hand-written instead of using a constant, so we check one set of hand
+        # drawn mappings against another and hopefully increase the chances of
+        # spotting an error.
+        #
+        expected_mapping = {
+          'eq' => '=',
+          'ne' => '!=',
+          'gt' => '>',
+          'ge' => '>=',
+          'lt' => '<',
+          'le' => '<=',
+          'co' => 'LIKE',
+          'sw' => 'LIKE',
+          'ew' => 'LIKE'
+        }
+
+        # Self-check: Is test coverage up to date?
+        #
+        expect(expected_mapping.keys).to match_array(Scimitar::Lists::QueryParser::SQL_COMPARISON_OPERATORS.keys)
+
+        expected_mapping.each do | input, expected_output |
+          expect(@instance.send(:activerecord_operator, input)).to eql(expected_output)
+        end
+      end
+
+      it 'is case insensitive' do
+        expect(@instance.send(:activerecord_operator, 'eQ')).to eql('=')
+      end
+    end # "context '#activerecord_operator' do"
+
+    # =========================================================================
+    # Parameters
+    # =========================================================================
+
+    context '#activerecord_parameter' do
+      it 'returns a blank string if a parameter is missing' do
+        expect(@instance.send(:activerecord_parameter, nil )).to eql('')
+        expect(@instance.send(:activerecord_parameter, ''  )).to eql('')
+        expect(@instance.send(:activerecord_parameter, '  ')).to eql('')
+      end
+
+      it 'returns the parameter if present' do
+        expect(@instance.send(:activerecord_parameter, 'BAZ')).to eql('BAZ')
+      end
+
+      it 'removes surrounding quotes if present' do
+        expect(@instance.send(:activerecord_parameter, '"BA"Z"')).to eql('BA"Z')
+        expect(@instance.send(:activerecord_parameter, '"BA"Z' )).to eql('"BA"Z')
+        expect(@instance.send(:activerecord_parameter, 'BA"Z"' )).to eql('BA"Z"')
+      end
+    end # "context '#parameter' do"
+  end # "context 'unit tests for internal methods' do"
 
   # ===========================================================================
   # ACTIVERECORD QUERIES
@@ -145,28 +123,24 @@ RSpec.describe Scimitar::Lists::QueryParser do
       # spotting an error.
       #
       expected_mapping = {
-        'eq' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" = 'BAZ')},
-        'ne' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" != 'BAZ')},
-        'gt' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" > 'BAZ')},
+        'eQ' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" = 'BAZ')},
+        'Ne' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" != 'BAZ')},
+        'GT' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" > 'BAZ')},
         'ge' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" >= 'BAZ')},
-        'lt' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" < 'BAZ')},
-        'le' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" <= 'BAZ')},
-        'co' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" LIKE '%BAZ%')},
+        'LT' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" < 'BAZ')},
+        'Le' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" <= 'BAZ')},
+        'cO' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" LIKE '%BAZ%')},
         'sw' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" LIKE 'BAZ%')},
-        'ew' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" LIKE '%BAZ')},
+        'eW' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" LIKE '%BAZ')},
       }
 
       # Self-check: Is test coverage up to date?
       #
-      expect(expected_mapping.keys).to match_array(Scimitar::Lists::QueryParser::SQL_COMPARISON_OPERATOR.keys)
+      expect(expected_mapping.keys.map(&:downcase)).to match_array(Scimitar::Lists::QueryParser::SQL_COMPARISON_OPERATORS.keys)
 
       expected_mapping.each do | input, expected_output |
-        instance = described_class.new(
-          MockUser.new.scim_queryable_attributes(),
-          "familyName #{input} BAZ"
-        )
-
-        query = instance.to_activerecord_query(MockUser.all)
+        @instance.parse("familyName #{input} \"BAZ\"")
+        query = @instance.to_activerecord_query(MockUser.all)
 
         # Run a count just to prove the result is at least of valid syntax and
         # check the SQL against expectations.
@@ -177,25 +151,26 @@ RSpec.describe Scimitar::Lists::QueryParser do
     end
 
     it 'handles "pr" (presence) checks' do
-      instance = described_class.new(
-        MockUser.new.scim_queryable_attributes(),
-        'familyName pr'
-      )
+      @instance.parse("familyName Pr")
+      query = @instance.to_activerecord_query(MockUser.all)
 
       # NB ActiveRecord SQL quirk leads to double parentheses after the WHERE
       # NOT clause; this is harmless.
       #
-      query = instance.to_activerecord_query(MockUser.all)
       expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE NOT (("mock_users"."last_name" = '' OR "mock_users"."last_name" IS NULL))})
     end
 
-    it 'escapes values sent into LIKE statements' do
-      instance = described_class.new(
-        MockUser.new.scim_queryable_attributes(),
-        'familyName co B%_AZ'
-      )
+    # Technically tests #parse :-) but I hit this when writing the test that
+    # immediately follows - this location will do for now, since OK in context.
+    #
+    it 'complains about incorrectly quoted queries' do
+      expect { @instance.parse('familyName co B%_AZ') }.to raise_error(Scimitar::FilterError)
+    end
 
-      query = instance.to_activerecord_query(MockUser.all)
+    it 'escapes values sent into LIKE statements' do
+      @instance.parse('familyName co "B%_AZ"')
+      query = @instance.to_activerecord_query(MockUser.all)
+
       expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" LIKE '%B\%\_AZ%')})
     end
 
@@ -206,41 +181,29 @@ RSpec.describe Scimitar::Lists::QueryParser do
 
       # Test the various "LIKE" wildcards
 
-      instance = described_class.new(
-        MockUser.new.scim_queryable_attributes(),
-        'familyName co o' # Last name contains 'o'
-      )
+      @instance.parse('familyName co o') # Last name contains 'o'
+      query = @instance.to_activerecord_query(MockUser.all)
 
-      query = instance.to_activerecord_query(MockUser.all)
       expect(query.count).to eql(1)
       expect(query.pluck(:id)).to eql([user_1.id])
 
-      instance = described_class.new(
-        MockUser.new.scim_queryable_attributes(),
-        'givenName sw J' # First name starts with 'J'
-      )
+      @instance.parse('givenName sw J') # First name starts with 'J'
+      query = @instance.to_activerecord_query(MockUser.all)
 
-      query = instance.to_activerecord_query(MockUser.all)
       expect(query.count).to eql(2)
       expect(query.pluck(:id)).to match_array([user_1.id, user_2.id])
 
-      instance = described_class.new(
-        MockUser.new.scim_queryable_attributes(),
-        'familyName ew he' # Last name ends with 'he'
-      )
+      @instance.parse('familyName ew he') # Last name ends with 'he'
+      query = @instance.to_activerecord_query(MockUser.all)
 
-      query = instance.to_activerecord_query(MockUser.all)
       expect(query.count).to eql(1)
       expect(query.pluck(:id)).to eql([user_2.id])
 
       # Test presence
 
-      instance = described_class.new(
-        MockUser.new.scim_queryable_attributes(),
-        'givenName pr' # First name is present
-      )
+      @instance.parse('givenName pr') # First name is present
+      query = @instance.to_activerecord_query(MockUser.all)
 
-      query = instance.to_activerecord_query(MockUser.all)
       expect(query.count).to eql(2)
       expect(query.pluck(:id)).to match_array([user_1.id, user_2.id])
 
@@ -248,30 +211,81 @@ RSpec.describe Scimitar::Lists::QueryParser do
       # the query would find "user_3" *except* there is no first name defined
       # at all, and in SQL, "foo != bar" is *not* a match if foo IS NULL.
 
-      instance = described_class.new(
-        MockUser.new.scim_queryable_attributes(),
-        'givenName ne Bob' # First name is not 'Bob'
-      )
-
-      query = instance.to_activerecord_query(MockUser.where.not('first_name' => 'John'))
+      @instance.parse('givenName ne Bob') # First name is not 'Bob'
+      query = @instance.to_activerecord_query(MockUser.where.not('first_name' => 'John'))
 
       expect(query.count).to eql(1)
       expect(query.pluck(:id)).to match_array([user_1.id])
     end
+
+    context 'with complex cases' do
+      context 'using AND' do
+        it 'generates expected SQL' do
+          @instance.parse('givenName pr AND familyName eq "Doe"')
+          query = @instance.to_activerecord_query(MockUser.all)
+
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE NOT (("mock_users"."first_name" = '' OR "mock_users"."first_name" IS NULL)) AND ("last_name" = 'Doe')})
+        end
+
+        it 'finds expected items' do
+          user_1 = MockUser.create(first_name: 'Jane', last_name: 'Davis')
+          user_2 = MockUser.create(first_name: 'John', last_name: 'Doe')
+          user_3 = MockUser.create(                    last_name: 'Doe')
+
+          @instance.parse('givenName pr AND familyName eq "Doe"')
+          query = @instance.to_activerecord_query(MockUser.all)
+
+          expect(query.count).to eql(1)
+          expect(query.pluck(:id)).to match_array([user_2.id])
+        end
+      end # "context 'simple AND' do"
+
+      context 'using OR' do
+        it 'generates expected SQL' do
+          @instance.parse('givenName pr OR familyName eq "Doe"')
+          query = @instance.to_activerecord_query(MockUser.all)
+
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE (NOT (("mock_users"."first_name" = '' OR "mock_users"."first_name" IS NULL)) OR "last_name" = 'Doe')})
+        end
+
+        it 'finds expected items' do
+          user_1 = MockUser.create(first_name: 'Jane', last_name: 'Davis')
+          user_2 = MockUser.create(                    last_name: 'Doe')
+          user_3 = MockUser.create(                    last_name: 'Smith')
+
+          @instance.parse('givenName pr OR familyName eq "Doe"')
+          query = @instance.to_activerecord_query(MockUser.all)
+
+          expect(query.count).to eql(2)
+          expect(query.pluck(:id)).to match_array([user_1.id, user_2.id])
+        end
+      end # "context 'simple OR' do"
+
+      context 'combined AND, OR and parentheses' do
+        it 'generates expected SQL' do
+          @instance.parse('givenName eq "Jane" and (familyName co "avi" or familyName ew "ith")')
+          query = @instance.to_activerecord_query(MockUser.all)
+
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE ("first_name" = 'Jane') AND ("last_name" LIKE '%avi%' OR "last_name" LIKE '%ith')})
+        end
+
+        it 'finds expected items' do
+          user_1 = MockUser.create(first_name: 'Jane', last_name: 'Davis')   # Match
+          user_2 = MockUser.create(first_name: 'Jane', last_name: 'Smith')   # Match
+          user_3 = MockUser.create(first_name: 'Jane', last_name: 'Moreith') # Match
+          user_4 = MockUser.create(first_name: 'Jane', last_name: 'Doe')     # No last name match
+          user_5 = MockUser.create(first_name: 'Doe',  last_name: 'Smith')   # No first name match
+          user_6 = MockUser.create(first_name: 'Bill', last_name: 'Davis')   # No first name match
+          user_7 = MockUser.create(                    last_name: 'Davis')   # Missing first name
+          user_8 = MockUser.create(                    last_name: 'Smith')   # Missing first name
+
+          @instance.parse('givenName eq "Jane" and (familyName co "avi" or familyName ew "ith")')
+          query = @instance.to_activerecord_query(MockUser.all)
+
+          expect(query.count).to eql(3)
+          expect(query.pluck(:id)).to match_array([user_1.id, user_2.id, user_3.id])
+        end
+      end # "context 'combined AND and OR' do"
+    end # "context 'complex cases' do"
   end # "context '#to_activerecord_query' do"
-
-  # ===========================================================================
-  # INSTANTIATION
-  # ===========================================================================
-
-  context 'instantiation' do
-    it 'complains if not given a String for the query, which can in particular happen if "params" is handled improperly in the controller' do
-      expect {
-        described_class.new(
-          MockUser.new.scim_queryable_attributes(),
-          {'filter' => 'familyName eq BAZ'}
-        )
-      }.to raise_error(RuntimeError, /#{Regexp.escape('Hash passed')}/)
-    end
-  end # "context 'instantiation' do"
-end
+end # "RSpec.describe Scimitar::Lists::QueryParser do"

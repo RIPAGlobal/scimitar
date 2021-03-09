@@ -40,10 +40,11 @@ Scimitar uses [semantic versioning](https://semver.org) so you can be confident 
 
 ## Heritage
 
-Scimitar borrow heavily - to the point of cut-and-paste - from:
+Scimitar borrows heavily - to the point of cut-and-paste - from:
 
 * [ScimEngine](https://github.com/Cisco-AMP/scim_engine) for the Rails controllers and resource-agnostic subclassing approach that makes supporting User and/or Group, along with custom resource types if you need them, quite easy.
 * [ScimRails](https://github.com/lessonly/scim_rails) for the bearer token support, 'index' actions and filter support.
+* [SCIM Query Filter Parser](https://github.com/ingydotnet/scim-query-filter-parser-rb) for advanced filter handling.
 
 All three are provided under the MIT license. Scimitar is too.
 
@@ -256,7 +257,7 @@ The tests use [RSpec](http://rspec.info) and require SQLite to be installed on y
 
 ```shell
 pushd spec/apps/dummy
-RAILS_ENV=test bundle exec rails db:drop db:create db:schema:load
+RAILS_ENV=test bundle exec rails db:drop db:create db:migrate
 popd
 ```
 

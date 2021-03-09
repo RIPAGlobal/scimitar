@@ -30,9 +30,36 @@ module Scimitar
     #
     class QueryParser
 
-      # Map SCIM operators to generic(ish) SQL operators. See #operator.
+      attr_reader :attribute_map, :rpn
+
+      # Combined operator precedence.
       #
-      SQL_COMPARISON_OPERATOR = {
+      OPERATORS = {
+        'pr' => 4,
+
+        'eq' => 3,
+        'ne' => 3,
+        'gt' => 3,
+        'ge' => 3,
+        'lt' => 3,
+        'le' => 3,
+        'co' => 3,
+        'sw' => 3,
+        'ew' => 3,
+
+        'and' => 2,
+        'or'  => 1
+      }.freeze
+
+      # Unary operators.
+      #
+      UNARY_OPERATORS = Set.new([
+        'pr'
+      ]).freeze
+
+      # Map SCIM operators to generic(ish) SQL operators.
+      #
+      SQL_COMPARISON_OPERATORS = {
         'eq' => '=',
         'ne' => '!=',
         'gt' => '>',
@@ -42,10 +69,19 @@ module Scimitar
         'co' => 'LIKE',
         'sw' => 'LIKE',
         'ew' => 'LIKE'
-      }
+      }.freeze
 
-      attr_reader :query_elements
-      attr_reader :attribute_map
+      # =======================================================================
+      # Tokenizing expressions
+      # =======================================================================
+
+      PAREN       = /[\(\)]/.freeze
+      STR         = /"(?:\\"|[^"])*"/.freeze
+      OP          = /#{OPERATORS.keys.join('|')}/i.freeze
+      WORD        = /[\w\.]+/.freeze
+      SEP         = /\s?/.freeze
+      NEXT_TOKEN  = /\A(#{PAREN}|#{STR}|#{OP}|#{WORD})#{SEP}/.freeze
+      IS_OPERATOR = /\A(?:#{OP})\Z/.freeze
 
       # Initialise an object.
       #
@@ -53,119 +89,415 @@ module Scimitar
       #                   implementing ::scim_queryable_attributes; pass that
       #                   method's return value here.
       #
-      # +query_string+::  Query string from inbound HTTP request.
-      #
-      def initialize(attribute_map, query_string)
-        unless query_string.is_a?(String)
-          raise "Scimitar::Lists::QueryParser#new: #{query_string.class} passed instead of string"
-        end
-
-        @attribute_map  = attribute_map
-        @query_elements = query_string.split(" ")
+      def initialize(attribute_map)
+        @attribute_map = attribute_map
       end
 
-      # Returns the mapped-to-your-domain attribute that the filter string is
-      # operating upon. If +nil+, there is no match.
+      # Parse SCIM filter query into RPN stack
       #
-      # TODO: Support more than one filter entry!
+      # +input+:: Input filter string, e.g. 'giveName eq "Briony"'.
       #
-      def attribute
-        scim_attr = self.scim_attribute()
+      # @return [SCIM::Query::Filter::Parser]
+      #
+      # Returns a SCIM::Query::Filter::Parser instance. Call #rpn on this to
+      # retrieve the parsed RPN stack. For example, given this input:
+      #
+      #     userType eq "Employee" and (emails co "example.com" or emails co "example.org")
+      #
+      # ...returns a parser object wherein #rpn will yield:
+      #
+      #     [
+      #       'userType',
+      #       '"Employee"',
+      #       'eq',
+      #       'emails',
+      #       '"example.com"',
+      #       'co',
+      #       'emails',
+      #       '"example.org"',
+      #       'co',
+      #       'or',
+      #       'and'
+      #     ]
+      #
+      # Alternatively, call #tree to get an expression tree:
+      #
+      #     [
+      #       'and',
+      #       [
+      #         'eq',
+      #         'userType',
+      #         '"Employee"'
+      #       ],
+      #       [
+      #         'or',
+      #         [
+      #           'co',
+      #           'emails',
+      #           '"example.com"'
+      #         ],
+      #         [
+      #           'co',
+      #           'emails',
+      #           '"example.org"'
+      #         ]
+      #       ]
+      #     ]
+      #
+      def parse(input)
+        # Save for error msgs
+        @input  = input.clone()
+        @tokens = self.lex(input)
+        @rpn    = self.parse_expr()
 
-        raise Scimitar::FilterError if scim_attr.blank?
-
-        scim_attr   = scim_attr.to_sym
-        mapped_attr = self.attribute_map()[scim_attr]
-
-        raise Scimitar::FilterError if mapped_attr.blank?
-
-        return mapped_attr
+        self.assert_eos()
+        self
       end
 
-      # Returns an SQL operator equivalent to that given in the filter string.
+      # Transform the RPN stack into a tree, returning the result. A new tree
+      # is created each time, so you can mutate the result if need be.
       #
-      # Raises Scimitar::FilterError if the filter cannot be handled. The most
-      # likely case is for "pr" (presence), which has no simple generic (ish)
-      # SQL equivalent. Note that "LIKE" is returned for "co", "sw" and "ew"
-      # (contains, starts-with, ends-with).
+      # See #parse for more information.
       #
-      # TODO: Support more than one filter entry!
-      #
-      def operator
-        scim_op = self.query_elements()[1]
-        sql_op  = self.sql_comparison_operator(scim_operator)
-
-        raise Scimitar::FilterError if sql_op.nil?
-        return sql_op
+      def tree
+        @stack = @rpn.clone()
+        self.get_tree()
       end
 
-      # Return the parameter that you're looking for, from the filter string.
-      # This might be blank, e.g. for "pr" (presence), but is never +nil+. Use
-      # this to construct your storage-system-specific search string but be
-      # sure to escape it, where necessary, for any special characters (e.g.
-      # to prevent SQL injection attacks or accidentally-wildcarded searches).
+      # Having called #parse, call here to generate an ActiveRecord query based
+      # on a given starting scope. The scope is used for all 'and' queries and
+      # as a basis for any nested 'or' scopes. For example, given this input:
       #
-      # TODO: Support more than one filter entry!
+      #     userType eq "Employee" and (emails eq "a@b.com" or emails eq "a@b.org")
       #
-      def parameter
-        scim_param = self.scim_parameter()
-        return scim_param.blank? ? '' : scim_param
-      end
-
-      # Collates #attribute, #operator and #parameter into an ActiveRecord
-      # query that also handles "pr" (presence) checks. Asssumes "%" is a valid
-      # wildcard for the LIKE operator. Handles all safety/escaping issues.
-      # Returns an ActiveRecord::Relation that narrows the given base scope.
+      # ...and if you passed 'User.active' as a scope, there would be something
+      # along these lines sent to ActiveRecord:
       #
-      # +base_scope+:: ActiveRecord::Relation that is to be narrowed by filter
-      #                (e.g. "User.all" or "Company.users").
+      #     User.active.where(user_type: 'Employee').and(User.active.where(work_email: 'a@b.com').or(User.active.where(work_email: 'a@b.org')))
+      #
+      # See query_parser_spec.rb to get an idea for expected SQL based on various
+      # kinds of input, especially section "context 'with complex cases' do".
+      #
+      # +base_scope+:: The starting scope, e.g. User.active.
+      #
+      # Returns an ActiveRecord::Relation giving an SQL query that is the gem's
+      # best attempt at interpreting the SCIM filter string.
       #
       def to_activerecord_query(base_scope)
-        query       = base_scope
-        column_name = self.attribute()
-        safe_value  = sql_modified_value(self.scim_operator(), self.parameter())
+        return self.to_activerecord_query_backend(
+          base_scope:      base_scope,
+          expression_tree: self.tree()
+        )
+      end
 
-        if safe_value.nil? # Presence ("pr") assumed
-          query = query.where.not(column_name => ['', nil])
-        else
-          sql_operator = self.operator()
-          if sql_operator.present?
-            safe_column_name = ActiveRecord::Base.connection.quote_column_name(column_name)
-            query = query.where("#{safe_column_name} #{sql_operator} ?", safe_value)
+      # =======================================================================
+      # PRIVATE INSTANCE METHODS
+      # =======================================================================
+      #
+      private
+
+        def parse_expr
+          ast       = []
+          expect_op = false
+
+          while !self.eos? && self.peek() != ')'
+            expect_op && self.assert_op() || self.assert_not_op()
+
+            ast.push(self.start_group? ? self.parse_group() : self.pop())
+
+            unless ! ast.last.is_a?(String) || UNARY_OPERATORS.include?(ast.last.downcase)
+              expect_op ^= true
+            end
+          end
+
+          self.to_rpn(ast)
+        end
+
+        def parse_group
+          # pop '(' token
+          self.pop()
+
+          ast = self.parse_expr()
+
+          # pop ')' token
+          self.assert_close() && self.pop()
+
+          ast
+        end
+
+        # Split input into tokens
+        #
+        # @param input [String]
+        #
+        # @return [Array<String>]
+        def lex(input)
+          input = input.clone
+          tokens = []
+
+          until input.empty? do
+            input.sub!(NEXT_TOKEN, '') || fail(Scimitar::FilterError, "Can't lex input here '#{input}'")
+
+            tokens.push($1)
+          end
+          tokens
+        end
+
+        # Turn parsed tokens into an RPN stack
+        #
+        # @see http://en.wikipedia.org/wiki/Shunting_yard_algorithm
+        #
+        # @param ast [Array]
+        def to_rpn(ast)
+          out = []
+          ops = []
+
+          out.push(ast.shift) unless ast.empty?
+
+          until ast.empty? do
+            op = ast.shift
+            precedence = OPERATORS[op&.downcase] || fail(Scimitar::FilterError, "Unknown operator '#{op}'")
+
+            until ops.empty? do
+              break if precedence > OPERATORS[ops.first&.downcase]
+              out.push(ops.shift)
+            end
+
+            ops.unshift(op)
+            out.push(ast.shift) unless UNARY_OPERATORS.include?(op&.downcase)
+          end
+          (out.concat(ops)).flatten
+        end
+
+        # Transform RPN stack into a tree structure. A new copy of the tree is
+        # returned each time, so you can mutate the result if need be.
+        #
+        def get_tree
+          tree = []
+          unless @stack.empty?
+            op = tree[0] = @stack.pop()
+            tree[1] = OPERATORS[@stack.last&.downcase] ? self.get_tree() : @stack.pop()
+
+            unless UNARY_OPERATORS.include?(op&.downcase)
+              tree.insert(1, (OPERATORS[@stack.last&.downcase] ? self.get_tree() : @stack.pop()))
+            end
+          end
+          tree
+        end
+
+        # =====================================================================
+        # Token sugar methods
+        # =====================================================================
+
+        def peek
+          @tokens.first()
+        end
+
+        def pop
+          @tokens.shift()
+        end
+
+        def eos?
+          @tokens.empty?
+        end
+
+        def start_group?
+          self.peek() == '('
+        end
+
+        def peek_operator
+          !self.eos? && self.peek().match(IS_OPERATOR)
+        end
+
+        # =====================================================================
+        # Error handling
+        # =====================================================================
+
+        def parse_error(msg)
+          raise Scimitar::FilterError("#{sprintf(msg, *@tokens, 'EOS')}.\nInput: '#{@input}'\n")
+        end
+
+        def assert_op
+          return true if self.peek_operator()
+          self.parse_error("Unexpected token '%s'. Expected operator")
+        end
+
+        def assert_not_op
+          return true unless self.peek_operator()
+          self.parse_error("Unexpected operator '%s'")
+        end
+
+        def assert_close
+          return true if self.peek() == ')'
+          self.parse_error("Unexpected token '%s'. Expected ')'")
+        end
+
+        def assert_eos
+          return true if self.eos?
+          self.parse_error("Unexpected token '%s'. Expected EOS")
+        end
+
+        # =====================================================================
+        # ActiveRecord query support
+        # =====================================================================
+
+        # Recursively process an expression tree. Calls itself with nested tree
+        # fragments. Each inner expression fragment calculates on the given
+        # base scope, with aggregration at each level into a wider query using
+        # AND or OR depending on the expression tree contents.
+        #
+        # +base_scope+::      Base scope (ActiveRecord::Relation, e.g. User.all
+        #                     - neverchanges during recursion).
+        #
+        # +expression_tree+:: Top-level expression tree or fragments inside if
+        #                     self-calling recursively.
+        #
+        def to_activerecord_query_backend(base_scope:, expression_tree:)
+          combining_method = :and
+          combining_yet    = false
+          query            = base_scope
+
+          first_item = expression_tree.first
+          first_item = first_item.downcase if first_item.is_a?(String)
+
+          if first_item == 'or'
+            combining_method = :or
+            expression_tree.shift()
+          elsif first_item == 'and'
+            expression_tree.shift()
+          elsif ! first_item.is_a?(Array) # Simple query; entire tree is just presence tuple or expression triple
+            raise Scimitar::FilterError unless expression_tree.size == 2 || expression_tree.size == 3
+            return apply_scim_filter( # NOTE EARLY EXIT
+              base_scope:     query,
+              scim_attribute: expression_tree[1],
+              scim_operator:  expression_tree[0],
+              scim_parameter: expression_tree[2]
+            )
+          end
+
+          expression_tree.each do | entry |
+            raise Scimitar::FilterError unless entry.is_a?(Array)
+
+            first_sub_item = entry.first
+            first_sub_item = first_sub_item.downcase if first_sub_item.is_a?(String)
+            nested         = first_sub_item.is_a?(Array) || first_sub_item == 'and' || first_sub_item == 'or'
+
+            if nested
+              query_component = to_activerecord_query_backend(
+                base_scope:      base_scope,
+                expression_tree: entry
+              )
+            else
+              raise Scimitar::FilterError unless entry.size == 2 || entry.size == 3
+              query_component = apply_scim_filter(
+                base_scope:     base_scope,
+                scim_attribute: entry[1],
+                scim_operator:  entry[0],
+                scim_parameter: entry[2]
+              )
+            end
+
+            # ActiveRecord quirk: User.and(User.where...) produces useful SQL
+            # but User.or(User.where...) just ignores everything inside 'or';
+            # so, make sure we only use a combination method once actually
+            # combining things - not for the very first query component.
+            #
+            if combining_yet
+              query = query.send(combining_method, query_component)
+            else
+              query = query.and(query_component)
+              combining_yet = true
+            end
+          end
+
+          return query
+        end
+
+        # Apply a SCIM filter to a given base scope.
+        #
+        # +base_scope+::     Base scope (ActiveRecord::Relation, e.g. User.all)
+        # +scim_attribute+:: SCIM domain attribute, e.g. 'familyName'
+        # +scim_operator+::  SCIM operator, e.g. 'eq', 'co', 'pr'
+        # +scim_parameter+:: Parameter to match, or +nil+ for operator 'pr'
+        #
+        # The SCIM operator is case-insensitive.
+        #
+        def apply_scim_filter(
+          base_scope:,
+          scim_attribute:,
+          scim_operator:,
+          scim_parameter:
+        )
+          query       = base_scope
+          column_name = self.activerecord_attribute(scim_attribute)
+          safe_value  = self.sql_modified_value(scim_operator, self.activerecord_parameter(scim_parameter))
+
+          if safe_value.nil? # Presence ("pr") assumed
+            query = base_scope.where.not(column_name => ['', nil])
           else
-            raise Scimitar::FilterError
+            sql_operator = self.activerecord_operator(scim_operator)
+
+            if sql_operator.present?
+              safe_column_name = ActiveRecord::Base.connection.quote_column_name(column_name)
+              query            = base_scope.where("#{safe_column_name} #{sql_operator} ?", safe_value)
+            else
+              raise Scimitar::FilterError
+            end
+          end
+
+          return query
+        end
+
+        # Returns the mapped-to-your-domain attribute that a filter string is
+        # operating upon. If +nil+, there is no match.
+        #
+        # +scim_attribute+:: SCIM attribute from a filter string.
+        #
+        def activerecord_attribute(scim_attribute)
+          raise Scimitar::FilterError if scim_attribute.blank?
+
+          scim_attribute   = scim_attribute.to_sym
+          mapped_attribute = self.attribute_map()[scim_attribute]
+
+          raise Scimitar::FilterError if mapped_attribute.blank?
+          return mapped_attribute
+        end
+
+        # Returns an SQL operator equivalent to that given in a filter string.
+        #
+        # Raises Scimitar::FilterError if the filter cannot be handled. The most
+        # likely case is for "pr" (presence), which has no simple generic (ish)
+        # SQL equivalent. Note that "LIKE" is returned for "co", "sw" and "ew"
+        # (contains, starts-with, ends-with).
+        #
+        # +scim_operator+:: SCIM operator from a filter string.
+        #
+        def activerecord_operator(scim_operator)
+          mapped_operator = self.sql_comparison_operator(scim_operator)
+
+          raise Scimitar::FilterError if mapped_operator.blank?
+          return mapped_operator
+        end
+
+        # Return the parameter that you're looking for, from a filter string.
+        # This might be blank, e.g. for "pr" (presence), but is never +nil+. Use
+        # this to construct your storage-system-specific search string but be
+        # sure to escape it, where necessary, for any special characters (e.g.
+        # to prevent SQL injection attacks or accidentally-wildcarded searches).
+        #
+        # +scim_operator+:: SCIM parameter from a filter string. Even if given
+        #                   +nil+ here, would always return an empty string;
+        #                   all blank inputs yield this.
+        #
+        def activerecord_parameter(scim_parameter)
+          if scim_parameter.blank?
+            return ''
+          elsif scim_parameter.start_with?('"') && scim_parameter.end_with?('"')
+            return scim_parameter[1..-2]
+          else
+            return scim_parameter
           end
         end
 
-        return query
-      end
-
-      private
-
-        # Return the SCIM attribute taken directly from the filter string given
-        # to the constructor, without any translation or mapping.
-        #
-        def scim_attribute
-          self.query_elements()[0]
-        end
-
-        # Return the SCIM operator taken directly from the filter string given
-        # to the constructor, without any translation or mapping.
-        #
-        def scim_operator
-          self.query_elements()[1]
-        end
-
-        # Return the SCIM parameter taken directly from the filter string given
-        # to the constructor, without any translation or mapping.
-        #
-        def scim_parameter
-          self.query_elements()[2..-1].join(' ')
-        end
-
-        # TODO: implement and/or/not
-        # TODO: implement additional operators?
-        #
         # https://tools.ietf.org/html/rfc7644#section-3.4.2.2
         #
         # Translates a SCIM test operator into a generic (ish, given "LIKE" is
@@ -178,7 +510,7 @@ module Scimitar
         #             if given +nil+.
         #
         def sql_comparison_operator(element)
-          SQL_COMPARISON_OPERATOR[element&.downcase]
+          SQL_COMPARISON_OPERATORS[element&.downcase]
         end
 
         # Takes a parameter value from a SCIM filter string and the filter
@@ -213,6 +545,7 @@ module Scimitar
               value
           end
         end
+
     end
   end
 end
