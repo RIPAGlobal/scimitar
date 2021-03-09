@@ -237,7 +237,7 @@ Often, you'll find that bearer tokens are in use by SCIM API consumers, but the 
 
 ### Omissions
 
-* Only a single filters are supported ("attribute-operation-value" or "attribute-present"); no multiple entries with "and"/"or"/"not", or support for parentheses indicating precedence.
+* While the gem attempts to support difficult/complex filter strings via incorporating code and ideas in [SCIM Query Filter Parser](https://github.com/ingydotnet/scim-query-filter-parser-rb), it is possible that ActiveRecord / Rails precedence on some query operations in complex cases might not exactly match the SCIM specification. Please do submit a bug report if you encounter this. You may also wish to view [`query_parser_spec.rb`](https://github.com/RIPGlobal/scimitar/blob/main/spec/models/scimitar/lists/query_parser_spec.rb) to get an idea of the tested examples - more interesting test cases are in the "`context 'with complex cases' do`" section.
 
 * Only whole-resource `PUT` is supported for updates, not the complicated `PATCH` mechanism. The mandatory former maps very closely to Rails behaviour while the optional latter would require very extensive extra code, especially around multiple operation types and `path` handling, with its filter-like strings.
 
