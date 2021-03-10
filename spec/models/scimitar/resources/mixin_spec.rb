@@ -385,6 +385,9 @@ RSpec.describe Scimitar::Resources::Mixin do
     # =========================================================================
 
     context '#from_patch!' do
+      before :each do
+        @instance = MockUser.new
+      end
 
       # -------------------------------------------------------------------
       # Internal
@@ -397,9 +400,6 @@ RSpec.describe Scimitar::Resources::Mixin do
       # These were used during development to debug the implementation.
       #
       context 'internal unit tests' do
-        before :each do
-          @instance = MockUser.new
-        end
 
         # ---------------------------------------------------------------------
         # Internal: #extract_filter_from
@@ -1482,7 +1482,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   value:         'ignored',
                   altering_data: scim_hash
                 )
-              end.to raise_error(Scimitar::ErrorResponse)
+              end.to raise_error(Scimitar::ErrorResponse) { |e| expect(e.as_json['scimType']).to eql('invalidSyntax') }
             end
 
             it 'when filters are specified for non-array types' do
@@ -1499,7 +1499,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   value:         'ignored',
                   altering_data: scim_hash
                 )
-              end.to raise_error(Scimitar::ErrorResponse)
+              end.to raise_error(Scimitar::ErrorResponse) { |e| expect(e.as_json['scimType']).to eql('invalidSyntax') }
             end
 
             it 'when a filter tries to match an array which does not contain Hashes' do
@@ -1519,7 +1519,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   value:         'ignored',
                   altering_data: scim_hash
                 )
-              end.to raise_error(Scimitar::ErrorResponse)
+              end.to raise_error(Scimitar::ErrorResponse) { |e| expect(e.as_json['scimType']).to eql('invalidSyntax') }
             end
           end # context 'with bad patches, raises errors' do
         end # "context '#from_patch_backend!' do"
@@ -1529,8 +1529,85 @@ RSpec.describe Scimitar::Resources::Mixin do
       # Public
       # -------------------------------------------------------------------
       #
-      xcontext 'public interface' do
-        it 'hopefully works' do
+      context 'public interface' do
+        it 'updates simple values' do
+          @instance.update(username: 'foo')
+
+          patch = {
+            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+            'Operations' => [
+              {
+                'op'    => 'replace',
+                'path'  => 'userName',
+                'value' => '1234'
+              }
+            ]
+          }
+
+          @instance.from_patch!(patch_hash: patch)
+          expect(@instance.username).to eql('1234')
+        end
+
+        it 'updates with filter match' do
+        end
+
+        it 'appends e-mails' do
+        end
+
+        it 'removes e-mails' do
+        end
+
+        it 'treats operation types as case-insensitive' do
+        end
+
+        it 'complains about bad operation types' do
+          patch = {
+            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+            'Operations' => [
+              {
+                'op'    => 'invalidop',
+                'path'  => 'userName',
+                'value' => '1234'
+              }
+            ]
+          }
+
+          expect { @instance.from_patch!(patch_hash: patch) }.to raise_error(Scimitar::ErrorResponse) do |e|
+            expect(e.as_json['scimType']).to eql('invalidSyntax')
+            expect(e.as_json[:detail   ]).to include('invalidop')
+          end
+
+          #   {
+          #       "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+          #       "Operations": [
+          #           {
+          #               "op": "add",
+          #               "path": "emails[type eq \"work\"].values",
+          #               "value": [{"updatedEmail@microsoft.com"}]
+          #           },
+          #           {
+          #               "op": "Replace",
+          #               "path": "name.familyName",
+          #               "value": "updatedFamilyName"
+          #           }
+          #       ]
+          #   }
+          # }
+        end
+
+        it 'complains about a missing target for "remove" operations' do
+          patch = {
+            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+            'Operations' => [
+              {
+                'op' => 'remove'
+              }
+            ]
+          }
+
+          expect { @instance.from_patch!(patch_hash: patch) }.to raise_error(Scimitar::ErrorResponse) do |e|
+            expect(e.as_json['scimType']).to eql('noTarget')
+          end
         end
       end # "context 'public interface' do"
     end # "context '#from_patch!' do"

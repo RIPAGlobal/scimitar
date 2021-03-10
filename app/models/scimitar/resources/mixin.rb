@@ -343,11 +343,11 @@ module Scimitar
 
 
         def from_patch!(patch_hash:)
-          scim_hash = self.to_scim()
+          scim_hash = self.to_scim(location: 'http://127.0.0.1/ignored')
 
           patch_hash['Operations'].each do |operation|
-            nature   = operation['op']&.downcase
-            path_str = operation['path']
+            nature   = operation['op'   ]&.downcase
+            path_str = operation['path' ]
             value    = operation['value']
 
             unless ['add', 'remove', 'replace'].include?(nature)
