@@ -651,18 +651,15 @@ module Scimitar
               )
             end
 
-            puts "! REPLACE ENSURE !" # During debugging...
-            # # Treat all exceptions as a malformed or unsupported PATCH.
-            # #
-            # ensure
-            #   raise Scimitar::ErrorResponse.new(
-            #     status:    400,
-            #     scimType: 'invalidSyntax',
-            #     detail:   "PATCH describes unrecognised attributes and/or unsupported filters"
-            #   )
+            # Treat all exceptions as a malformed or unsupported PATCH.
+            #
+            rescue
+              raise Scimitar::ErrorResponse.new(
+                status:    400,
+                scimType: 'invalidSyntax',
+                detail:   "PATCH describes unrecognised attributes and/or unsupported filters"
+              )
           end
-
-
 
 
           # Happily throws exceptions if data is not as expected / required.
@@ -728,14 +725,6 @@ module Scimitar
             #
             elsif filter.present? && nature != 'add'
               compact_after = false
-
-              unless current_data_at_path.is_a?(Array)
-                raise Scimitar::ErrorResponse.new(
-                  status:    400,
-                  scimType: 'invalidSyntax',
-                  detail:   "Cannot apply filter #{filter.inspect} to non-array attribute at #{path_component.inspect}"
-                )
-              end
 
               all_matching_filter(filter: filter, within_array: current_data_at_path) do | matched_hash, index |
                 case nature

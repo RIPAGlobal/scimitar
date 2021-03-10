@@ -386,6 +386,10 @@ RSpec.describe Scimitar::Resources::Mixin do
 
     context '#from_patch!' do
 
+      # -------------------------------------------------------------------
+      # Internal
+      # -------------------------------------------------------------------
+      #
       # PATCH is so enormously complex that we do lots of unit tests on private
       # methods before even bothering with the higher level "unit" (more like
       # integration!) tests on #from_patch! itself.
@@ -397,6 +401,10 @@ RSpec.describe Scimitar::Resources::Mixin do
           @instance = MockUser.new
         end
 
+        # ---------------------------------------------------------------------
+        # Internal: #extract_filter_from
+        # ---------------------------------------------------------------------
+        #
         context '#extract_filter_from' do
           it 'handles normal path components' do
             path_component, filter = @instance.send(:extract_filter_from, path_component: 'emails')
@@ -413,6 +421,10 @@ RSpec.describe Scimitar::Resources::Mixin do
           end
         end # "context '#extract_filter_from' do"
 
+        # ---------------------------------------------------------------------
+        # Internal: #all_matching_filter
+        # ---------------------------------------------------------------------
+        #
         context '#all_matching_filter' do
           it 'complains about unsupported operators' do
             expect do
@@ -497,14 +509,22 @@ RSpec.describe Scimitar::Resources::Mixin do
           end
         end # "context '#all_matching_filter' do"
 
+        # ---------------------------------------------------------------------
+        # Internal: #from_patch_backend
+        # ---------------------------------------------------------------------
+        #
         context '#from_patch_backend!' do
 
+          # -------------------------------------------------------------------
+          # Internal: #from_patch_backend - add
+          # -------------------------------------------------------------------
+          #
           # Except for filter and array behaviour at the leaf of the path,
           # "add" and "replace" are pretty much identical.
           #
           context 'add' do
             context 'when prior value already exists' do
-              it 'simple value' do
+              it 'simple value: overwrites' do
                 path      = [ 'userName' ]
                 scim_hash = { 'userName' => 'bar' }
 
@@ -519,7 +539,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                 expect(scim_hash['userName']).to eql('foo')
               end
 
-              it 'nested simple value' do
+              it 'nested simple value: overwrites' do
                 path      = [ 'name', 'givenName' ]
                 scim_hash = { 'name' => { 'givenName' => 'Foo', 'familyName' => 'Bar' } }
 
@@ -535,8 +555,11 @@ RSpec.describe Scimitar::Resources::Mixin do
                 expect(scim_hash['name']['familyName']).to eql('Bar')
               end
 
-              context 'with filter in path' do
-                it 'by string match' do
+              # For 'add', filter at end-of-path is nonsensical and not
+              # supported by spec or Scimitar; we only test mid-path filters.
+              #
+              context 'with filter mid-path' do
+                it 'by string match: overwrites' do
                   path      = [ 'emails[type eq "work"]', 'value' ]
                   scim_hash = {
                     'emails' => [
@@ -555,15 +578,15 @@ RSpec.describe Scimitar::Resources::Mixin do
                     :from_patch_backend!,
                     nature:        'add',
                     path:          path,
-                    value:         'replaced@test.com',
+                    value:         'added_over_origina@test.com',
                     altering_data: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('replaced@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
                 end
 
-                it 'by boolean match' do
+                it 'by boolean match: overwrites' do
                   path      = [ 'emails[primary eq true]', 'value' ]
                   scim_hash = {
                     'emails' => [
@@ -581,15 +604,15 @@ RSpec.describe Scimitar::Resources::Mixin do
                     :from_patch_backend!,
                     nature:        'add',
                     path:          path,
-                    value:         'replaced@test.com',
+                    value:         'added_over_origina@test.com',
                     altering_data: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('replaced@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
                 end
 
-                it 'multiple matches' do
+                it 'multiple matches: overwrites all' do
                   path      = [ 'emails[type eq "work"]', 'value' ]
                   scim_hash = {
                     'emails' => [
@@ -608,16 +631,16 @@ RSpec.describe Scimitar::Resources::Mixin do
                     :from_patch_backend!,
                     nature:        'add',
                     path:          path,
-                    value:         'replaced@test.com',
+                    value:         'added_over_origina@test.com',
                     altering_data: scim_hash
                   )
 
-                  expect(scim_hash['emails'][0]['value']).to eql('replaced@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('replaced@test.com')
+                  expect(scim_hash['emails'][0]['value']).to eql('added_over_origina@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
                 end
-              end # "context 'with filter in path' do"
+              end # "context 'with filter mid-path' do"
 
-              it 'add to array' do
+              it 'with arrays: appends' do
                 path      = [ 'emails' ]
                 scim_hash = {
                   'emails' => [
@@ -643,7 +666,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             end # context 'when prior value already exists' do
 
             context 'when value is not present' do
-              it 'simple value' do
+              it 'simple value: adds' do
                 path      = [ 'userName' ]
                 scim_hash = {}
 
@@ -658,7 +681,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                 expect(scim_hash['userName']).to eql('foo')
               end
 
-              it 'nested simple value' do
+              it 'nested simple value: adds' do
                 path      = [ 'name', 'givenName' ]
                 scim_hash = {}
 
@@ -673,7 +696,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                 expect(scim_hash['name']['givenName']).to eql('Baz')
               end
 
-              context 'with filter in path' do
+              context 'with filter mid-path: adds' do
                 it 'by string match' do
                   path      = [ 'emails[type eq "work"]', 'value' ]
                   scim_hash = {
@@ -692,15 +715,15 @@ RSpec.describe Scimitar::Resources::Mixin do
                     :from_patch_backend!,
                     nature:        'add',
                     path:          path,
-                    value:         'replaced@test.com',
+                    value:         'added@test.com',
                     altering_data: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('replaced@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added@test.com')
                 end
 
-                it 'by boolean match' do
+                it 'by boolean match: adds' do
                   path      = [ 'emails[primary eq true]', 'value' ]
                   scim_hash = {
                     'emails' => [
@@ -717,15 +740,15 @@ RSpec.describe Scimitar::Resources::Mixin do
                     :from_patch_backend!,
                     nature:        'add',
                     path:          path,
-                    value:         'replaced@test.com',
+                    value:         'added@test.com',
                     altering_data: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('replaced@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added@test.com')
                 end
 
-                it 'multiple matches' do
+                it 'multiple matches: adds to all' do
                   path      = [ 'emails[type eq "work"]', 'value' ]
                   scim_hash = {
                     'emails' => [
@@ -742,16 +765,16 @@ RSpec.describe Scimitar::Resources::Mixin do
                     :from_patch_backend!,
                     nature:        'add',
                     path:          path,
-                    value:         'replaced@test.com',
+                    value:         'added@test.com',
                     altering_data: scim_hash
                   )
 
-                  expect(scim_hash['emails'][0]['value']).to eql('replaced@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('replaced@test.com')
+                  expect(scim_hash['emails'][0]['value']).to eql('added@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added@test.com')
                 end
-              end # "context 'with filter in path' do"
+              end # "context 'with filter mid-path' do"
 
-              it 'add to array' do
+              it 'with arrays: appends' do
                 path      = [ 'emails' ]
                 scim_hash = {}
 
@@ -770,27 +793,742 @@ RSpec.describe Scimitar::Resources::Mixin do
             end # context 'when value is not present' do
           end # "context 'add' do"
 
-          xcontext 'remove' do
-            xcontext 'when prior value already exists' do
+          # -------------------------------------------------------------------
+          # Internal: #from_patch_backend - remove
+          # -------------------------------------------------------------------
+          #
+          context 'remove' do
+            context 'when prior value already exists' do
+              it 'simple value: removes' do
+                path      = [ 'userName' ]
+                scim_hash = { 'userName' => 'bar' }
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'remove',
+                  path:          path,
+                  value:         nil,
+                  altering_data: scim_hash
+                )
+
+                expect(scim_hash).to be_empty
+              end
+
+              it 'nested simple value: removes' do
+                path      = [ 'name', 'givenName' ]
+                scim_hash = { 'name' => { 'givenName' => 'Foo', 'familyName' => 'Bar' } }
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'remove',
+                  path:          path,
+                  value:         nil,
+                  altering_data: scim_hash
+                )
+
+                expect(scim_hash['name']).to_not have_key('givenName')
+                expect(scim_hash['name']['familyName']).to eql('Bar')
+              end
+
+              context 'with filter mid-path' do
+                it 'by string match: removes' do
+                  path      = [ 'emails[type eq "work"]', 'value' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'type' => 'home',
+                        'value' => 'home@test.com'
+                      },
+                      {
+                        'type' => 'work',
+                        'value' => 'work@test.com'
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'remove',
+                    path:          path,
+                    value:         nil,
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
+                  expect(scim_hash['emails'][1]).to_not have_key('value')
+                end
+
+                it 'by boolean match: removes' do
+                  path      = [ 'emails[primary eq true]', 'value' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'value' => 'home@test.com'
+                      },
+                      {
+                        'value' => 'work@test.com',
+                        'primary' => true
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'remove',
+                    path:          path,
+                    value:         nil,
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
+                  expect(scim_hash['emails'][1]).to_not have_key('value')
+                end
+
+                it 'multiple matches: removes all' do
+                  path      = [ 'emails[type eq "work"]', 'value' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'type' => 'work',
+                        'value' => 'work_1@test.com'
+                      },
+                      {
+                        'type' => 'work',
+                        'value' => 'work_2@test.com'
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'remove',
+                    path:          path,
+                    value:         nil,
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash['emails'][0]).to_not have_key('value')
+                  expect(scim_hash['emails'][1]).to_not have_key('value')
+                end
+              end # "context 'with filter mid-path' do"
+
+              context 'with filter at end of path' do
+                it 'by string match: removes entire matching array entry' do
+                  path      = [ 'emails[type eq "work"]' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'type' => 'home',
+                        'value' => 'home@test.com'
+                      },
+                      {
+                        'type' => 'work',
+                        'value' => 'work@test.com'
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'remove',
+                    path:          path,
+                    value:         nil,
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash['emails'].size).to eql(1)
+                  expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
+                end
+
+                it 'by boolean match: removes entire matching array entry' do
+                  path      = [ 'emails[primary eq true]' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'value' => 'home@test.com'
+                      },
+                      {
+                        'value' => 'work@test.com',
+                        'primary' => true
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'remove',
+                    path:          path,
+                    value:         nil,
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash['emails'].size).to eql(1)
+                  expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
+                end
+
+                it 'multiple matches: removes all matching array entries' do
+                  path      = [ 'emails[type eq "work"]' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'type' => 'work',
+                        'value' => 'work_1@test.com'
+                      },
+                      {
+                        'type' => 'work',
+                        'value' => 'work_2@test.com'
+                      },
+                      {
+                        'type' => 'home',
+                        'value' => 'home@test.com'
+                      },
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'remove',
+                    path:          path,
+                    value:         nil,
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash['emails'].size).to eql(1)
+                  expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
+                end
+              end # "context 'with filter at end of path' do"
+
+              it 'whole array: removes' do
+                path      = [ 'emails' ]
+                scim_hash = {
+                  'emails' => [
+                    {
+                      'type' => 'home',
+                      'value' => 'home@test.com'
+                    }
+                  ]
+                }
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'remove',
+                  path:          path,
+                  value:         nil,
+                  altering_data: scim_hash
+                )
+
+                expect(scim_hash).to_not have_key('emails')
+              end
             end # context 'when prior value already exists' do
 
-            xcontext 'when value is not present' do
+            context 'when value is not present' do
+              it 'simple value: does nothing' do
+                path      = [ 'userName' ]
+                scim_hash = {}
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'remove',
+                  path:          path,
+                  value:         nil,
+                  altering_data: scim_hash
+                )
+
+                expect(scim_hash).to be_empty
+              end
+
+              it 'nested simple value: does nothing' do
+                path      = [ 'name', 'givenName' ]
+                scim_hash = { 'name' => {'familyName' => 'Bar' } }
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'remove',
+                  path:          path,
+                  value:         nil,
+                  altering_data: scim_hash
+                )
+
+                expect(scim_hash['name']).to_not have_key('givenName')
+                expect(scim_hash['name']['familyName']).to eql('Bar')
+              end
+
+              context 'with filter mid-path' do
+                it 'by string match: does nothing' do
+                  path      = [ 'emails[type eq "work"]', 'value' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'type' => 'home',
+                        'value' => 'home@test.com'
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'remove',
+                    path:          path,
+                    value:         nil,
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash['emails'].size).to eql(1)
+                  expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
+                end
+
+                it 'by boolean match: does nothing' do
+                  path      = [ 'emails[primary eq true]', 'value' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'value' => 'home@test.com'
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'remove',
+                    path:          path,
+                    value:         nil,
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash['emails'].size).to eql(1)
+                  expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
+                end
+
+                it 'multiple matches: does nothing' do
+                  path      = [ 'emails[type eq "work"]', 'value' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'type' => 'home',
+                        'value' => 'home@test.com'
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'remove',
+                    path:          path,
+                    value:         nil,
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash['emails'].size).to eql(1)
+                  expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
+                end
+              end # "context 'with filter mid-path' do"
+
+              context 'with filter at end of path' do
+                it 'by string match: does nothing' do
+                  path      = [ 'emails[type eq "work"]' ]
+                  scim_hash = {}
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'remove',
+                    path:          path,
+                    value:         nil,
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash).to be_empty
+                end
+
+                it 'by boolean match: does nothing' do
+                  path      = [ 'emails[primary eq true]' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'value' => 'home@test.com',
+                        'primary' => false
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'remove',
+                    path:          path,
+                    value:         nil,
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash['emails'].size).to eql(1)
+                  expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
+                end
+              end # "context 'with filter at end of path' do"
+
+              it 'remove whole array: does nothing' do
+                path      = [ 'emails' ]
+                scim_hash = {}
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'remove',
+                  path:          path,
+                  value:         nil,
+                  altering_data: scim_hash
+                )
+
+                expect(scim_hash).to_not have_key('emails')
+              end
             end # context 'when value is not present' do
           end # "context 'remove' do"
 
+          # -------------------------------------------------------------------
+          # Internal: #from_patch_backend - replace
+          # -------------------------------------------------------------------
+          #
           # Except for filter and array behaviour at the leaf of the path,
           # "add" and "replace" are pretty much identical.
           #
-          xcontext 'replace' do
-            xcontext 'when prior value already exists' do
+          context 'replace' do
+            context 'when prior value already exists' do
+              it 'simple value: overwrites' do
+                path      = [ 'userName' ]
+                scim_hash = { 'userName' => 'bar' }
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'replace',
+                  path:          path,
+                  value:         'foo',
+                  altering_data: scim_hash
+                )
+
+                expect(scim_hash['userName']).to eql('foo')
+              end
+
+              it 'nested simple value: overwrites' do
+                path      = [ 'name', 'givenName' ]
+                scim_hash = { 'name' => { 'givenName' => 'Foo', 'familyName' => 'Bar' } }
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'replace',
+                  path:          path,
+                  value:         'Baz',
+                  altering_data: scim_hash
+                )
+
+                expect(scim_hash['name']['givenName' ]).to eql('Baz')
+                expect(scim_hash['name']['familyName']).to eql('Bar')
+              end
+
+              # For 'replace', filter at end-of-path is nonsensical and not
+              # supported by spec or Scimitar; we only test mid-path filters.
+              #
+              context 'with filter mid-path' do
+                it 'by string match: overwrites' do
+                  path      = [ 'emails[type eq "work"]', 'value' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'type' => 'home',
+                        'value' => 'home@test.com'
+                      },
+                      {
+                        'type' => 'work',
+                        'value' => 'work@test.com'
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'replace',
+                    path:          path,
+                    value:         'added_over_origina@test.com',
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
+                end
+
+                it 'by boolean match: overwrites' do
+                  path      = [ 'emails[primary eq true]', 'value' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'value' => 'home@test.com'
+                      },
+                      {
+                        'value' => 'work@test.com',
+                        'primary' => true
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'replace',
+                    path:          path,
+                    value:         'added_over_origina@test.com',
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
+                end
+
+                it 'multiple matches: overwrites all' do
+                  path      = [ 'emails[type eq "work"]', 'value' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'type' => 'work',
+                        'value' => 'work_1@test.com'
+                      },
+                      {
+                        'type' => 'work',
+                        'value' => 'work_2@test.com'
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'replace',
+                    path:          path,
+                    value:         'added_over_origina@test.com',
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash['emails'][0]['value']).to eql('added_over_origina@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
+                end
+              end # "context 'with filter mid-path' do"
+
+              it 'with arrays: replaces whole array' do
+                path      = [ 'emails' ]
+                scim_hash = {
+                  'emails' => [
+                    {
+                      'type' => 'home',
+                      'value' => 'home@test.com'
+                    }
+                  ]
+                }
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'replace',
+                  path:          path,
+                  value:         [ { 'type' => 'work', 'value' => 'work@test.com' } ], # NOTE - to-add value is an Array (and must be)
+                  altering_data: scim_hash
+                )
+
+                expect(scim_hash['emails'].size).to eql(1)
+                expect(scim_hash['emails'][0]['type' ]).to eql('work')
+                expect(scim_hash['emails'][0]['value']).to eql('work@test.com')
+              end
             end # context 'when prior value already exists' do
 
-            xcontext 'when value is not present' do
+            context 'when value is not present' do
+              it 'simple value: adds' do
+                path      = [ 'userName' ]
+                scim_hash = {}
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'replace',
+                  path:          path,
+                  value:         'foo',
+                  altering_data: scim_hash
+                )
+
+                expect(scim_hash['userName']).to eql('foo')
+              end
+
+              it 'nested simple value: adds' do
+                path      = [ 'name', 'givenName' ]
+                scim_hash = {}
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'replace',
+                  path:          path,
+                  value:         'Baz',
+                  altering_data: scim_hash
+                )
+
+                expect(scim_hash['name']['givenName']).to eql('Baz')
+              end
+
+              context 'with filter mid-path: adds' do
+                it 'by string match' do
+                  path      = [ 'emails[type eq "work"]', 'value' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'type' => 'home',
+                        'value' => 'home@test.com'
+                      },
+                      {
+                        'type' => 'work'
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'replace',
+                    path:          path,
+                    value:         'added@test.com',
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added@test.com')
+                end
+
+                it 'by boolean match: adds' do
+                  path      = [ 'emails[primary eq true]', 'value' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'value' => 'home@test.com'
+                      },
+                      {
+                        'primary' => true
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'replace',
+                    path:          path,
+                    value:         'added@test.com',
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added@test.com')
+                end
+
+                it 'multiple matches: adds to all' do
+                  path      = [ 'emails[type eq "work"]', 'value' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'type' => 'work'
+                      },
+                      {
+                        'type' => 'work'
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'replace',
+                    path:          path,
+                    value:         'added@test.com',
+                    altering_data: scim_hash
+                  )
+
+                  expect(scim_hash['emails'][0]['value']).to eql('added@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added@test.com')
+                end
+              end # "context 'with filter mid-path' do"
+
+              it 'with arrays: replaces' do
+                path      = [ 'emails' ]
+                scim_hash = {}
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'replace',
+                  path:          path,
+                  value:         [ { 'type' => 'work', 'value' => 'work@test.com' } ], # NOTE - to-add value is an Array (and must be)
+                  altering_data: scim_hash
+                )
+
+                expect(scim_hash['emails'].size).to eql(1)
+                expect(scim_hash['emails'][0]['type' ]).to eql('work')
+                expect(scim_hash['emails'][0]['value']).to eql('work@test.com')
+              end
             end # context 'when value is not present' do
           end # "context 'replace' do"
+
+          context 'with bad patches, raises errors' do
+            it 'for unsupported filters' do
+              path      = [ 'emails[type ne "work" and value ne "hello@test.com"', 'value' ]
+              scim_hash = {
+                'emails' => [
+                  {
+                    'type' => 'work',
+                    'value' => 'work_1@test.com'
+                  },
+                  {
+                    'type' => 'work',
+                    'value' => 'work_2@test.com'
+                  }
+                ]
+              }
+
+              expect do
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'replace',
+                  path:          path,
+                  value:         'ignored',
+                  altering_data: scim_hash
+                )
+              end.to raise_error(Scimitar::ErrorResponse)
+            end
+
+            it 'when filters are specified for non-array types' do
+              path      = [ 'userName[type eq "work"]', 'value' ]
+              scim_hash = {
+                'userName' => '1234'
+              }
+
+              expect do
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'replace',
+                  path:          path,
+                  value:         'ignored',
+                  altering_data: scim_hash
+                )
+              end.to raise_error(Scimitar::ErrorResponse)
+            end
+
+            it 'when a filter tries to match an array which does not contain Hashes' do
+              path      = [ 'emails[type eq "work"]', 'value' ]
+              scim_hash = {
+                'emails' => [
+                  'work_1@test.com',
+                  'work_2@test.com',
+                ]
+              }
+
+              expect do
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'replace',
+                  path:          path,
+                  value:         'ignored',
+                  altering_data: scim_hash
+                )
+              end.to raise_error(Scimitar::ErrorResponse)
+            end
+          end # context 'with bad patches, raises errors' do
         end # "context '#from_patch_backend!' do"
       end # "context 'internal unit tests' do"
 
+      # -------------------------------------------------------------------
+      # Public
+      # -------------------------------------------------------------------
+      #
       xcontext 'public interface' do
         it 'hopefully works' do
         end
