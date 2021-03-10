@@ -71,7 +71,7 @@ module Scim
           find_group(scim_group['id'])
         end
 
-        instance.from_scim!(scim_object: scim_group)
+        instance.from_scim!(scim_hash: scim_group)
         instance.save!
 
       rescue ActiveRecord::RecordInvalid => exception

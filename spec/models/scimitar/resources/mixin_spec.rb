@@ -337,7 +337,7 @@ RSpec.describe Scimitar::Resources::Mixin do
           }
 
           instance = MockUser.new
-          instance.from_scim!(scim_object: hash)
+          instance.from_scim!(scim_hash: hash)
 
           expect(instance.scim_uid          ).to eql('AA02984')
           expect(instance.username          ).to eql('foo')
@@ -367,7 +367,7 @@ RSpec.describe Scimitar::Resources::Mixin do
           }
 
           instance = MockGroup.new
-          instance.from_scim!(scim_object: hash)
+          instance.from_scim!(scim_hash: hash)
 
           expect(instance.scim_uid         ).to eql('GG01536')
           expect(instance.display_name     ).to eql('Foo Group')

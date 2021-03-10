@@ -684,10 +684,8 @@ module Scimitar
 
             found_data_for_recursion = if filter
               matched_hashes = []
-              if inner_data.is_a?(Array)
-                all_matching_filter(filter: filter, within_array: inner_data) do | matched_hash |
-                  matched_hashes << matched_hash
-                end
+              all_matching_filter(filter: filter, within_array: inner_data) do | matched_hash |
+                matched_hashes << matched_hash
               end
               matched_hashes
             else
@@ -783,7 +781,7 @@ module Scimitar
             value     = value[1..-2] if value.start_with?('"') && value.end_with?('"')
 
             within_array.each.with_index do | hash, index |
-              matched = (hash.key?(attribute) && hash[attribute]&.to_s == value&.to_s) rescue false
+              matched = hash.key?(attribute) && hash[attribute]&.to_s == value&.to_s
               yield(hash, index) if matched
             end
           end

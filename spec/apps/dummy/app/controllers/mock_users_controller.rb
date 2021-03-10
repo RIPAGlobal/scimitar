@@ -71,7 +71,7 @@ module Scim
           find_user(scim_user['id'])
         end
 
-        instance.from_scim!(scim_object: scim_user)
+        instance.from_scim!(scim_hash: scim_user)
         instance.save!
 
       rescue ActiveRecord::RecordInvalid => exception
