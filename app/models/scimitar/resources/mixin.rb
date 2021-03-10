@@ -328,16 +328,76 @@ module Scimitar
         # does not attempt to persist / "save" 'this' instance; it just
         # sets the attribute values within it.
         #
-        # +scim_object+:: A Hash that's the result of parsing a JSON payload
-        #                 from an inbound SCIM write-related request.
+        # +scim_hash+:: A Hash that's the result of parsing a JSON payload
+        #               from an inbound SCIM write-related request.
         #
         # Returns 'self', for convenience of e.g. chaining other methods.
         #
-        def from_scim!(scim_object:)
+        def from_scim!(scim_hash:)
           map = self.class.scim_attributes_map()
 
-          self.from_scim_backend!(attrs_map_or_leaf_value: map, scim_object_or_leaf_value: scim_object)
+          self.from_scim_backend!(attrs_map_or_leaf_value: map, scim_hash_or_leaf_value: scim_hash)
           return self
+        end
+
+
+
+        def from_patch!(patch_hash:)
+          scim_hash = self.to_scim()
+
+          patch_hash['Operations'].each do |operation|
+            nature   = operation['op']&.downcase
+            path_str = operation['path']
+            value    = operation['value']
+
+            unless ['add', 'remove', 'replace'].include?(nature)
+              raise Scimitar::ErrorResponse.new(
+                status:    400,
+                scimType: 'invalidSyntax',
+                detail:   "Unrecognised PATCH \"op\" value of \"#{nature}\""
+              )
+            end
+
+            # https://tools.ietf.org/html/rfc7644#section-3.5.2.2
+            #
+            # o  If "path" is unspecified, the operation fails with HTTP status
+            #    code 400 and a "scimType" error code of "noTarget".
+            #
+            # (...for "add" or "replace", no path means "whole object").
+            #
+            if nature == 'remove' && path_str.blank?
+              raise Scimitar::ErrorResponse.new(
+                status:    400,
+                scimType: 'noTarget',
+                detail:   'No "path" target given for "replace" operation'
+              )
+            end
+
+            # Deal with the exception case of no path, where the entire object
+            # is addressed. It's easier internally to treat a path as a set of
+            # steps towards a final Hash key (attribute) with an associated
+            # value to change (and filters may apply if the value is an Array).
+            #
+            extract_root = false
+            if path_str.blank?
+              extract_root = true
+              path_str     = 'root'
+              scim_hash    = { 'root' => scim_hash }
+            end
+
+            self.from_patch_backend!(
+              nature:        nature,
+              path:          (path_str || '').split('.'),
+              value:         value,
+              altering_data: scim_hash
+            )
+
+            if extract_root
+              scim_hash = scim_hash['root']
+            end
+          end
+
+          self.from_scim!(scim_hash: scim_hash)
         end
 
         private # (...but note that we're inside "included do" within a mixin)
@@ -454,27 +514,27 @@ module Scimitar
           #
           # Named attributes:
           #
-          # +attrs_map_or_leaf_value+::   Attribute map; recursive calls jsut
-          #                               pass in the fragment for recursion,
-          #                               so at the deepest level, this ends
-          #                               up being a leaf node which may have
-          #                               a Symbol method name, used to look
-          #                               for a write accessor; or a read-only
-          #                               literal, which is ignored.
+          # +attrs_map_or_leaf_value+:: Attribute map; recursive calls just
+          #                             pass in the fragment for recursion, so
+          #                             at the deepest level, this ends up
+          #                             being a leaf node which may have a
+          #                             Symbol method name, used to look for a
+          #                             write accessor; or a read-only literal,
+          #                             which is ignored.
           #
-          # +scim_object_or_leaf_value+:: Similar to +attrs_map_or_leaf_value+
-          #                               but tracks the SCIM schema data being
-          #                               read as input source material.
+          # +scim_hash_or_leaf_value+:: Similar to +attrs_map_or_leaf_value+
+          #                             but tracks the SCIM schema data being
+          #                             read as input source material.
           #
-          # +path+::                      Array of SCIM attribute names giving
-          #                               a path into the SCIM schema where
-          #                               iteration has reached. Used to find
-          #                               the schema attribute definiton and
-          #                               check mutability before writing.
+          # +path+::                    Array of SCIM attribute names giving a
+          #                             path into the SCIM schema where
+          #                             iteration has reached. Used to find the
+          #                             schema attribute definiton and check
+          #                             mutability before writing.
           #
           def from_scim_backend!(
             attrs_map_or_leaf_value:,
-            scim_object_or_leaf_value:,
+            scim_hash_or_leaf_value:,
             path: []
           )
             attrs_map_or_leaf_value = attrs_map_or_leaf_value.with_indifferent_access() if attrs_map_or_leaf_value.instance_of?(Hash)
@@ -488,15 +548,15 @@ module Scimitar
             #
             resource_class = self.class.scim_resource_type()
 
-            case scim_object_or_leaf_value
+            case scim_hash_or_leaf_value
               when Hash # Attrute-value pairs
-                scim_object_or_leaf_value.each do | scim_attribute, value |
+                scim_hash_or_leaf_value.each do | scim_attribute, value |
                   sub_attrs_map_or_leaf_value = attrs_map_or_leaf_value[scim_attribute]
                   next if sub_attrs_map_or_leaf_value.nil? || (scim_attribute.to_s.downcase == 'id' && path.empty?)
 
                   self.from_scim_backend!(
                     attrs_map_or_leaf_value:   sub_attrs_map_or_leaf_value,
-                    scim_object_or_leaf_value: value,
+                    scim_hash_or_leaf_value: value,
                     path:                      path + [scim_attribute]
                   )
                 end
@@ -513,7 +573,7 @@ module Scimitar
                     # Search for the array entry in the SCIM object that
                     # matches the thing we're looking for via :match & :with.
                     #
-                    found_source_list_entry = scim_object_or_leaf_value.find do | scim_array_entry |
+                    found_source_list_entry = scim_hash_or_leaf_value.find do | scim_array_entry |
                       scim_array_entry[attr_to_match] == value_to_match
                     end
 
@@ -523,9 +583,9 @@ module Scimitar
                     #
                     unless found_source_list_entry.nil?
                       self.from_scim_backend!(
-                        attrs_map_or_leaf_value:   sub_attrs_map,
-                        scim_object_or_leaf_value: found_source_list_entry,
-                        path:                      path
+                        attrs_map_or_leaf_value: sub_attrs_map,
+                        scim_hash_or_leaf_value: found_source_list_entry,
+                        path:                    path
                       )
                     end
 
@@ -537,7 +597,7 @@ module Scimitar
                       find_with_proc = mapped_array_entry[:find_with]
 
                       unless find_with_proc.nil?
-                        mapped_list = scim_object_or_leaf_value.map do | source_list_entry |
+                        mapped_list = scim_hash_or_leaf_value.map do | source_list_entry |
                           find_with_proc.call(source_list_entry)
                         end
 
@@ -560,12 +620,188 @@ module Scimitar
 
                   if mutable
                     method = "#{attrs_map_or_leaf_value}="
-                    self.public_send(method, scim_object_or_leaf_value) if self.respond_to?(method)
+                    self.public_send(method, scim_hash_or_leaf_value) if self.respond_to?(method)
                   end
                 end
 
-            end # "case scim_object_or_leaf_value"
+            end # "case scim_hash_or_leaf_value"
           end # "def from_scim_backend!..."
+
+
+
+
+
+          def from_patch_backend!(nature:, path:, value:, altering_data:)
+
+            # These all throw exceptions if data is not as expected / required.
+            #
+            if path.count == 1
+              from_patch_backend_apply!(
+                nature:         nature,
+                path_component: path.first,
+                value:          value,
+                altering_data:  altering_data
+              )
+            else
+              from_patch_backend_traverse!(
+                nature:        nature,
+                path:          path,
+                value:         value,
+                altering_data: altering_data
+              )
+            end
+
+            puts "! REPLACE ENSURE !" # During debugging...
+            # # Treat all exceptions as a malformed or unsupported PATCH.
+            # #
+            # ensure
+            #   raise Scimitar::ErrorResponse.new(
+            #     status:    400,
+            #     scimType: 'invalidSyntax',
+            #     detail:   "PATCH describes unrecognised attributes and/or unsupported filters"
+            #   )
+          end
+
+
+
+
+          # Happily throws exceptions if data is not as expected / required.
+          #
+          def from_patch_backend_traverse!(nature:, path:, value:, altering_data:)
+            path_component, filter = extract_filter_from(path_component: path.first)
+
+            # https://tools.ietf.org/html/rfc7644#section-3.5.2.3
+            #
+            # o  If the target location path specifies an attribute that does not
+            #    exist, the service provider SHALL treat the operation as an "add".
+            #
+            # Required anyway for 'add'; harmless in this context for 'remove'.
+            #
+            altering_data[path_component] ||= {}
+
+            # Unless the PATCH is bad, inner data is an Array or Hash always as
+            # by definition this method is only called at path positions above
+            # the leaf (target attribute-to-modify) node.
+            #
+            inner_data = altering_data[path_component]
+
+            found_data_for_recursion = if filter
+              matched_hashes = []
+              if inner_data.is_a?(Array)
+                all_matching_filter(filter: filter, within_array: inner_data) do | matched_hash |
+                  matched_hashes << matched_hash
+                end
+              end
+              matched_hashes
+            else
+              [ inner_data ]
+            end
+
+            found_data_for_recursion.each do | found_data |
+              self.from_patch_backend!(
+                nature:        nature,
+                path:          path[1..-1],
+                value:         value,
+                altering_data: found_data
+              )
+            end
+          end
+
+
+
+          # Happily throws exceptions if data is not as expected / required.
+          #
+          def from_patch_backend_apply!(nature:, path_component:, value:, altering_data:)
+            path_component, filter = extract_filter_from(path_component: path_component)
+            current_data_at_path   = altering_data[path_component]
+
+            if current_data_at_path.nil?
+              case nature
+                when 'add', 'replace'
+                  altering_data[path_component] = value
+                when 'remove'
+                  # Nothing to do - no data here anyway
+              end
+
+            # Path filters are not described for 'add' and assumed to have no
+            # meaning - https://tools.ietf.org/html/rfc7644#section-3.5.2.1
+            #
+            elsif filter.present? && nature != 'add'
+              compact_after = false
+
+              unless current_data_at_path.is_a?(Array)
+                raise Scimitar::ErrorResponse.new(
+                  status:    400,
+                  scimType: 'invalidSyntax',
+                  detail:   "Cannot apply filter #{filter.inspect} to non-array attribute at #{path_component.inspect}"
+                )
+              end
+
+              all_matching_filter(filter: filter, within_array: current_data_at_path) do | matched_hash, index |
+                case nature
+                  when 'remove'
+                    current_data_at_path[index] = nil
+                    compact_after = true
+                  when 'replace'
+                    matched_hash.reject! { true }
+                    matched_hash.merge!(value)
+                end
+              end
+
+              current_data_at_path.compact! if compact_after
+
+            else
+              case nature
+                when 'add'
+                  if current_data_at_path.is_a?(Array)
+                    altering_data[path_component] += value
+                  else
+                    altering_data[path_component] = value
+                  end
+                when 'replace'
+                  altering_data[path_component] = value
+                when 'remove'
+                  altering_data.delete(path_component)
+              end
+            end
+          end
+
+          # Happily throws exceptions if data is not as expected / required.
+          #
+          def extract_filter_from(path_component:)
+            filter = nil
+
+            if path_component.include?('[')
+              composition    = path_component.split(/[\[\]]/) # "attribute_name[filter_string]" -> ["attribute_name", "filter_string"]
+              path_component = composition.first
+              filter         = composition.last
+            end
+
+            [path_component, filter]
+          end
+
+
+          # Happily throws exceptions if data is not as expected / required.
+          #
+          # TODO: Support more complex matchers than 'attr eq "value"'
+          #
+          def all_matching_filter(filter:, within_array:, &block)
+            filter_components = filter.split(' ')
+            raise "Unsupported matcher #{filter.inspect}" unless filter_components.size == 3 && filter_components[1].downcase == 'eq'
+
+            attribute = filter_components[0]
+            value     = filter_components[2]
+            value     = value[1..-2] if value.start_with?('"') && value.end_with?('"')
+
+            within_array.each.with_index do | hash, index |
+              matched = (hash.key?(attribute) && hash[attribute]&.to_s == value&.to_s) rescue false
+              yield(hash, index) if matched
+            end
+          end
+
+
+
+
 
       end # "included do"
     end # "module Mixin"
