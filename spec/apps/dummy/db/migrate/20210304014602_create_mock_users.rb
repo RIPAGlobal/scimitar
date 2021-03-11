@@ -7,6 +7,7 @@ class CreateMockUsers < ActiveRecord::Migration[6.1]
       t.text :first_name
       t.text :last_name
       t.text :work_email_address
+      t.text :home_email_address
       t.text :work_phone_number
 
     end

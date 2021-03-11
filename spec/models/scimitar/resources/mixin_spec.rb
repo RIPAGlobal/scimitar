@@ -121,6 +121,7 @@ RSpec.describe Scimitar::Resources::Mixin do
   context 'with good class definitons' do
 
     require_relative '../../../apps/dummy/app/models/mock_user.rb'
+    require_relative '../../../apps/dummy/app/models/mock_group.rb'
 
     # =========================================================================
     # Support methods
@@ -143,6 +144,14 @@ RSpec.describe Scimitar::Resources::Mixin do
         result = MockUser.new.scim_mutable_attributes()
         expect(result).to match_array(readwrite_attrs)
       end
+
+      it 'includes read-write dynamic list attributes' do
+        readwrite_attrs = MockGroup::READWRITE_ATTRS.map(&:to_sym)
+        readwrite_attrs.delete(:id) # Should never be offered as writable in SCIM
+
+        result = MockGroup.new.scim_mutable_attributes()
+        expect(result).to match_array(readwrite_attrs)
+      end
     end # "context '#scim_mutable_attributes' do"
 
     # =========================================================================
@@ -158,6 +167,7 @@ RSpec.describe Scimitar::Resources::Mixin do
         instance.first_name         = 'Foo'
         instance.last_name          = 'Bar'
         instance.work_email_address = 'foo.bar@test.com'
+        instance.home_email_address = nil
         instance.work_phone_number  = '+642201234567'
 
         g1 = MockGroup.create!(display_name: 'Group 1')
@@ -175,8 +185,8 @@ RSpec.describe Scimitar::Resources::Mixin do
           'userName'    => 'foo',
           'name'        => {'givenName'=>'Foo', 'familyName'=>'Bar'},
           'active'      => true,
-          'emails'      => [{'type'=>'work', 'primary'=>true,  'value'=>'foo.bar@test.com'}], # Note, 'type' present
-          'phoneNumbers'=> [{'type'=>'work', 'primary'=>false, 'value'=>'+642201234567'   }], # Note, 'type' present
+          'emails'      => [{'type'=>'work', 'primary'=>true, 'value'=>'foo.bar@test.com'}, {"primary"=>false, "type"=>"home", "value"=>nil}],
+          'phoneNumbers'=> [{'type'=>'work', 'primary'=>false, 'value'=>'+642201234567'}],
           'id'          => '42', # Note, String
           'externalId'  => 'AA02984',
           'groups'      => [{'display'=>g1.display_name, 'value'=>g1.id.to_s}, {'display'=>g3.display_name, 'value'=>g3.id.to_s}],
@@ -314,6 +324,38 @@ RSpec.describe Scimitar::Resources::Mixin do
           end
         end # "context 'using dynamic lists' do"
       end # "context 'with arrays' do"
+
+      context 'with bad definitions' do
+        it 'complains about non-Hash entries in mapping Arrays' do
+          expect(StaticMapTest).to receive(:scim_attributes_map).and_return({
+            emails: [
+              'this is not Hash'
+            ]
+          })
+
+          instance = StaticMapTest.new(work_email_address: 'work@test.com', home_email_address: 'home@test.com')
+
+          expect do
+            scim = instance.to_scim(location: 'https://test.com/static_map_test')
+          end.to raise_error(RuntimeError) { |e| expect(e.message).to include('Array contains someting other than mapping Hash(es)') }
+        end
+
+        it 'complains about bad Hash entries in mapping Arrays' do
+          expect(StaticMapTest).to receive(:scim_attributes_map).and_return({
+            emails: [
+              {
+                this_is_not: :a_valid_entry
+              }
+            ]
+          })
+
+          instance = StaticMapTest.new(work_email_address: 'work@test.com', home_email_address: 'home@test.com')
+
+          expect do
+            scim = instance.to_scim(location: 'https://test.com/static_map_test')
+          end.to raise_error(RuntimeError) { |e| expect(e.message).to include('Mapping Hash inside Array does not contain supported data') }
+        end
+      end # "context 'with bad definitions' do"
     end # "context '#to_scim' do"
 
     # =========================================================================
@@ -337,6 +379,7 @@ RSpec.describe Scimitar::Resources::Mixin do
           }
 
           instance = MockUser.new
+          instance.home_email_address = 'home@test.com' # Should be cleared as no home e-mail specified in SCIM hash above
           instance.from_scim!(scim_hash: hash)
 
           expect(instance.scim_uid          ).to eql('AA02984')
@@ -344,6 +387,7 @@ RSpec.describe Scimitar::Resources::Mixin do
           expect(instance.first_name        ).to eql('Foo')
           expect(instance.last_name         ).to eql('Bar')
           expect(instance.work_email_address).to eql('foo.bar@test.com')
+          expect(instance.home_email_address).to be_nil
           expect(instance.work_phone_number ).to eql('+642201234567')
         end
 
@@ -378,6 +422,29 @@ RSpec.describe Scimitar::Resources::Mixin do
           expect(g1.reload.parent_id).to eql(instance.id)
         end
       end # "context 'writes instance attribute values from a SCIM representation' do"
+
+      it 'clears things not present in input' do
+        instance                    = MockUser.new
+        instance.id                 = 42
+        instance.scim_uid           = 'AA02984'
+        instance.username           = 'foo'
+        instance.first_name         = 'Foo'
+        instance.last_name          = 'Bar'
+        instance.work_email_address = 'work@test.com'
+        instance.home_email_address = 'home@test.com'
+        instance.work_phone_number  = '+642201234567'
+
+        instance.from_scim!(scim_hash: {})
+
+        expect(instance.id                ).to eql(42)
+        expect(instance.scim_uid          ).to be_nil
+        expect(instance.username          ).to be_nil
+        expect(instance.first_name        ).to be_nil
+        expect(instance.last_name         ).to be_nil
+        expect(instance.work_email_address).to be_nil
+        expect(instance.home_email_address).to be_nil
+        expect(instance.work_phone_number ).to be_nil
+      end
     end # "context '#from_scim!' do"
 
     # =========================================================================
@@ -533,7 +600,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'add',
                   path:          path,
                   value:         'foo',
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash['userName']).to eql('foo')
@@ -548,7 +615,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'add',
                   path:          path,
                   value:         'Baz',
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash['name']['givenName' ]).to eql('Baz')
@@ -579,7 +646,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'add',
                     path:          path,
                     value:         'added_over_origina@test.com',
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
@@ -605,7 +672,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'add',
                     path:          path,
                     value:         'added_over_origina@test.com',
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
@@ -632,7 +699,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'add',
                     path:          path,
                     value:         'added_over_origina@test.com',
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('added_over_origina@test.com')
@@ -656,7 +723,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'add',
                   path:          path,
                   value:         [ { 'type' => 'work', 'value' => 'work@test.com' } ], # NOTE - to-add value is an Array (and must be)
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash['emails'].size).to eql(2)
@@ -675,7 +742,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'add',
                   path:          path,
                   value:         'foo',
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash['userName']).to eql('foo')
@@ -690,7 +757,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'add',
                   path:          path,
                   value:         'Baz',
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash['name']['givenName']).to eql('Baz')
@@ -716,7 +783,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'add',
                     path:          path,
                     value:         'added@test.com',
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
@@ -741,11 +808,26 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'add',
                     path:          path,
                     value:         'added@test.com',
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
                   expect(scim_hash['emails'][1]['value']).to eql('added@test.com')
+                end
+
+                it 'with no match: still adds' do
+                  path      = [ 'emails[type eq "work"]', 'value' ]
+                  scim_hash = {}
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'add',
+                    path:          path,
+                    value:         'added@test.com',
+                    altering_hash: scim_hash
+                  )
+
+                  expect(scim_hash['emails'][0]['value']).to eql('added@test.com')
                 end
 
                 it 'multiple matches: adds to all' do
@@ -766,7 +848,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'add',
                     path:          path,
                     value:         'added@test.com',
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('added@test.com')
@@ -783,7 +865,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'add',
                   path:          path,
                   value:         [ { 'type' => 'work', 'value' => 'work@test.com' } ], # NOTE - to-add value is an Array (and must be)
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash['emails'].size).to eql(1)
@@ -808,7 +890,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'remove',
                   path:          path,
                   value:         nil,
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash).to be_empty
@@ -823,7 +905,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'remove',
                   path:          path,
                   value:         nil,
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash['name']).to_not have_key('givenName')
@@ -851,7 +933,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'remove',
                     path:          path,
                     value:         nil,
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
@@ -877,7 +959,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'remove',
                     path:          path,
                     value:         nil,
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
@@ -904,7 +986,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'remove',
                     path:          path,
                     value:         nil,
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]).to_not have_key('value')
@@ -933,7 +1015,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'remove',
                     path:          path,
                     value:         nil,
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'].size).to eql(1)
@@ -959,7 +1041,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'remove',
                     path:          path,
                     value:         nil,
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'].size).to eql(1)
@@ -990,7 +1072,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'remove',
                     path:          path,
                     value:         nil,
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'].size).to eql(1)
@@ -1014,7 +1096,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'remove',
                   path:          path,
                   value:         nil,
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash).to_not have_key('emails')
@@ -1031,7 +1113,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'remove',
                   path:          path,
                   value:         nil,
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash).to be_empty
@@ -1046,7 +1128,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'remove',
                   path:          path,
                   value:         nil,
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash['name']).to_not have_key('givenName')
@@ -1070,7 +1152,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'remove',
                     path:          path,
                     value:         nil,
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'].size).to eql(1)
@@ -1092,7 +1174,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'remove',
                     path:          path,
                     value:         nil,
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'].size).to eql(1)
@@ -1115,7 +1197,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'remove',
                     path:          path,
                     value:         nil,
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'].size).to eql(1)
@@ -1133,7 +1215,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'remove',
                     path:          path,
                     value:         nil,
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash).to be_empty
@@ -1155,7 +1237,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'remove',
                     path:          path,
                     value:         nil,
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'].size).to eql(1)
@@ -1172,7 +1254,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'remove',
                   path:          path,
                   value:         nil,
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash).to_not have_key('emails')
@@ -1198,7 +1280,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'replace',
                   path:          path,
                   value:         'foo',
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash['userName']).to eql('foo')
@@ -1213,16 +1295,13 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'replace',
                   path:          path,
                   value:         'Baz',
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash['name']['givenName' ]).to eql('Baz')
                 expect(scim_hash['name']['familyName']).to eql('Bar')
               end
 
-              # For 'replace', filter at end-of-path is nonsensical and not
-              # supported by spec or Scimitar; we only test mid-path filters.
-              #
               context 'with filter mid-path' do
                 it 'by string match: overwrites' do
                   path      = [ 'emails[type eq "work"]', 'value' ]
@@ -1244,7 +1323,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'replace',
                     path:          path,
                     value:         'added_over_origina@test.com',
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
@@ -1270,7 +1349,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'replace',
                     path:          path,
                     value:         'added_over_origina@test.com',
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
@@ -1297,13 +1376,81 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'replace',
                     path:          path,
                     value:         'added_over_origina@test.com',
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('added_over_origina@test.com')
                   expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
                 end
               end # "context 'with filter mid-path' do"
+
+              context 'with filter at end of path' do
+                it 'by string match: replaces matching array entry' do
+                  path      = [ 'emails[type eq "work"]' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'type' => 'holiday',
+                        'value' => 'holiday@test.com'
+                      },
+                      {
+                        'type' => 'work',
+                        'value' => 'work@test.com'
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'replace',
+                    path:          path,
+                    value:         {'type' => 'home', 'primary' => true, 'value' => 'home@test.com'},
+                    altering_hash: scim_hash
+                  )
+
+                  expect(scim_hash['emails'].size).to eql(2)
+                  expect(scim_hash['emails'][0]['type'   ]).to eql('holiday') # unchanged
+                  expect(scim_hash['emails'][1]['type'   ]).to eql('home') # "work" became "home"
+                  expect(scim_hash['emails'][1]['primary']).to eql(true)
+                  expect(scim_hash['emails'][1]['value'  ]).to eql('home@test.com')
+                end
+
+                it 'multiple matches: replaces all matching array entries' do
+                  path      = [ 'emails[type eq "work"]' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'type' => 'work',
+                        'value' => 'work_1@test.com'
+                      },
+                      {
+                        'type' => 'work',
+                        'value' => 'work_2@test.com'
+                      },
+                      {
+                        'type' => 'home',
+                        'value' => 'home@test.com'
+                      },
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'replace',
+                    path:          path,
+                    value:         {'type' => 'workinate', 'value' => 'replaced@test.com'},
+                    altering_hash: scim_hash
+                  )
+
+                  expect(scim_hash['emails'].size).to eql(3)
+                  expect(scim_hash['emails'][0]['type' ]).to eql('workinate')
+                  expect(scim_hash['emails'][0]['value']).to eql('replaced@test.com')
+                  expect(scim_hash['emails'][1]['type' ]).to eql('workinate')
+                  expect(scim_hash['emails'][1]['value']).to eql('replaced@test.com')
+                  expect(scim_hash['emails'][2]['type' ]).to eql('home')
+                  expect(scim_hash['emails'][2]['value']).to eql('home@test.com')
+                end
+              end # "context 'with filter at end of path' do"
 
               it 'with arrays: replaces whole array' do
                 path      = [ 'emails' ]
@@ -1321,7 +1468,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'replace',
                   path:          path,
                   value:         [ { 'type' => 'work', 'value' => 'work@test.com' } ], # NOTE - to-add value is an Array (and must be)
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash['emails'].size).to eql(1)
@@ -1340,7 +1487,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'replace',
                   path:          path,
                   value:         'foo',
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash['userName']).to eql('foo')
@@ -1355,7 +1502,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'replace',
                   path:          path,
                   value:         'Baz',
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash['name']['givenName']).to eql('Baz')
@@ -1381,7 +1528,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'replace',
                     path:          path,
                     value:         'added@test.com',
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
@@ -1406,7 +1553,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'replace',
                     path:          path,
                     value:         'added@test.com',
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
@@ -1431,13 +1578,57 @@ RSpec.describe Scimitar::Resources::Mixin do
                     nature:        'replace',
                     path:          path,
                     value:         'added@test.com',
-                    altering_data: scim_hash
+                    altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('added@test.com')
                   expect(scim_hash['emails'][1]['value']).to eql('added@test.com')
                 end
               end # "context 'with filter mid-path' do"
+
+              context 'with filter at end of path' do
+                it 'by string match: adds item' do
+                  path      = [ 'emails[type eq "work"]' ]
+                  scim_hash = {}
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'replace',
+                    path:          path,
+                    value:         {'type' => 'work', 'value' => 'work@test.com'},
+                    altering_hash: scim_hash
+                  )
+
+                  expect(scim_hash['emails'].size).to eql(1)
+                  expect(scim_hash['emails'][0]['type' ]).to eql('work')
+                  expect(scim_hash['emails'][0]['value']).to eql('work@test.com')
+                end
+
+                it 'by boolean match: adds item' do
+                  path      = [ 'emails[primary eq true]' ]
+                  scim_hash = {
+                    'emails' => [
+                      {
+                        'value' => 'home@test.com',
+                        'primary' => false
+                      }
+                    ]
+                  }
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'replace',
+                    path:          path,
+                    value:         {'type' => 'work', 'value' => 'work@test.com'},
+                    altering_hash: scim_hash
+                  )
+
+                  expect(scim_hash['emails'].size).to eql(2)
+                  expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
+                  expect(scim_hash['emails'][1]['type' ]).to eql('work')
+                  expect(scim_hash['emails'][1]['value']).to eql('work@test.com')
+                end
+              end # "context 'with filter at end of path' do"
 
               it 'with arrays: replaces' do
                 path      = [ 'emails' ]
@@ -1448,7 +1639,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'replace',
                   path:          path,
                   value:         [ { 'type' => 'work', 'value' => 'work@test.com' } ], # NOTE - to-add value is an Array (and must be)
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
 
                 expect(scim_hash['emails'].size).to eql(1)
@@ -1480,7 +1671,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'replace',
                   path:          path,
                   value:         'ignored',
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
               end.to raise_error(Scimitar::ErrorResponse) { |e| expect(e.as_json['scimType']).to eql('invalidSyntax') }
             end
@@ -1497,7 +1688,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'replace',
                   path:          path,
                   value:         'ignored',
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
               end.to raise_error(Scimitar::ErrorResponse) { |e| expect(e.as_json['scimType']).to eql('invalidSyntax') }
             end
@@ -1517,7 +1708,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   nature:        'replace',
                   path:          path,
                   value:         'ignored',
-                  altering_data: scim_hash
+                  altering_hash: scim_hash
                 )
               end.to raise_error(Scimitar::ErrorResponse) { |e| expect(e.as_json['scimType']).to eql('invalidSyntax') }
             end
@@ -1531,7 +1722,7 @@ RSpec.describe Scimitar::Resources::Mixin do
       #
       context 'public interface' do
         it 'updates simple values' do
-          @instance.update(username: 'foo')
+          @instance.update!(username: 'foo')
 
           patch = {
             'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
@@ -1548,16 +1739,114 @@ RSpec.describe Scimitar::Resources::Mixin do
           expect(@instance.username).to eql('1234')
         end
 
+        it 'updates nested values' do
+          @instance.update!(first_name: 'Foo', last_name: 'Bar')
+
+          patch = {
+            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+            'Operations' => [
+              {
+                'op'    => 'replace',
+                'path'  => 'name.givenName',
+                'value' => 'Baz'
+              }
+            ]
+          }
+
+          @instance.from_patch!(patch_hash: patch)
+          expect(@instance.first_name).to eql('Baz')
+        end
+
         it 'updates with filter match' do
+          @instance.update!(work_email_address: 'work@test.com', home_email_address: 'home@test.com')
+
+          patch = {
+            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+            'Operations' => [
+              {
+                'op'    => 'replace',
+                'path'  => 'emails[type eq "work"].value',
+                'value' => 'replaced@test.com'
+              }
+            ]
+          }
+
+          @instance.from_patch!(patch_hash: patch)
+          expect(@instance.work_email_address).to eql('replaced@test.com')
+          expect(@instance.home_email_address).to eql('home@test.com')
         end
 
         it 'appends e-mails' do
+          @instance.update!(work_email_address: 'work@test.com')
+
+          patch = {
+            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+            'Operations' => [
+              {
+                'op'    => 'add',
+                'path'  => 'emails[type eq "home"].value',
+                'value' => 'home@test.com'
+              }
+            ]
+          }
+
+          @instance.from_patch!(patch_hash: patch)
+          expect(@instance.work_email_address).to eql('work@test.com')
+          expect(@instance.home_email_address).to eql('home@test.com')
         end
 
         it 'removes e-mails' do
+          @instance.update!(work_email_address: 'work@test.com', home_email_address: 'home@test.com')
+
+          patch = {
+            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+            'Operations' => [
+              {
+                'op'   => 'remove',
+                'path' => 'emails[type eq "home"]'
+              }
+            ]
+          }
+
+          @instance.from_patch!(patch_hash: patch)
+          expect(@instance.work_email_address).to eql('work@test.com')
+          expect(@instance.home_email_address).to be_nil
+        end
+
+        it 'can patch the whole object' do
+          @instance.update!(username: 'foo')
+
+          patch = {
+            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+            'Operations' => [
+              {
+                'op'    => 'replace',
+                'value' => {'userName' => '1234', 'name' => {'givenName' => 'Bar'}}
+              }
+            ]
+          }
+
+          @instance.from_patch!(patch_hash: patch)
+          expect(@instance.username).to eql('1234')
+          expect(@instance.first_name).to eql('Bar')
         end
 
         it 'treats operation types as case-insensitive' do
+          @instance.update!(username: 'foo')
+
+          patch = {
+            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+            'Operations' => [
+              {
+                'op'    => 'REPLACE', # Note upper case
+                'path'  => 'userName',
+                'value' => '1234'
+              }
+            ]
+          }
+
+          @instance.from_patch!(patch_hash: patch)
+          expect(@instance.username).to eql('1234')
         end
 
         it 'complains about bad operation types' do
@@ -1576,23 +1865,6 @@ RSpec.describe Scimitar::Resources::Mixin do
             expect(e.as_json['scimType']).to eql('invalidSyntax')
             expect(e.as_json[:detail   ]).to include('invalidop')
           end
-
-          #   {
-          #       "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-          #       "Operations": [
-          #           {
-          #               "op": "add",
-          #               "path": "emails[type eq \"work\"].values",
-          #               "value": [{"updatedEmail@microsoft.com"}]
-          #           },
-          #           {
-          #               "op": "Replace",
-          #               "path": "name.familyName",
-          #               "value": "updatedFamilyName"
-          #           }
-          #       ]
-          #   }
-          # }
         end
 
         it 'complains about a missing target for "remove" operations' do

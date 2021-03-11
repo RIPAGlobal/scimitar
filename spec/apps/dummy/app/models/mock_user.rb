@@ -11,6 +11,7 @@ class MockUser < ActiveRecord::Base
     first_name
     last_name
     work_email_address
+    home_email_address
     work_phone_number
   }
 
@@ -46,6 +47,14 @@ class MockUser < ActiveRecord::Base
           using: {
             value:   :work_email_address,
             primary: true
+          }
+        },
+        {
+          match: 'type',
+          with:  'home',
+          using: {
+            value:   :home_email_address,
+            primary: false
           }
         },
       ],

@@ -32,6 +32,7 @@ ActiveRecord::Schema.define(version: 2021_03_08_044214) do
     t.text "first_name"
     t.text "last_name"
     t.text "work_email_address"
+    t.text "home_email_address"
     t.text "work_phone_number"
   end
 

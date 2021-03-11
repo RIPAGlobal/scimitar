@@ -8,6 +8,7 @@ class MockGroup < ActiveRecord::Base
     id
     scim_uid
     display_name
+    scim_users_and_groups
   }
 
   has_and_belongs_to_many :mock_users
