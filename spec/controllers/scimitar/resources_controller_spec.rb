@@ -104,14 +104,14 @@ RSpec.describe Scimitar::ResourcesController do
     end
 
     it 'renders error if resource object cannot be built from the params' do
-      put :update, params: { id: 'group-id', name: {email: 'a@b.com'}, format: :scim }
+      put :replace, params: { id: 'group-id', name: {email: 'a@b.com'}, format: :scim }
       expect(response.status).to eql(400)
       expect(response_body[:detail]).to match(/^Invalid/)
     end
 
     it 'renders application side error' do
       allow_any_instance_of(Scimitar::Resources::Group).to receive(:to_json).and_raise(Scimitar::ErrorResponse.new(status: 400, detail: 'gaga'))
-      put :update, params: { id: 'group-id', displayName: 'invalid name', format: :scim }
+      put :replace, params: { id: 'group-id', displayName: 'invalid name', format: :scim }
       expect(response.status).to eql(400)
       expect(response_body[:detail]).to eql('gaga')
     end
@@ -120,7 +120,7 @@ RSpec.describe Scimitar::ResourcesController do
       post :create, params: { id: 'some-id', displayName: 'sauron', format: :scim }
 
       expect(response).to have_http_status(:bad_request)
-      expect(response_body[:detail]).to start_with('id is not a valid parameter for create')
+      expect(response_body[:detail]).to start_with('"id" is not a valid parameter for POST')
     end
 
     it 'does not renders error if externalId is provided' do
@@ -135,26 +135,26 @@ RSpec.describe Scimitar::ResourcesController do
 
   context 'PUT update' do
     it 'returns error if body is missing' do
-      put :update, params: { id: 'group-id', format: :scim }
+      put :replace, params: { id: 'group-id', format: :scim }
       expect(response.status).to eql(400)
       expect(response_body[:detail]).to eql('must provide a request body')
     end
 
     it 'works if the request is valid' do
-      put :update, params: { id: 'group-id', displayName: 'sauron', format: :scim }
+      put :replace, params: { id: 'group-id', displayName: 'sauron', format: :scim }
       expect(response.status).to eql(200)
       expect(response_body[:displayName]).to eql('sauron')
     end
 
     it 'renders error if resource object cannot be built from the params' do
-      put :update, params: { id: 'group-id', name: {email: 'a@b.com'}, format: :scim }
+      put :replace, params: { id: 'group-id', name: {email: 'a@b.com'}, format: :scim }
       expect(response.status).to eql(400)
       expect(response_body[:detail]).to match(/^Invalid/)
     end
 
     it 'renders application side error' do
       allow_any_instance_of(Scimitar::Resources::Group).to receive(:to_json).and_raise(Scimitar::ErrorResponse.new(status: 400, detail: 'gaga'))
-      put :update, params: { id: 'group-id', displayName: 'invalid name', format: :scim }
+      put :replace, params: { id: 'group-id', displayName: 'invalid name', format: :scim }
       expect(response.status).to eql(400)
       expect(response_body[:detail]).to eql('gaga')
     end

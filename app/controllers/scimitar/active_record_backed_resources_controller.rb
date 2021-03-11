@@ -19,10 +19,28 @@ module Scimitar
   #
   class ActiveRecordBackedResourcesController < ResourcesController
 
+    rescue_from ActiveRecord::RecordNotFound, with: :handle_resource_not_found # See Scimitar::ApplicationController
+
     # GET (list)
     #
     def index
-      super() do | record |
+      query = if params[:filter].blank?
+        self.storage_scope()
+      else
+        attribute_map = storage_class().new.scim_queryable_attributes()
+        parser        = ::Scimitar::Lists::QueryParser.new(attribute_map)
+
+        parser.parse(params[:filter])
+        parser.to_activerecord_query(self.storage_scope())
+      end
+
+      pagination_info = scim_pagination_info(query.count())
+      page_of_results = query
+        .offset(pagination_info.offset)
+        .limit(pagination_info.limit)
+        .to_a()
+
+      super(pagination_info, page_of_results) do | record |
         record.to_scim(location: url_for(action: :show, id: record.id))
       end
     end
@@ -39,13 +57,37 @@ module Scimitar
     # POST (create)
     #
     def create
-      super(&method(:save))
+      super do |scim_resource|
+        self.storage_class().transaction do
+          record = self.storage_class().new
+          record.from_scim!(scim_hash: scim_resource.as_json())
+          self.save!(record)
+        end
+      end
     end
 
-    # PUT (replace) and PATCH (update)
+    # PUT (replace)
+    #
+    def replace
+      super do |record_id, scim_resource|
+        self.storage_class().transaction do
+          record = self.find_record(record_id)
+          record.from_scim!(scim_hash: scim_resource.as_json())
+          self.save!(record)
+        end
+      end
+    end
+
+    # PATCH (update)
     #
     def update
-      super(&method(:save))
+      super do |record_id, patch_hash|
+        self.storage_class().transaction do
+          record = self.find_record(record_id)
+          record.from_scim_patch!(patch_hash: patch_hash)
+          self.save!(record)
+        end
+      end
     end
 
     # DELETE (remove)
@@ -77,39 +119,17 @@ module Scimitar
       #
       def find_record(record_id)
         self.storage_scope().find(record_id)
-      rescue ActiveRecord::RecordNotFound
-        handle_resource_not_found() # See Scimitar::ApplicationController
       end
 
-      # Create, replace or update (patch) a RIP user from SCIM data.
+      # Save a record, dealing with validation exceptions by raising SCIM
+      # errors.
       #
-      # +scim_resource+:: The payload from the inbound write operation.
-      # +operation+::     :create, :replace or :patch.
+      # +record+:: ActiveRecord subclass to save (via #save!).
       #
-      def save(scim_resource, operation)
-        record = nil
-
-        self.storage_class().transaction do
-          case operation
-            when :create
-              record = self.storage_class().new
-              record.from_scim!(scim_hash: scim_resource.as_json)
-
-            when :replace
-              record = self.find_record(scim_resource['id'])
-              record.from_scim!(scim_hash: scim_resource.as_json)
-
-            when :patch
-              record = self.find_record(scim_resource['id'])
-              record.from_scim_patch!(patch_hash: scim_resource.as_json)
-          end
-
-          record.save!
-        end
-
+      def save!(record)
+        record.save!
       rescue ActiveRecord::RecordInvalid => exception
-        raise Scimitar::ResourceInvalidError.new(record&.errors&.full_messages&.join('; ') || exception.message)
-
+        raise Scimitar::ResourceInvalidError.new(record.errors.full_messages.join('; '))
       end
 
   end

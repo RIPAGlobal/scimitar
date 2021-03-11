@@ -78,13 +78,11 @@ namespace :scim do
   get    'Users',     to: 'users#index'
   get    'Users/:id', to: 'users#show'
   post   'Users',     to: 'users#create'
-  put    'Users/:id', to: 'users#update'
-  patch  'Users/:id', to: 'users#update'
+  put    'Users/:id', to: 'mock_users#replace'
+  patch  'Users/:id', to: 'mock_users#update'
   delete 'Users/:id', to: 'users#destroy'
 end
 ```
-
-...where `patch` is intentionally routed to `#update`, which is expected to handle both replace-like semantics (`put`) and update-partially semantics (`patch`). You can change the routing if you prefer, but you'll need to do more custom work in any controllers as the above is the out-of-box expectation for the various Scimitar base controller classes.
 
 All routes then will be available at `https://.../scim/...`.
 
@@ -107,9 +105,29 @@ module Scim
     # own authorisation before-action filter would always run first.
 
     def index
-      super(user_scope) do | user |
+      # There's a degree of heavy lifting for arbitrary storage engines.
+      query = if params[:filter].present?
+        attribute_map = User.new.scim_queryable_attributes() # Note use of *instance* method
+        parser        = Scimitar::Lists::QueryParser.new(attribute_map)
+
+        parser.parse(params[:filter])
+        # Then use 'parser' to read e.g. #tree or #rpn and turn this into a
+        # query object for your storage engine. With ActiveRecord, you could
+        # just do: parser.to_activerecord_query(base_scope)
+      else
+        # Return a query object for 'all results' (e.g. User.all).
+      end
+
+      # Assuming the 'query' object above had ActiveRecord-like semantics,
+      # you'd create a Scimitar::Lists::Count object with total count filled in
+      # via #scim_pagination_info and obtain a page of results with something
+      # like the code shown below.
+      pagination_info = scim_pagination_info(query.count())
+      page_of_results = query.offset(pagination_info.offset).limit(pagination_info.limit).to_a
+
+      super(pagination_info, page_of_results) do | record |
         # Return each instance as a SCIM object, e.g. via Scimitar::Resources::Mixin#to_scim
-        user.to_scim(location: url_for(action: :show, id: user.id))
+        record.to_scim(location: url_for(action: :show, id: record.id))
       end
     end
 
@@ -122,11 +140,36 @@ module Scim
     end
 
     def create
-      super(&method(:save))
+      super do |scim_resource|
+        # Create an instance based on the Scimitar::Resources::User in
+        # "scim_resource" (or whatever your ::storage_class() defines via its
+        # ::scim_resource_type class method).
+        record = self.storage_class().new
+        record.from_scim!(scim_hash: scim_resource.as_json())
+        self.save!(record)
+      end
+    end
+
+    def replace
+      super do |record_id, scim_resource|
+        # Fully update an instance based on the Scimitar::Resources::User in
+        # "scim_resource" (or whatever your ::storage_class() defines via its
+        # ::scim_resource_type class method). For example:
+        record = self.find_record(record_id)
+        record.from_scim!(scim_hash: scim_resource.as_json())
+        self.save!(record)
+      end
     end
 
     def update
-      super(&method(:save))
+      super do |record_id, patch_hash|
+        # Partially update an instance based on the PATCH payload *Hash* given
+        # in "patch_hash" (note that unlike the "scim_resource" parameter given
+        # to blocks in #create or #replace, this is *not* a high-level object).
+        record = self.find_record(record_id)
+        record.from_scim_patch!(patch_hash: patch_hash)
+        self.save!(record)
+      end
     end
 
     def destroy
@@ -138,47 +181,11 @@ module Scim
 
     protected
 
-      def save(scim_user, operation)
-
-        # You might need to enclose the code below in a transaction of some
-        # sort, depending on your storage engine's behaviour. It is definitely
-        # needed for ActiveRecord.
-        #
-        case operation
-          when :create
-            record = User.new
-            # Fill in all data from the SCIM payload, e.g. via Scimitar::Resources::Mixin#from_scim!
-            record.from_scim!(scim_hash: scim_resource.as_json)
-
-          when :replace
-            record = find_record(scim_resource['id'])
-            # Replace all attributes from the SCIM payload, e.g. via Scimitar::Resources::Mixin#from_scim!
-            record.from_scim!(scim_hash: scim_resource.as_json)
-
-          when :patch
-            record = find_record(scim_resource['id'])
-            # Update some attributes from the SCIM patch data, e.g. via Scimitar::Resources::Mixin#from_scim_patch!
-            record.from_scim_patch!(patch_hash: scim_resource.as_json)
-        end
-
-        # ...and persist 'record'. You should always try to store the
-        # 'externalId' value.
-      rescue ActiveRecord::RecordInvalid => exception
-        # Map the enternal errors to a ScimEngine error.
-        raise ScimEngine::ResourceInvalidError.new(...error message here...)
-      end
-
       # The class including Scimitar::Resources::Mixin which declares mappings
       # to the entity you return in #resource_type.
       #
       def storage_class
         User
-      end
-
-      # Return an index (list) ActiveRecord::Relation scope for User records.
-      #
-      def user_scope
-        # Return a User scope here - e.g. User.all, Company.users...
       end
 
       # Find your user. The +id+ parameter is one of YOUR identifiers, which
@@ -191,12 +198,21 @@ module Scim
         # Find records by your ID here.
       end
 
+      # Persist 'user' - for example, if we *were* using ActiveRecord...
+      #
+      def save!(user)
+        user.save!
+      rescue ActiveRecord::RecordInvalid => exception
+        raise Scimitar::ResourceInvalidError.new(record.errors.full_messages.join('; '))
+      end
+
+
   end
 end
 
 ```
 
-Note that the `Scimitar::ApplicationController` parent class of `Scimitar::ResourcesController` has a few methods to help with handling exceptions and rendering them as SCIM responses; for example, if a resource were not found by ID, you might wish to call `Scimitar::ApplicationController#handle_resource_not_found`. If you use ActiveRecord, though, you can choose a more advanced subclass and all of that gets handled for you:
+Note that the `Scimitar::ApplicationController` parent class of `Scimitar::ResourcesController` has a few methods to help with handling exceptions and rendering them as SCIM responses; for example, if a resource were not found by ID, you might wish to use `Scimitar::ApplicationController#handle_resource_not_found`. If you use ActiveRecord, though, you can choose a more advanced subclass and all of that gets handled for you:
 
 ```ruby
 module Scim

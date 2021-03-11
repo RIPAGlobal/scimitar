@@ -142,7 +142,7 @@ RSpec.describe Scimitar::ApplicationController do
         expect(response).to have_http_status(:not_found)
         parsed_body = JSON.parse(response.body)
         expect(parsed_body).to include('schemas' => ['urn:ietf:params:scim:api:messages:2.0:Error'])
-        expect(parsed_body).to include('detail' => 'Resource 10 not found')
+        expect(parsed_body).to include('detail' => 'Resource "10" not found')
         expect(parsed_body).to include('status' => '404')
       end
     end

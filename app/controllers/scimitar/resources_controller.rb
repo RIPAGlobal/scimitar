@@ -2,9 +2,10 @@ require_dependency "scimitar/application_controller"
 
 module Scimitar
 
-  # A Rails controller which is largely idiomatic, with #index, #show, #create
-  # and #destroy methods mapping to the conventional HTTP methods in Rails as
-  # well as #update, which can be called for either PUT or PATCH.
+  # A Rails controller which is mostly idiomatic, with #index, #show, #create
+  # and #destroy methods mapping to the conventional HTTP methods in Rails.
+  # The #update method is used for partial-update PATCH calls, while the
+  # #replace method is used for whole-update PUT calls.
   #
   # Subclass this controller to deal with resource-specific API calls, for
   # endpoints such as Users and Groups. Any one controller is assumed to be
@@ -30,77 +31,88 @@ module Scimitar
 
     # GET (list)
     #
-    def index(base_scope, &block)
-      query = if params[:filter].present?
-        attribute_map = storage_class().new.scim_queryable_attributes()
-        parser        = ::Scimitar::Lists::QueryParser.new(attribute_map)
-
-        parser.parse(params[:filter])
-        parser.to_activerecord_query(base_scope)
-      else
-        base_scope
-      end
-
-      counts = ::Scimitar::Lists::Count.new(
-        start_index: params[:startIndex],
-        limit:       params[:count],
-        total:       query.count()
-      )
-
-      results = query.offset(counts.offset).limit(counts.limit).to_a
-
-      render json: {
+    # Pass a Scimitar::Lists::Count object providing pagination data along with
+    # a page of results in "your" data domain as an Enumerable, along with a
+    # block. Renders as "list" result by calling your block with each of the
+    # results, allowing you to use something like
+    # Scimitar::Resources::Mixin#to_scim to convert to a SCIM representation.
+    #
+    # +pagination_info+:: A Scimitar::Lists::Count instance with #total set.
+    #                     See e.g. protected method #scim_pagination_info to
+    #                     assist with this.
+    #
+    # +page_of_results+:: An Enumerable single page of results.
+    #
+    def index(pagination_info, page_of_results, &block)
+      render(json: {
         schemas: [
             'urn:ietf:params:scim:api:messages:2.0:ListResponse'
         ],
-        totalResults: counts.total,
-        startIndex:   counts.start_index,
-        itemsPerPage: counts.limit,
-        Resources:    results.map(&block)
-      }
+        totalResults: pagination_info.total,
+        startIndex:   pagination_info.start_index,
+        itemsPerPage: pagination_info.limit,
+        Resources:    page_of_results.map(&block)
+      })
     end
 
     # GET/id (show)
     #
+    # Call with a block that is passed an ID to find in "your" domain. Evaluate
+    # to the SCIM representation of the arising found record.
+    #
     def show(&block)
-      scim_resource = yield(self.resource_params()[:id])
-      render json: scim_resource
-    rescue ErrorResponse => error
-      handle_scim_error(error)
+      scim_resource = yield(self.safe_params()[:id])
+      render(json: scim_resource)
     end
 
     # POST (create)
     #
+    # Call with a block that is passed a SCIM resource instance - e.g a
+    # Scimitar::Resources::User instance - representing an item to be created,
+    # along with a second parameter that is always ":create".  Evaluate to the
+    # SCIM representation of the arising found record.
+    #
     def create(&block)
-      if self.resource_params()[:id].present?
-        handle_scim_error(ErrorResponse.new(status: 400, detail: 'id is not a valid parameter for create'))
-        return
+      if self.safe_params()[:id].present?
+        raise ErrorResponse.new(status: 400, detail: '"id" is not a valid parameter for POST')
       end
 
       with_scim_resource() do |resource|
-        render json: yield(resource, :create), status: :created
+        render(json: yield(resource, :create), status: :created)
       end
     end
 
-    # PUT (replace) and PATCH (update)
+    # PUT (replace)
+    #
+    def replace(&block)
+      with_scim_resource() do |resource|
+        render(json: yield(self.safe_params()[:id], resource))
+      end
+    end
+
+    # PATCH (update)
     #
     def update(&block)
-      with_scim_resource() do |resource|
-        render json: yield(resource, request.patch? ? :patch : :replace)
-      end
+      validate_request()
+
+      # Params includes all of the PATCH data at the top level along with other
+      # other Rails-injected params like 'id', 'action', 'controller'. These
+      # are harmless given no namespace collision and we're only interested in
+      # the 'Operations' key for the actual patch data.
+      #
+      render(json: yield(self.safe_params()[:id], self.safe_params().to_hash()))
     end
 
     # DELETE (remove)
     #
     def destroy
-      if yield(self.resource_params()[:id]) != false
+      if yield(self.safe_params()[:id]) != false
         head :no_content
       else
-        five_hundred = ErrorResponse.new(
+        raise ErrorResponse.new(
           status: 500,
           detail: "Failed to delete the resource with id '#{params[:id]}'. Please try again later."
         )
-        handle_scim_error(five_hundred)
       end
     end
 
@@ -117,6 +129,23 @@ module Scimitar
         raise NotImplementedError
       end
 
+      # For #index actions, returns a Scimitar::Lists::Count instance which can
+      # be used to access offset-vs-start-index (0-indexed or 1-indexed),
+      # per-page limit and also holds the total number-of-items count which you
+      # can optionally pass up-front here, or set via #total= later.
+      #
+      # +total_count+:: Optional integer total record count across all pages,
+      #                 else must be set later - BEFORE passing an instance to
+      #                 the #index implementation in this class.
+      #
+      def scim_pagination_info(total_count = nil)
+        ::Scimitar::Lists::Count.new(
+          start_index: params[:startIndex],
+          limit:       params[:count],
+          total:       total_count
+        )
+      end
+
     # =========================================================================
     # PRIVATE INSTANCE METHODS
     # =========================================================================
@@ -131,29 +160,29 @@ module Scimitar
 
       def with_scim_resource
         validate_request()
+
         resource_type = storage_class().scim_resource_type() # See Scimitar::Resources::Mixin
+        resource      = resource_type.new(self.safe_params().to_h)
 
-        begin
-          resource = resource_type.new(self.resource_params().to_h)
-
-          unless resource.valid?
-            raise Scimitar::ErrorResponse.new(
-              status:   400,
-              detail:   "Invalid resource: #{resource.errors.full_messages.join(', ')}.",
-              scimType: 'invalidValue'
-            )
-          end
-
+        if resource.valid?
           yield(resource)
-        rescue NoMethodError => error
-          Rails.logger.error(error)
-          raise Scimitar::ErrorResponse.new(status: 400, detail: 'invalid request')
+        else
+          raise Scimitar::ErrorResponse.new(
+            status:   400,
+            detail:   "Invalid resource: #{resource.errors.full_messages.join(', ')}.",
+            scimType: 'invalidValue'
+          )
         end
-      rescue Scimitar::ErrorResponse => error
-        handle_scim_error(error)
+
+      # Gem bugs aside - if this happens, we couldn't create "resource"; bad
+      # (or unsupported) attributes encountered in inbound payload data.
+      #
+      rescue NoMethodError => exception
+        Rails.logger.error("#{exception.message}\n#{exception.backtrace}")
+        raise Scimitar::ErrorResponse.new(status: 400, detail: 'invalid request')
       end
 
-      def resource_params
+      def safe_params
         params.permit!
       end
 
