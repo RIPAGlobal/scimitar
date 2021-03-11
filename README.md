@@ -209,6 +209,30 @@ end
 
 ### Controllers
 
+If you use ActiveRecord, your controllers can potentially be extremely simple - at a minimum:
+
+```ruby
+module Scim
+  class UsersController < Scimitar::ActiveRecordBackedResourcesController
+
+    skip_before_action :verify_authenticity_token
+
+    protected
+
+      def storage_class
+        User
+      end
+
+      def storage_scope
+        User.all # Or e.g. "User.where(is_deleted: false)" - whatever base scope you require
+      end
+
+  end
+end
+```
+
+All data-layer actions are taken via `#find` or `#save!`, with exceptions such as `ActiveRecord::RecordNotFound`, `ActiveRecord::RecordInvalid` or generalised SCIM exceptions handled by various superclasses. For a real Rails example of this, see the [test suite's controllers](https://github.com/RIPGlobal/scimitar/tree/main/spec/apps/dummy/app/controllers) which are invoked via its [routing declarations](https://github.com/RIPGlobal/scimitar/blob/main/spec/apps/dummy/config/routes.rb).
+
 If you do _not_ use ActiveRecord to store data, or if you have very esoteric read-write requirements, you can subclass `ScimEngine::ResourcesController` in a manner similar to this:
 
 ```ruby
@@ -339,29 +363,7 @@ end
 
 ```
 
-Note that the `Scimitar::ApplicationController` parent class of `Scimitar::ResourcesController` has a few methods to help with handling exceptions and rendering them as SCIM responses; for example, if a resource were not found by ID, you might wish to use `Scimitar::ApplicationController#handle_resource_not_found`. If you use ActiveRecord, though, you can choose a more advanced subclass and all of that gets handled for you:
-
-```ruby
-module Scim
-  class UsersController < Scimitar::ActiveRecordBackedResourcesController
-
-    skip_before_action :verify_authenticity_token
-
-    protected
-
-      def storage_class
-        User
-      end
-
-      def storage_scope
-        User.all # Or e.g. "User.where(is_deleted: false)" - whatever base scope you require
-      end
-
-  end
-end
-```
-
-In the simplest case - that's it! All actions are taken via `#find` or `#save!`, with things like `ActiveRecord::RecordNotFound` or generalised SCIM errors handled by the various superclasses. For a real Rails example of this, see the [test suite's controllers](https://github.com/RIPGlobal/scimitar/tree/main/spec/apps/dummy/app/controllers) (which are invoked via its [routing declarations](https://github.com/RIPGlobal/scimitar/blob/main/spec/apps/dummy/config/routes.rb)).
+Note that the `Scimitar::ApplicationController` parent class of `Scimitar::ResourcesController` has a few methods to help with handling exceptions and rendering them as SCIM responses; for example, if a resource were not found by ID, you might wish to use `Scimitar::ApplicationController#handle_resource_not_found`.
 
 
 
