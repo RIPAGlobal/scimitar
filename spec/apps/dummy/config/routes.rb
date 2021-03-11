@@ -6,6 +6,7 @@ Rails.application.routes.draw do
     get    'Users/:id', to: 'mock_users#show'
     post   'Users',     to: 'mock_users#create'
     put    'Users/:id', to: 'mock_users#update'
+    patch  'Users/:id', to: 'mock_users#update'
     delete 'Users/:id', to: 'mock_users#destroy'
   end
 end

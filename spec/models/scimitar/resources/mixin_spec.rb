@@ -448,10 +448,10 @@ RSpec.describe Scimitar::Resources::Mixin do
     end # "context '#from_scim!' do"
 
     # =========================================================================
-    # #from_patch!
+    # #from_scim_patch!
     # =========================================================================
 
-    context '#from_patch!' do
+    context '#from_scim_patch!' do
       before :each do
         @instance = MockUser.new
       end
@@ -462,7 +462,7 @@ RSpec.describe Scimitar::Resources::Mixin do
       #
       # PATCH is so enormously complex that we do lots of unit tests on private
       # methods before even bothering with the higher level "unit" (more like
-      # integration!) tests on #from_patch! itself.
+      # integration!) tests on #from_scim_patch! itself.
       #
       # These were used during development to debug the implementation.
       #
@@ -1735,7 +1735,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             ]
           }
 
-          @instance.from_patch!(patch_hash: patch)
+          @instance.from_scim_patch!(patch_hash: patch)
           expect(@instance.username).to eql('1234')
         end
 
@@ -1753,7 +1753,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             ]
           }
 
-          @instance.from_patch!(patch_hash: patch)
+          @instance.from_scim_patch!(patch_hash: patch)
           expect(@instance.first_name).to eql('Baz')
         end
 
@@ -1771,7 +1771,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             ]
           }
 
-          @instance.from_patch!(patch_hash: patch)
+          @instance.from_scim_patch!(patch_hash: patch)
           expect(@instance.work_email_address).to eql('replaced@test.com')
           expect(@instance.home_email_address).to eql('home@test.com')
         end
@@ -1790,7 +1790,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             ]
           }
 
-          @instance.from_patch!(patch_hash: patch)
+          @instance.from_scim_patch!(patch_hash: patch)
           expect(@instance.work_email_address).to eql('work@test.com')
           expect(@instance.home_email_address).to eql('home@test.com')
         end
@@ -1808,7 +1808,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             ]
           }
 
-          @instance.from_patch!(patch_hash: patch)
+          @instance.from_scim_patch!(patch_hash: patch)
           expect(@instance.work_email_address).to eql('work@test.com')
           expect(@instance.home_email_address).to be_nil
         end
@@ -1826,7 +1826,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             ]
           }
 
-          @instance.from_patch!(patch_hash: patch)
+          @instance.from_scim_patch!(patch_hash: patch)
           expect(@instance.username).to eql('1234')
           expect(@instance.first_name).to eql('Bar')
         end
@@ -1845,7 +1845,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             ]
           }
 
-          @instance.from_patch!(patch_hash: patch)
+          @instance.from_scim_patch!(patch_hash: patch)
           expect(@instance.username).to eql('1234')
         end
 
@@ -1861,7 +1861,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             ]
           }
 
-          expect { @instance.from_patch!(patch_hash: patch) }.to raise_error(Scimitar::ErrorResponse) do |e|
+          expect { @instance.from_scim_patch!(patch_hash: patch) }.to raise_error(Scimitar::ErrorResponse) do |e|
             expect(e.as_json['scimType']).to eql('invalidSyntax')
             expect(e.as_json[:detail   ]).to include('invalidop')
           end
@@ -1877,11 +1877,11 @@ RSpec.describe Scimitar::Resources::Mixin do
             ]
           }
 
-          expect { @instance.from_patch!(patch_hash: patch) }.to raise_error(Scimitar::ErrorResponse) do |e|
+          expect { @instance.from_scim_patch!(patch_hash: patch) }.to raise_error(Scimitar::ErrorResponse) do |e|
             expect(e.as_json['scimType']).to eql('noTarget')
           end
         end
       end # "context 'public interface' do"
-    end # "context '#from_patch!' do"
+    end # "context '#from_scim_patch!' do"
   end # "context 'with good class definitons' do"
 end # "RSpec.describe Scimitar::Resources::Mixin do"

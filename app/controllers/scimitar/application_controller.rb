@@ -5,23 +5,11 @@ module Scimitar
     before_action :add_mandatory_response_headers
     before_action :authenticate
 
-    private
-
-      def authenticated?
-        result = if Scimitar.engine_configuration.basic_authenticator.present?
-          authenticate_with_http_basic(&Scimitar.engine_configuration.basic_authenticator)
-        end
-
-        result ||= if Scimitar.engine_configuration.token_authenticator.present?
-          authenticate_with_http_token(&Scimitar.engine_configuration.token_authenticator)
-        end
-
-        return result
-      end
-
-      def authenticate
-        handle_scim_error(Scimitar::AuthenticationError.new) unless authenticated?
-      end
+    # =========================================================================
+    # PROTECTED INSTANCE METHODS
+    # =========================================================================
+    #
+    protected
 
       def handle_resource_not_found(exception)
         handle_scim_error(NotFoundError.new(params[:id]))
@@ -31,13 +19,15 @@ module Scimitar
         handle_scim_error(ErrorResponse.new(status: 400, detail: "Operation failed since record has become invalid: #{error_message}"))
       end
 
-      def handle_unauthorized
-        handle_scim_error(ErrorResponse.new(status: 401, detail: "Invalid credentails"))
-      end
-
       def handle_scim_error(error_response)
         render json: error_response, status: error_response.status
       end
+
+    # =========================================================================
+    # PRIVATE INSTANCE METHODS
+    # =========================================================================
+    #
+    private
 
       def require_scim
         unless request.format == :scim
@@ -61,6 +51,22 @@ module Scimitar
         #
         response.set_header('WWW_AUTHENTICATE', 'Basic' ) if Scimitar.engine_configuration.basic_authenticator.present?
         response.set_header('WWW_AUTHENTICATE', 'Bearer') if Scimitar.engine_configuration.token_authenticator.present?
+      end
+
+      def authenticate
+        handle_scim_error(Scimitar::AuthenticationError.new) unless authenticated?
+      end
+
+      def authenticated?
+        result = if Scimitar.engine_configuration.basic_authenticator.present?
+          authenticate_with_http_basic(&Scimitar.engine_configuration.basic_authenticator)
+        end
+
+        result ||= if Scimitar.engine_configuration.token_authenticator.present?
+          authenticate_with_http_token(&Scimitar.engine_configuration.token_authenticator)
+        end
+
+        return result
       end
 
   end

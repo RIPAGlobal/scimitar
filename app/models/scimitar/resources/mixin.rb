@@ -325,9 +325,9 @@ module Scimitar
           return resource
         end
 
-        # Update self from a SCIM object using ::scim_attributes_map. This
-        # does not attempt to persist / "save" 'this' instance; it just
-        # sets the attribute values within it.
+        # Update self from a SCIM object using ::scim_attributes_map. This does
+        # NOT PERSIST ("save") 'this' instance - it just sets attribute values
+        # within it.
         #
         # If you are mixing into an ActiveRecord subclass then depending on how
         # your ::scim_attributes_map updates associated objects (if any), Rails
@@ -340,8 +340,10 @@ module Scimitar
         #       record.save!
         #     end
         #
+        # Call ONLY for POST or PUT. For PATCH, see #from_scim_patch!.
+        #
         # +scim_hash+:: A Hash that's the result of parsing a JSON payload
-        #               from an inbound SCIM write-related request.
+        #               from an inbound POST or PUT request.
         #
         # Returns 'self', for convenience of e.g. chaining other methods.
         #
@@ -353,8 +355,11 @@ module Scimitar
           return self
         end
 
-        # Update self from a SCIM object representing a PATCH operation. In
-        # SCIM, these are very complex - a series of operations can be listed,
+        # Update self from a SCIM object representing a PATCH operation. This
+        # does NOT PERSIST ("save") 'this' instance - it just sets attribute
+        # values within it.
+        #
+        # SCIM patch operations are complex. A series of operations is given,
         # each asking to add, remove or replace specific attributes or, via
         # filters, potentially multiple attributes if the filter matches many.
         #
@@ -365,18 +370,21 @@ module Scimitar
         #
         # * The inbound operations are applied. A Scimitar::ErrorResponse may
         #   be thrown if the patch data looks bad - if you are calling from a
-        #   Scimitar::ResourcesController subclass, this will be handled for
-        #   you and returned as an appropriate HTTP response.
+        #   Scimitar::ActiveRecordBackedResourcesController subclass, this will
+        #   be handled for you and returned as an appropriate HTTP response.
+        #   Otherwise, you'll need to rescue it yourself and e.g. make use of
+        #   Scimitar::ApplicationController#handle_scim_error, passing the
+        #   exception object to it, if you are a subclass of that base class.
         #
         # * The (possibly) updated SCIM representation of 'self' is pushed
         #   back into 'this' instance via #from_scim!.
         #
-        # Returns the updated (but NOT persisted) 'self' for convenience.
-        #
         # IMPORTANT: Please see #from_scim! for notes about associations and
         # use of transactions with ActiveRecord.
         #
-        def from_patch!(patch_hash:)
+        # Call ONLY for PATCH. For POST and PUT, see #from_scim!.
+        #
+        def from_scim_patch!(patch_hash:)
           patch_hash.freeze()
           scim_hash = self.to_scim(location: '(unused)').as_json()
 
@@ -386,11 +394,7 @@ module Scimitar
             value    = operation['value']
 
             unless ['add', 'remove', 'replace'].include?(nature)
-              raise Scimitar::ErrorResponse.new(
-                status:    400,
-                scimType: 'invalidSyntax',
-                detail:   "Unrecognised PATCH \"op\" value of \"#{nature}\""
-              )
+              raise Scimitar::InvalidSyntaxError.new("Unrecognised PATCH \"op\" value of \"#{nature}\"")
             end
 
             # https://tools.ietf.org/html/rfc7644#section-3.5.2.2
@@ -660,10 +664,11 @@ module Scimitar
             end # "case scim_hash_or_leaf_value"
           end # "def from_scim_backend!..."
 
-          # Recursive back-end for #from_patch! which traverses paths down into
-          # one or many (if multiple-match filters are encountered) attributes
-          # and performs updates on a SCIM Hash representation of 'self'. If it
-          # encounters any errors, throws Scimitar::ErrorResponse.
+          # Recursive back-end for #from_scim_patch! which traverses paths down
+          # into one or - if multiple-match filters are encountered - multiple
+          # attributes and performs updates on a SCIM Hash representation of
+          # 'self'. Throws Scimitar::ErrorResponse (or a subclass thereof) upon
+          # encountering any errors.
           #
           # Named parameters:
           #
@@ -712,11 +717,7 @@ module Scimitar
             # Treat all exceptions as a malformed or unsupported PATCH.
             #
             rescue => _exception # You can use _exception if debugging
-              raise Scimitar::ErrorResponse.new(
-                status:    400,
-                scimType: 'invalidSyntax',
-                detail:   "PATCH describes unrecognised attributes and/or unsupported filters"
-              )
+              raise Scimitar::InvalidSyntaxError.new('PATCH describes unrecognised attributes and/or unsupported filters')
           end
 
           # Called by #from_patch_backend! when dealing with path elements that

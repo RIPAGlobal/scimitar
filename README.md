@@ -67,6 +67,7 @@ Scimitar neither enforces nor presumes any kind of encoding for bearer tokens. Y
 
 
 
+### Routes
 
 For each resource you support, add these lines to your `routes.rb`:
 
@@ -78,27 +79,25 @@ namespace :scim do
   get    'Users/:id', to: 'users#show'
   post   'Users',     to: 'users#create'
   put    'Users/:id', to: 'users#update'
+  patch  'Users/:id', to: 'users#update'
   delete 'Users/:id', to: 'users#destroy'
 end
 ```
 
+...where `patch` is intentionally routed to `#update`, which is expected to handle both replace-like semantics (`put`) and update-partially semantics (`patch`). You can change the routing if you prefer, but you'll need to do more custom work in any controllers as the above is the out-of-box expectation for the various Scimitar base controller classes.
+
 All routes then will be available at `https://.../scim/...`.
 
+### Controllers
 
+If you do _not_ use ActiveRecord to store data, or if you have very esoteric read-write requirements, you can subclass `ScimEngine::ResourcesController` in a manner similar to this:
 
 ```ruby
-# app/controllers/scim/users_controller.rb
-
 module Scim
 
   # SCIM clients don't use Rails CSRF tokens.
   #
   skip_before_action :verify_authenticity_token
-
-  # ScimEngine::ResourcesController uses a template method so that the
-  # subclasses can provide the fillers with minimal effort solely focused on
-  # application code leaving the SCIM protocol and schema specific code within the
-  # engine.
 
   class UsersController < ScimEngine::ResourcesController
 
@@ -109,6 +108,7 @@ module Scim
 
     def index
       super(user_scope) do | user |
+        # Return each instance as a SCIM object, e.g. via Scimitar::Resources::Mixin#to_scim
         user.to_scim(location: url_for(action: :show, id: user.id))
       end
     end
@@ -116,6 +116,7 @@ module Scim
     def show
       super do |user_id|
         user = find_user(user_id)
+        # Return the instance as a SCIM object, e.g. via Scimitar::Resources::Mixin#to_scim
         user.to_scim(location: url_for(action: :show, id: user_id))
       end
     end
@@ -137,9 +138,31 @@ module Scim
 
     protected
 
-      def save(scim_user, is_create: false)
-        # Convert the ScimEngine::Resources::User to your application object
-        # and save. IMPORTANT: Make sure you store the 'externalId' value.
+      def save(scim_user, operation)
+
+        # You might need to enclose the code below in a transaction of some
+        # sort, depending on your storage engine's behaviour. It is definitely
+        # needed for ActiveRecord.
+        #
+        case operation
+          when :create
+            record = User.new
+            # Fill in all data from the SCIM payload, e.g. via Scimitar::Resources::Mixin#from_scim!
+            record.from_scim!(scim_hash: scim_resource.as_json)
+
+          when :replace
+            record = find_record(scim_resource['id'])
+            # Replace all attributes from the SCIM payload, e.g. via Scimitar::Resources::Mixin#from_scim!
+            record.from_scim!(scim_hash: scim_resource.as_json)
+
+          when :patch
+            record = find_record(scim_resource['id'])
+            # Update some attributes from the SCIM patch data, e.g. via Scimitar::Resources::Mixin#from_scim_patch!
+            record.from_scim_patch!(patch_hash: scim_resource.as_json)
+        end
+
+        # ...and persist 'record'. You should always try to store the
+        # 'externalId' value.
       rescue ActiveRecord::RecordInvalid => exception
         # Map the enternal errors to a ScimEngine error.
         raise ScimEngine::ResourceInvalidError.new(...error message here...)
@@ -165,15 +188,38 @@ module Scim
       # "externalId" value and retrieve your "id" from that response.
       #
       def find_user(id)
-        # Find your #associated_class (User) by your ID here. If you throw
-        # ActiveRecord::RecordNotFound, it'll be caught by Scimitar and
-        # returned as an appropriately-formatted JSON response.
+        # Find records by your ID here.
       end
 
   end
 end
 
 ```
+
+Note that the `Scimitar::ApplicationController` parent class of `Scimitar::ResourcesController` has a few methods to help with handling exceptions and rendering them as SCIM responses; for example, if a resource were not found by ID, you might wish to call `Scimitar::ApplicationController#handle_resource_not_found`. If you use ActiveRecord, though, you can choose a more advanced subclass and all of that gets handled for you:
+
+```ruby
+module Scim
+  class MockUsersController < Scimitar::ActiveRecordBackedResourcesController
+
+    skip_before_action :verify_authenticity_token
+
+    protected
+
+      def storage_class
+        User
+      end
+
+      def storage_scope
+        User.all # Or e.g. "User.where(is_deleted: false)" - whatever base scope you require
+      end
+
+  end
+end
+```
+
+In the simplest case - that's it! All actions are taken via `#find` or `#save!`, with things like `ActiveRecord::RecordNotFound` or generalised SCIM errors handled by the various superclasses.
+
 
 
 ```
