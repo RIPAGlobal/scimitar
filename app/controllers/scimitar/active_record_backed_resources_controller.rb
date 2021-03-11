@@ -62,6 +62,7 @@ module Scimitar
           record = self.storage_class().new
           record.from_scim!(scim_hash: scim_resource.as_json())
           self.save!(record)
+          record.to_scim(location: url_for(action: :show, id: record.id))
         end
       end
     end
@@ -74,6 +75,7 @@ module Scimitar
           record = self.find_record(record_id)
           record.from_scim!(scim_hash: scim_resource.as_json())
           self.save!(record)
+          record.to_scim(location: url_for(action: :show, id: record.id))
         end
       end
     end
@@ -86,6 +88,7 @@ module Scimitar
           record = self.find_record(record_id)
           record.from_scim_patch!(patch_hash: patch_hash)
           self.save!(record)
+          record.to_scim(location: url_for(action: :show, id: record.id))
         end
       end
     end
@@ -126,11 +129,14 @@ module Scimitar
       #
       # +record+:: ActiveRecord subclass to save (via #save!).
       #
-      # Returns a SCIM representation of the saved record.
+      # The return value is not used internally, making life easier for
+      # overriding subclasses to "do the right thing" / avoid mistakes (instead
+      # of e.g. requiring that a to-SCIM representation of 'record' is returned
+      # and relying upon this to generate correct response payloads - an early
+      # version of the gem did this and it caused a confusing subclass bug).
       #
       def save!(record)
         record.save!
-        return record.to_scim(location: url_for(action: :show, id: record.id))
       rescue ActiveRecord::RecordInvalid => exception
         raise Scimitar::ResourceInvalidError.new(record.errors.full_messages.join('; '))
       end
