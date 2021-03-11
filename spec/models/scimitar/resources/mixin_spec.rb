@@ -1649,6 +1649,186 @@ RSpec.describe Scimitar::Resources::Mixin do
             end # context 'when value is not present' do
           end # "context 'replace' do"
 
+          # -------------------------------------------------------------------
+          # Internal: #from_patch_backend - some bespoke complex cases
+          # -------------------------------------------------------------------
+          #
+          # I just wanted to be sure...
+          #
+          context 'contrived complexity' do
+            before :each do
+              @contrived_class = Class.new do
+                def self.scim_resource_type
+                  return nil
+                end
+
+                def self.scim_attributes_map
+                  return {
+                    complex: [
+                      match: 'type',
+                      with:  'type1',
+                      using: {
+                        data: {
+                          nested: [
+                            match: 'nature',
+                            with:  'nature2',
+                            using: {
+                              info: {
+                                deep: :accessor_method_is_unused_in_this_test
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                end
+
+                def self.scim_mutable_attributes
+                  return nil
+                end
+
+                def self.scim_queryable_attributes
+                  return nil
+                end
+
+                include Scimitar::Resources::Mixin
+              end
+
+              @original_hash = {
+                'complex' => [
+                  {
+                    'type' => 'type1', # This will match the filter below
+                    'data' => {
+                      'nested' => [
+                        {
+                          'nature' => 'nature1', # This will not match
+                          'info'   => [
+                            { 'deep' => 'nature1deep' }
+                          ]
+                        },
+                        {
+                          'nature' => 'nature2', # This will match the filter below
+                          'info'   => [
+                            { 'deep' => 'nature2deep1' }
+                          ]
+                        },
+                        {
+                          'nature' => 'nature2', # This will match the filter below
+                          'info'   => [
+                            { 'deep' => 'nature2deep2' }
+                          ]
+                        },
+                      ]
+                    }
+                  },
+                  {
+                    'type' => 'type1', # This will match the filter below
+                    'data' => {
+                      'nested' => [
+                        {
+                          'nature' => 'nature2', # This will match the filter below
+                          'info'   => [
+                            { 'deep' => 'nature2deep3' }
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    'type' => 'type2', # This will not match
+                    'data' => {
+                      'nested' => [
+                        {
+                          'nature' => 'nature2', # This will match the filter below, but is nested inside something that does not match
+                          'info'   => [
+                            { 'deep' => 'nature2deep3' }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            end
+
+            it 'adds across multiple deep matching points' do
+              scim_hash          = @original_hash.deep_dup()
+              contrived_instance = @contrived_class.new
+              contrived_instance.send(
+                :from_patch_backend!,
+                nature:        'add',
+                path:          ['complex[type eq "type1"]', 'data', 'nested[nature eq "nature2"]', 'info'],
+                value:         [{ 'deeper' => 'addition' }],
+                altering_hash: scim_hash
+              )
+
+              expect(scim_hash.dig('complex', 0, 'data', 'nested', 0, 'info').count).to eql(1) # Unchanged
+              expect(scim_hash.dig('complex', 0, 'data', 'nested', 1, 'info').count).to eql(2) # One new item
+              expect(scim_hash.dig('complex', 0, 'data', 'nested', 2, 'info').count).to eql(2) # One new item
+              expect(scim_hash.dig('complex', 0, 'data', 'nested', 1, 'info', 1, 'deeper')).to eql('addition')
+              expect(scim_hash.dig('complex', 0, 'data', 'nested', 2, 'info', 1, 'deeper')).to eql('addition')
+
+              expect(scim_hash.dig('complex', 1, 'data', 'nested', 0, 'info').count).to eql(2) # One new item
+              expect(scim_hash.dig('complex', 1, 'data', 'nested', 0, 'info', 1, 'deeper')).to eql('addition')
+
+              expect(scim_hash.dig('complex', 2, 'data', 'nested', 0, 'info').count).to eql(1) # Unchanged
+            end
+
+            it 'replaces across multiple deep matching points' do
+              scim_hash          = @original_hash.deep_dup()
+              contrived_instance = @contrived_class.new
+              contrived_instance.send(
+                :from_patch_backend!,
+                nature:        'replace',
+                path:          ['complex[type eq "type1"]', 'data', 'nested[nature eq "nature2"]', 'info'],
+                value:         [{ 'deeper' => 'addition' }],
+                altering_hash: scim_hash
+              )
+
+              expect(scim_hash.dig('complex', 0, 'data', 'nested', 0, 'info').count).to eql(1) # Unchanged?
+              expect(scim_hash.dig('complex', 0, 'data', 'nested', 1, 'info').count).to eql(1)
+              expect(scim_hash.dig('complex', 0, 'data', 'nested', 2, 'info').count).to eql(1)
+              expect(scim_hash.dig('complex', 0, 'data', 'nested', 0, 'info', 0, 'deep')).to eql('nature1deep') # Yes, unchanged.
+              expect(scim_hash.dig('complex', 0, 'data', 'nested', 1, 'info', 0, 'deeper')).to eql('addition')
+              expect(scim_hash.dig('complex', 0, 'data', 'nested', 2, 'info', 0, 'deeper')).to eql('addition')
+
+              expect(scim_hash.dig('complex', 1, 'data', 'nested', 0, 'info').count).to eql(1)
+              expect(scim_hash.dig('complex', 1, 'data', 'nested', 0, 'info', 0, 'deeper')).to eql('addition')
+
+              expect(scim_hash.dig('complex', 2, 'data', 'nested', 0, 'info').count).to eql(1) # Unchanged
+              expect(scim_hash.dig('complex', 2, 'data', 'nested', 0, 'info', 0, 'deep')).to eql('nature2deep3') # Unchanged
+            end
+
+            it 'removes across multiple deep matching points' do
+              scim_hash          = @original_hash.deep_dup()
+              contrived_instance = @contrived_class.new
+              contrived_instance.send(
+                :from_patch_backend!,
+                nature:        'remove',
+                path:          ['complex[type eq "type1"]', 'data', 'nested[nature eq "nature2"]', 'info'],
+                value:         [{ 'deeper' => 'addition' }],
+                altering_hash: scim_hash
+              )
+
+              expect(scim_hash.dig('complex', 0, 'data', 'nested', 0, 'info').count).to eql(1) # Unchanged
+              expect(scim_hash.dig('complex', 0, 'data', 'nested', 1, 'info')).to be_nil
+              expect(scim_hash.dig('complex', 0, 'data', 'nested', 2, 'nature')).to be_present
+              expect(scim_hash.dig('complex', 0, 'data', 'nested', 1, 'info')).to be_nil
+              expect(scim_hash.dig('complex', 0, 'data', 'nested', 2, 'nature')).to be_present
+
+              expect(scim_hash.dig('complex', 1, 'data', 'nested', 0, 'info')).to be_nil
+              expect(scim_hash.dig('complex', 1, 'data', 'nested', 0, 'nature')).to be_present
+
+              expect(scim_hash.dig('complex', 2, 'data', 'nested', 0, 'info').count).to eql(1) # Unchanged
+              expect(scim_hash.dig('complex', 2, 'data', 'nested', 0, 'info', 0, 'deep')).to eql('nature2deep3') # Unchanged
+            end
+          end # "context 'contrived complexity' do"
+
+          # -------------------------------------------------------------------
+          # Internal: #from_patch_backend - error handling
+          # -------------------------------------------------------------------
+          #
           context 'with bad patches, raises errors' do
             it 'for unsupported filters' do
               path      = [ 'emails[type ne "work" and value ne "hello@test.com"', 'value' ]
