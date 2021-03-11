@@ -6,7 +6,7 @@ module Scimitar
     # be Users or Groups, identified by the "type" attribute). Used
     # by the Group SCIM resource's "members" array.
     #
-    # @see Scimitar::ComplexTypes::ReferenceMember
+    # See also Scimitar::ComplexTypes::ReferenceMember
     #
     class ReferenceMember < Base
       def self.scim_attributes

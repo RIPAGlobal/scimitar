@@ -3,7 +3,7 @@ module Scimitar
 
     # Represents the schema for the Photo complex type.
     #
-    # @see Scimitar::ComplexTypes::Photo
+    # See also Scimitar::ComplexTypes::Photo
     #
     class Photo < Vdtp; end
   end

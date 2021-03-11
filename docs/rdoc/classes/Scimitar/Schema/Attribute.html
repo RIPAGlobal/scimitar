@@ -1,0 +1,452 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>Scimitar::Schema::Attribute</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+
+    <meta property="og:title" value="Scimitar::Schema::Attribute">
+
+    <meta name="description" content="Represents an attribute of a SCIM resource that is declared in its schema. Attributes can be simple or complex.">
+    <meta property="og:description" content="Represents an attribute of a SCIM resource that is declared in its schema. Attributes can be simple or complex.">
+
+    <meta name="keywords" content="Scimitar::Schema::Attribute class">
+    <meta name="keywords" content="new, valid?, valid_blank?, valid_complex_type?, valid_simple_type?, valid_date_time?, all_valid?, as_json">
+</head>
+
+<body>
+    <div class="banner">
+        <h1>
+            <span class="type">Class</span>
+            Scimitar::Schema::Attribute
+            <span class="parent">&lt;
+                Object
+            </span>
+        </h1>
+        <ul class="files">
+            <li><a href="../../../files/app/models/scimitar/schema/attribute_rb.html">app/models/scimitar/schema/attribute.rb</a></li>
+        </ul>
+    </div>
+    <div id="bodyContent">
+        <div id="content">
+    <div class="description">
+        
+<p>Represents an attribute of a SCIM resource that is declared in its schema. Attributes can be simple or complex. A complex attribute needs to have its own schema that is passed to the initialize method when the attribute is instantiated. @example</p>
+
+<pre><code>Attribute.new(name: &#39;userName&#39;, type: &#39;string&#39;, uniqueness: &#39;server&#39;)
+Attribute.new(name: &#39;name&#39;, complexType: Scimitar::ComplexTypes::Name)
+</code></pre>
+
+    </div>
+
+
+
+
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+        <dt>A</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-all_valid-3F">all_valid?</a>,
+                </li>
+                <li>
+                    <a href="#method-i-as_json">as_json</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>N</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-c-new">new</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>V</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-valid-3F">valid?</a>,
+                </li>
+                <li>
+                    <a href="#method-i-valid_blank-3F">valid_blank?</a>,
+                </li>
+                <li>
+                    <a href="#method-i-valid_complex_type-3F">valid_complex_type?</a>,
+                </li>
+                <li>
+                    <a href="#method-i-valid_date_time-3F">valid_date_time?</a>,
+                </li>
+                <li>
+                    <a href="#method-i-valid_simple_type-3F">valid_simple_type?</a>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+
+    <!-- Includes -->
+    <div class="sectiontitle">Included Modules</div>
+    <ul>
+        <li>
+            ActiveModel::Model
+        </li>
+        <li>
+            <a href="../Errors.html">
+                Scimitar::Errors
+            </a>
+        </li>
+    </ul>
+
+
+
+
+    <!-- Section attributes -->
+    <div class="sectiontitle">Attributes</div>
+    <table border='0' cellpadding='5'>
+        <tr valign='top' id='attribute-i-canonicalValues'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>canonicalValues</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-caseExact'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>caseExact</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-complexType'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>complexType</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-multiValued'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>multiValued</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-mutability'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>mutability</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-name'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>name</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-required'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>required</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-returned'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>returned</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-subAttributes'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>subAttributes</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-type'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>type</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-uniqueness'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>uniqueness</td>
+            <td class='attr-desc'></td>
+        </tr>
+    </table>
+
+<!-- Methods -->
+
+    <div class="sectiontitle">Class Public methods</div>
+    <div class="method">
+        <div class="title method-title" id="method-c-new">
+            <b>new</b>(options = {})
+            <a href="../../../classes/Scimitar/Schema/Attribute.html#method-c-new" name="method-c-new" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>@param options [Hash] a hash of values to be used for instantiating the attribute object. Some of the instance variables of the objects will have default values if this hash does not contain anything for them.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
+            </p>
+            <div id="method-c-new_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/schema/attribute.rb, line 25</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">options</span> = {})
+  <span class="ruby-identifier">defaults</span> = {
+    <span class="ruby-value">multiValued:</span>     <span class="ruby-keyword">false</span>,
+    <span class="ruby-value">required:</span>        <span class="ruby-keyword">false</span>,
+    <span class="ruby-value">caseExact:</span>       <span class="ruby-keyword">false</span>,
+    <span class="ruby-value">mutability:</span>      <span class="ruby-string">&#39;readWrite&#39;</span>,
+    <span class="ruby-value">uniqueness:</span>      <span class="ruby-string">&#39;none&#39;</span>,
+    <span class="ruby-value">returned:</span>        <span class="ruby-string">&#39;default&#39;</span>,
+    <span class="ruby-value">canonicalValues:</span> []
+  }
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">options</span>[<span class="ruby-value">:complexType</span>]
+    <span class="ruby-identifier">defaults</span>.<span class="ruby-identifier">merge!</span>(<span class="ruby-value">type:</span> <span class="ruby-string">&#39;complex&#39;</span>, <span class="ruby-value">subAttributes:</span> <span class="ruby-identifier">options</span>[<span class="ruby-value">:complexType</span>].<span class="ruby-identifier">schema</span>.<span class="ruby-identifier">scim_attributes</span>)
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">super</span>(<span class="ruby-identifier">defaults</span>.<span class="ruby-identifier">merge</span>(<span class="ruby-identifier">options</span> <span class="ruby-operator">||</span> {}))
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="sectiontitle">Instance Public methods</div>
+    <div class="method">
+        <div class="title method-title" id="method-i-all_valid-3F">
+            <b>all_valid?</b>(complex_type, value)
+            <a href="../../../classes/Scimitar/Schema/Attribute.html#method-i-all_valid-3F" name="method-i-all_valid-3F" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-all_valid-3F_source')" id="l_method-i-all_valid-3F_source">show</a>
+            </p>
+            <div id="method-i-all_valid-3F_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/schema/attribute.rb, line 89</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">all_valid?</span>(<span class="ruby-identifier">complex_type</span>, <span class="ruby-identifier">value</span>)
+  <span class="ruby-identifier">validations</span> = <span class="ruby-identifier">value</span>.<span class="ruby-identifier">map</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">value_in_array</span><span class="ruby-operator">|</span> <span class="ruby-identifier">valid_complex_type?</span>(<span class="ruby-identifier">value_in_array</span>)}
+  <span class="ruby-identifier">validations</span>.<span class="ruby-identifier">all?</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-as_json">
+            <b>as_json</b>(options = {})
+            <a href="../../../classes/Scimitar/Schema/Attribute.html#method-i-as_json" name="method-i-as_json" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-as_json_source')" id="l_method-i-as_json_source">show</a>
+            </p>
+            <div id="method-i-as_json_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/schema/attribute.rb, line 94</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">as_json</span>(<span class="ruby-identifier">options</span> = {})
+  <span class="ruby-identifier">options</span>[<span class="ruby-value">:except</span>] <span class="ruby-operator">||=</span> [<span class="ruby-string">&#39;complexType&#39;</span>]
+  <span class="ruby-identifier">options</span>[<span class="ruby-value">:except</span>] <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-string">&#39;canonicalValues&#39;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">canonicalValues</span>.<span class="ruby-identifier">empty?</span>
+  <span class="ruby-keyword">super</span>.<span class="ruby-identifier">except</span>(<span class="ruby-identifier">options</span>)
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-valid-3F">
+            <b>valid?</b>(value)
+            <a href="../../../classes/Scimitar/Schema/Attribute.html#method-i-valid-3F" name="method-i-valid-3F" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Validates a value against this attribute object. For simple attributes, it checks if blank is valid or not and if the type matches. For complex attributes, it delegates it to the valid? method of the complex type schema. If the value is not valid, validation message(s) are added to the errors attribute of this object. @return [Boolean] whether or not the value is valid for this attribute</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-valid-3F_source')" id="l_method-i-valid-3F_source">show</a>
+            </p>
+            <div id="method-i-valid-3F_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/schema/attribute.rb, line 46</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">valid?</span>(<span class="ruby-identifier">value</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-identifier">valid_blank?</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">blank?</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-identifier">value</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">FalseClass</span>)
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">type</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;complex&#39;</span>
+    <span class="ruby-keyword">return</span> <span class="ruby-identifier">all_valid?</span>(<span class="ruby-identifier">complexType</span>, <span class="ruby-identifier">value</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">multiValued</span>
+    <span class="ruby-identifier">valid_complex_type?</span>(<span class="ruby-identifier">value</span>)
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">valid_simple_type?</span>(<span class="ruby-identifier">value</span>)
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-valid_blank-3F">
+            <b>valid_blank?</b>()
+            <a href="../../../classes/Scimitar/Schema/Attribute.html#method-i-valid_blank-3F" name="method-i-valid_blank-3F" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-valid_blank-3F_source')" id="l_method-i-valid_blank-3F_source">show</a>
+            </p>
+            <div id="method-i-valid_blank-3F_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/schema/attribute.rb, line 57</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">valid_blank?</span>
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">true</span> <span class="ruby-keyword">unless</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">required</span>
+  <span class="ruby-identifier">errors</span>.<span class="ruby-identifier">add</span>(<span class="ruby-keyword">self</span>.<span class="ruby-identifier">name</span>, <span class="ruby-string">&#39;is required&#39;</span>)
+  <span class="ruby-keyword">false</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-valid_complex_type-3F">
+            <b>valid_complex_type?</b>(value)
+            <a href="../../../classes/Scimitar/Schema/Attribute.html#method-i-valid_complex_type-3F" name="method-i-valid_complex_type-3F" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-valid_complex_type-3F_source')" id="l_method-i-valid_complex_type-3F_source">show</a>
+            </p>
+            <div id="method-i-valid_complex_type-3F_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/schema/attribute.rb, line 63</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">valid_complex_type?</span>(<span class="ruby-identifier">value</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">value</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:schema</span>) <span class="ruby-operator">||</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">schema</span> <span class="ruby-operator">!=</span> <span class="ruby-identifier">complexType</span>.<span class="ruby-identifier">schema</span>
+    <span class="ruby-identifier">errors</span>.<span class="ruby-identifier">add</span>(<span class="ruby-keyword">self</span>.<span class="ruby-identifier">name</span>, <span class="ruby-string">&#39;has to follow the complexType format.&#39;</span>)
+    <span class="ruby-keyword">return</span> <span class="ruby-keyword">false</span>
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">value</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">schema</span>.<span class="ruby-identifier">valid?</span>(<span class="ruby-identifier">value</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">true</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">errors</span>.<span class="ruby-identifier">empty?</span>
+  <span class="ruby-identifier">add_errors_from_hash</span>(<span class="ruby-identifier">value</span>.<span class="ruby-identifier">errors</span>.<span class="ruby-identifier">to_hash</span>, <span class="ruby-value">prefix:</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">name</span>)
+  <span class="ruby-keyword">false</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-valid_date_time-3F">
+            <b>valid_date_time?</b>(value)
+            <a href="../../../classes/Scimitar/Schema/Attribute.html#method-i-valid_date_time-3F" name="method-i-valid_date_time-3F" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-valid_date_time-3F_source')" id="l_method-i-valid_date_time-3F_source">show</a>
+            </p>
+            <div id="method-i-valid_date_time-3F_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/schema/attribute.rb, line 83</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">valid_date_time?</span>(<span class="ruby-identifier">value</span>)
+  <span class="ruby-operator">!</span><span class="ruby-operator">!</span><span class="ruby-constant">Time</span>.<span class="ruby-identifier">iso8601</span>(<span class="ruby-identifier">value</span>)
+<span class="ruby-keyword">rescue</span> <span class="ruby-constant">ArgumentError</span>
+  <span class="ruby-keyword">false</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-valid_simple_type-3F">
+            <b>valid_simple_type?</b>(value)
+            <a href="../../../classes/Scimitar/Schema/Attribute.html#method-i-valid_simple_type-3F" name="method-i-valid_simple_type-3F" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-valid_simple_type-3F_source')" id="l_method-i-valid_simple_type-3F_source">show</a>
+            </p>
+            <div id="method-i-valid_simple_type-3F_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/schema/attribute.rb, line 74</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">valid_simple_type?</span>(<span class="ruby-identifier">value</span>)
+  <span class="ruby-identifier">valid</span> = (<span class="ruby-identifier">type</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;string&#39;</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">String</span>)) <span class="ruby-operator">||</span>
+    (<span class="ruby-identifier">type</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;boolean&#39;</span> <span class="ruby-operator">&amp;&amp;</span> (<span class="ruby-identifier">value</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">TrueClass</span>) <span class="ruby-operator">||</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">FalseClass</span>))) <span class="ruby-operator">||</span>
+    (<span class="ruby-identifier">type</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;integer&#39;</span> <span class="ruby-operator">&amp;&amp;</span> (<span class="ruby-identifier">value</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Integer</span>))) <span class="ruby-operator">||</span>
+    (<span class="ruby-identifier">type</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;dateTime&#39;</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">valid_date_time?</span>(<span class="ruby-identifier">value</span>))
+  <span class="ruby-identifier">errors</span>.<span class="ruby-identifier">add</span>(<span class="ruby-keyword">self</span>.<span class="ruby-identifier">name</span>, <span class="ruby-node">&quot;has the wrong type. It has to be a(n) #{self.type}.&quot;</span>) <span class="ruby-keyword">unless</span> <span class="ruby-identifier">valid</span>
+  <span class="ruby-identifier">valid</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+    </div>
+  </body>
+</html>

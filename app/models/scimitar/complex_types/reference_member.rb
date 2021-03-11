@@ -3,7 +3,7 @@ module Scimitar
 
     # Represents the complex reference-a-member type.
     #
-    # @see Scimitar::Schema::ReferenceMember
+    # See also Scimitar::Schema::ReferenceMember
     #
     class ReferenceMember < Base
       set_schema Scimitar::Schema::ReferenceMember

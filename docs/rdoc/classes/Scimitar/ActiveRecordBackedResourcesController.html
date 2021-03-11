@@ -1,0 +1,429 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>Scimitar::ActiveRecordBackedResourcesController</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../css/github.css" type="text/css" media="screen" />
+<script src="../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+
+    <meta property="og:title" value="Scimitar::ActiveRecordBackedResourcesController">
+
+    <meta name="description" content="An ActiveRecord-centric subclass of Scimitar::ResourcesController.">
+    <meta property="og:description" content="An ActiveRecord-centric subclass of Scimitar::ResourcesController.">
+
+    <meta name="keywords" content="Scimitar::ActiveRecordBackedResourcesController class">
+    <meta name="keywords" content="index, show, create, replace, update, destroy, storage_scope, find_record, save!">
+</head>
+
+<body>
+    <div class="banner">
+        <h1>
+            <span class="type">Class</span>
+            Scimitar::ActiveRecordBackedResourcesController
+            <span class="parent">&lt;
+                ResourcesController
+            </span>
+        </h1>
+        <ul class="files">
+            <li><a href="../../files/app/controllers/scimitar/active_record_backed_resources_controller_rb.html">app/controllers/scimitar/active_record_backed_resources_controller.rb</a></li>
+        </ul>
+    </div>
+    <div id="bodyContent">
+        <div id="content">
+    <div class="description">
+        
+<p>An ActiveRecord-centric subclass of <a href="ResourcesController.html"><code>Scimitar::ResourcesController</code></a>. See that class&#39;s documentation first, as it describes things that your subclass must do which apply equally to subclasses of this ActiveRecord-focused code.</p>
+
+<p>In addition to requirements mentioned above, your subclass MUST override protected method <a href="ActiveRecordBackedResourcesController.html#method-i-storage_scope"><code>storage_scope</code></a>, returning an ActiveRecord::Relation which is used as a starting scope for any &#39;index&#39; (list) views. This gives you an opportunity to apply things like is-active filters, apply soft deletion scopes, apply security scopes and so-on. For example:</p>
+
+<pre><code>protected
+  def storage_scope
+    self.storage_class().where(is_deleted: false)
+  end
+</code></pre>
+
+    </div>
+
+
+
+
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+        <dt>C</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-create">create</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>D</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-destroy">destroy</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>F</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-find_record">find_record</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>I</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-index">index</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>R</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-replace">replace</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>S</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-save-21">save!</a>,
+                </li>
+                <li>
+                    <a href="#method-i-show">show</a>,
+                </li>
+                <li>
+                    <a href="#method-i-storage_scope">storage_scope</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>U</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-update">update</a>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+
+
+
+
+
+
+<!-- Methods -->
+
+    <div class="sectiontitle">Instance Public methods</div>
+    <div class="method">
+        <div class="title method-title" id="method-i-create">
+            <b>create</b>()
+            <a href="../../classes/Scimitar/ActiveRecordBackedResourcesController.html#method-i-create" name="method-i-create" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>POST (create)</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-create_source')" id="l_method-i-create_source">show</a>
+            </p>
+            <div id="method-i-create_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/active_record_backed_resources_controller.rb, line 59</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">create</span>
+  <span class="ruby-keyword">super</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">scim_resource</span><span class="ruby-operator">|</span>
+    <span class="ruby-keyword">self</span>.<span class="ruby-identifier">storage_class</span>().<span class="ruby-identifier">transaction</span> <span class="ruby-keyword">do</span>
+      <span class="ruby-identifier">record</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">storage_class</span>().<span class="ruby-identifier">new</span>
+      <span class="ruby-identifier">record</span>.<span class="ruby-identifier">from_scim!</span>(<span class="ruby-value">scim_hash:</span> <span class="ruby-identifier">scim_resource</span>.<span class="ruby-identifier">as_json</span>())
+      <span class="ruby-keyword">self</span>.<span class="ruby-identifier">save!</span>(<span class="ruby-identifier">record</span>)
+      <span class="ruby-identifier">record</span>.<span class="ruby-identifier">to_scim</span>(<span class="ruby-value">location:</span> <span class="ruby-identifier">url_for</span>(<span class="ruby-value">action:</span> <span class="ruby-value">:show</span>, <span class="ruby-value">id:</span> <span class="ruby-identifier">record</span>.<span class="ruby-identifier">id</span>))
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-destroy">
+            <b>destroy</b>()
+            <a href="../../classes/Scimitar/ActiveRecordBackedResourcesController.html#method-i-destroy" name="method-i-destroy" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>DELETE (remove)</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-destroy_source')" id="l_method-i-destroy_source">show</a>
+            </p>
+            <div id="method-i-destroy_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/active_record_backed_resources_controller.rb, line 98</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">destroy</span>
+  <span class="ruby-keyword">super</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">record_id</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">record</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">find_record</span>(<span class="ruby-identifier">record_id</span>)
+    <span class="ruby-identifier">record</span>.<span class="ruby-identifier">update_column</span>(<span class="ruby-value">:is_active</span>, <span class="ruby-keyword">false</span>)
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-index">
+            <b>index</b>()
+            <a href="../../classes/Scimitar/ActiveRecordBackedResourcesController.html#method-i-index" name="method-i-index" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>GET (list)</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-index_source')" id="l_method-i-index_source">show</a>
+            </p>
+            <div id="method-i-index_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/active_record_backed_resources_controller.rb, line 26</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">index</span>
+  <span class="ruby-identifier">query</span> = <span class="ruby-keyword">if</span> <span class="ruby-identifier">params</span>[<span class="ruby-value">:filter</span>].<span class="ruby-identifier">blank?</span>
+    <span class="ruby-keyword">self</span>.<span class="ruby-identifier">storage_scope</span>()
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">attribute_map</span> = <span class="ruby-identifier">storage_class</span>().<span class="ruby-identifier">new</span>.<span class="ruby-identifier">scim_queryable_attributes</span>()
+    <span class="ruby-identifier">parser</span>        = <span class="ruby-operator">::</span><span class="ruby-constant">Scimitar</span><span class="ruby-operator">::</span><span class="ruby-constant">Lists</span><span class="ruby-operator">::</span><span class="ruby-constant">QueryParser</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">attribute_map</span>)
+
+    <span class="ruby-identifier">parser</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">params</span>[<span class="ruby-value">:filter</span>])
+    <span class="ruby-identifier">parser</span>.<span class="ruby-identifier">to_activerecord_query</span>(<span class="ruby-keyword">self</span>.<span class="ruby-identifier">storage_scope</span>())
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">pagination_info</span> = <span class="ruby-identifier">scim_pagination_info</span>(<span class="ruby-identifier">query</span>.<span class="ruby-identifier">count</span>())
+  <span class="ruby-identifier">page_of_results</span> = <span class="ruby-identifier">query</span>
+    .<span class="ruby-identifier">offset</span>(<span class="ruby-identifier">pagination_info</span>.<span class="ruby-identifier">offset</span>)
+    .<span class="ruby-identifier">limit</span>(<span class="ruby-identifier">pagination_info</span>.<span class="ruby-identifier">limit</span>)
+    .<span class="ruby-identifier">to_a</span>()
+
+  <span class="ruby-keyword">super</span>(<span class="ruby-identifier">pagination_info</span>, <span class="ruby-identifier">page_of_results</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span> <span class="ruby-identifier">record</span> <span class="ruby-operator">|</span>
+    <span class="ruby-identifier">record</span>.<span class="ruby-identifier">to_scim</span>(<span class="ruby-value">location:</span> <span class="ruby-identifier">url_for</span>(<span class="ruby-value">action:</span> <span class="ruby-value">:show</span>, <span class="ruby-value">id:</span> <span class="ruby-identifier">record</span>.<span class="ruby-identifier">id</span>))
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-replace">
+            <b>replace</b>()
+            <a href="../../classes/Scimitar/ActiveRecordBackedResourcesController.html#method-i-replace" name="method-i-replace" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>PUT (replace)</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-replace_source')" id="l_method-i-replace_source">show</a>
+            </p>
+            <div id="method-i-replace_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/active_record_backed_resources_controller.rb, line 72</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">replace</span>
+  <span class="ruby-keyword">super</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">record_id</span>, <span class="ruby-identifier">scim_resource</span><span class="ruby-operator">|</span>
+    <span class="ruby-keyword">self</span>.<span class="ruby-identifier">storage_class</span>().<span class="ruby-identifier">transaction</span> <span class="ruby-keyword">do</span>
+      <span class="ruby-identifier">record</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">find_record</span>(<span class="ruby-identifier">record_id</span>)
+      <span class="ruby-identifier">record</span>.<span class="ruby-identifier">from_scim!</span>(<span class="ruby-value">scim_hash:</span> <span class="ruby-identifier">scim_resource</span>.<span class="ruby-identifier">as_json</span>())
+      <span class="ruby-keyword">self</span>.<span class="ruby-identifier">save!</span>(<span class="ruby-identifier">record</span>)
+      <span class="ruby-identifier">record</span>.<span class="ruby-identifier">to_scim</span>(<span class="ruby-value">location:</span> <span class="ruby-identifier">url_for</span>(<span class="ruby-value">action:</span> <span class="ruby-value">:show</span>, <span class="ruby-value">id:</span> <span class="ruby-identifier">record</span>.<span class="ruby-identifier">id</span>))
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-show">
+            <b>show</b>()
+            <a href="../../classes/Scimitar/ActiveRecordBackedResourcesController.html#method-i-show" name="method-i-show" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>GET/id (show)</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-show_source')" id="l_method-i-show_source">show</a>
+            </p>
+            <div id="method-i-show_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/active_record_backed_resources_controller.rb, line 50</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">show</span>
+  <span class="ruby-keyword">super</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">record_id</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">record</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">find_record</span>(<span class="ruby-identifier">record_id</span>)
+    <span class="ruby-identifier">record</span>.<span class="ruby-identifier">to_scim</span>(<span class="ruby-value">location:</span> <span class="ruby-identifier">url_for</span>(<span class="ruby-value">action:</span> <span class="ruby-value">:show</span>, <span class="ruby-value">id:</span> <span class="ruby-identifier">record_id</span>))
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-update">
+            <b>update</b>()
+            <a href="../../classes/Scimitar/ActiveRecordBackedResourcesController.html#method-i-update" name="method-i-update" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>PATCH (update)</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-update_source')" id="l_method-i-update_source">show</a>
+            </p>
+            <div id="method-i-update_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/active_record_backed_resources_controller.rb, line 85</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">update</span>
+  <span class="ruby-keyword">super</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">record_id</span>, <span class="ruby-identifier">patch_hash</span><span class="ruby-operator">|</span>
+    <span class="ruby-keyword">self</span>.<span class="ruby-identifier">storage_class</span>().<span class="ruby-identifier">transaction</span> <span class="ruby-keyword">do</span>
+      <span class="ruby-identifier">record</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">find_record</span>(<span class="ruby-identifier">record_id</span>)
+      <span class="ruby-identifier">record</span>.<span class="ruby-identifier">from_scim_patch!</span>(<span class="ruby-value">patch_hash:</span> <span class="ruby-identifier">patch_hash</span>)
+      <span class="ruby-keyword">self</span>.<span class="ruby-identifier">save!</span>(<span class="ruby-identifier">record</span>)
+      <span class="ruby-identifier">record</span>.<span class="ruby-identifier">to_scim</span>(<span class="ruby-value">location:</span> <span class="ruby-identifier">url_for</span>(<span class="ruby-value">action:</span> <span class="ruby-value">:show</span>, <span class="ruby-value">id:</span> <span class="ruby-identifier">record</span>.<span class="ruby-identifier">id</span>))
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="sectiontitle">Instance Protected methods</div>
+    <div class="method">
+        <div class="title method-title" id="method-i-find_record">
+            <b>find_record</b>(record_id)
+            <a href="../../classes/Scimitar/ActiveRecordBackedResourcesController.html#method-i-find_record" name="method-i-find_record" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Find a RIP user record. Subclasses can override this if they need special lookup behaviour.</p>
+<dl class="rdoc-list note-list"><dt><code>record_id</code>
+<dd>
+<p>Record ID (SCIM schema &#39;id&#39; value - “our” ID).</p>
+</dd></dl>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-find_record_source')" id="l_method-i-find_record_source">show</a>
+            </p>
+            <div id="method-i-find_record_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/active_record_backed_resources_controller.rb, line 123</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">find_record</span>(<span class="ruby-identifier">record_id</span>)
+  <span class="ruby-keyword">self</span>.<span class="ruby-identifier">storage_scope</span>().<span class="ruby-identifier">find</span>(<span class="ruby-identifier">record_id</span>)
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-save-21">
+            <b>save!</b>(record)
+            <a href="../../classes/Scimitar/ActiveRecordBackedResourcesController.html#method-i-save-21" name="method-i-save-21" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Save a record, dealing with validation exceptions by raising SCIM errors.</p>
+<dl class="rdoc-list note-list"><dt><code>record</code>
+<dd>
+<p>ActiveRecord subclass to save (via <a href="ActiveRecordBackedResourcesController.html#method-i-save-21"><code>save!</code></a>).</p>
+</dd></dl>
+
+<p>The return value is not used internally, making life easier for overriding subclasses to “do the right thing” / avoid mistakes (instead of e.g. requiring that a to-SCIM representation of &#39;record&#39; is returned and relying upon this to generate correct response payloads - an early version of the gem did this and it caused a confusing subclass bug).</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-save-21_source')" id="l_method-i-save-21_source">show</a>
+            </p>
+            <div id="method-i-save-21_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/active_record_backed_resources_controller.rb, line 138</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">save!</span>(<span class="ruby-identifier">record</span>)
+  <span class="ruby-identifier">record</span>.<span class="ruby-identifier">save!</span>
+<span class="ruby-keyword">rescue</span> <span class="ruby-constant">ActiveRecord</span><span class="ruby-operator">::</span><span class="ruby-constant">RecordInvalid</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">exception</span>
+  <span class="ruby-identifier">raise</span> <span class="ruby-constant">Scimitar</span><span class="ruby-operator">::</span><span class="ruby-constant">ResourceInvalidError</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">record</span>.<span class="ruby-identifier">errors</span>.<span class="ruby-identifier">full_messages</span>.<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39;; &#39;</span>))
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-storage_scope">
+            <b>storage_scope</b>()
+            <a href="../../classes/Scimitar/ActiveRecordBackedResourcesController.html#method-i-storage_scope" name="method-i-storage_scope" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Return an ActiveRecord::Relation used as the starting scope for <a href="ActiveRecordBackedResourcesController.html#method-i-index"><code>index</code></a> lists and any &#39;find by ID&#39; operation.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-storage_scope_source')" id="l_method-i-storage_scope_source">show</a>
+            </p>
+            <div id="method-i-storage_scope_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/active_record_backed_resources_controller.rb, line 114</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">storage_scope</span>
+  <span class="ruby-identifier">raise</span> <span class="ruby-constant">NotImplementedError</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+    </div>
+  </body>
+</html>

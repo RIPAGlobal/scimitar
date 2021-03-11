@@ -3,7 +3,7 @@ module Scimitar
 
     # Represents the schema for the Entitlement complex type.
     #
-    # @see Scimitar::ComplexTypes::Entitlement
+    # See also Scimitar::ComplexTypes::Entitlement
     #
     class Entitlement < Vdtp; end
   end

@@ -691,7 +691,7 @@ RSpec.describe Scimitar::Schema::User do
         "description": "Represents a User",
         "meta": {
           "resourceType": "Schema",
-          "location": "/scim/Schemas?name=urn%3Aietf%3Aparams%3Ascim%3Aschemas%3Acore%3A2.0%3AUser"
+          "location": "/scim_v2/Schemas?name=urn%3Aietf%3Aparams%3Ascim%3Aschemas%3Acore%3A2.0%3AUser"
         },
         "attributes": #{expected_attributes()}
       }

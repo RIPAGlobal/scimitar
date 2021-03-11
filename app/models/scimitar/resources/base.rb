@@ -28,34 +28,35 @@ module Scimitar
         flattened
       end
 
-      # Can be used to extend an existing resource type's schema
-      # @example
-      #  module Scim
-      #    module Schema
-      #      class MyExtension < Scimitar::Schema::Base
+      # Can be used to extend an existing resource type's schema. For example:
       #
-      #        def initialize(options = {})
-      #          super(name: 'ExtendedGroup',
-      #                id: self.class.id,
-      #                description: 'Represents extra info about a group',
-      #                scim_attributes: self.class.scim_attributes)
-      #        end
+      #     module Scim
+      #       module Schema
+      #         class MyExtension < Scimitar::Schema::Base
       #
-      #        def self.id
-      #          'urn:ietf:params:scim:schemas:extension:extendedgroup:2.0:Group'
-      #        end
+      #           def initialize(options = {})
+      #             super(name: 'ExtendedGroup',
+      #                   id: self.class.id,
+      #                   description: 'Represents extra info about a group',
+      #                   scim_attributes: self.class.scim_attributes)
+      #           end
       #
-      #        def self.scim_attributes
-      #          [Scimitar::Schema::Attribute.new(name: 'someAddedAttribute',
-      #                         type: 'string',
-      #                         required: true,
-      #                         canonicalValues: ['FOO', 'BAR'])]
-      #        end
-      #      end
-      #    end
-      #  end
+      #           def self.id
+      #             'urn:ietf:params:scim:schemas:extension:extendedgroup:2.0:Group'
+      #           end
       #
-      #  Scimitar::Resources::Group.extend_schema Scim::Schema::MyExtention
+      #           def self.scim_attributes
+      #             [Scimitar::Schema::Attribute.new(name: 'someAddedAttribute',
+      #                            type: 'string',
+      #                            required: true,
+      #                            canonicalValues: ['FOO', 'BAR'])]
+      #           end
+      #         end
+      #       end
+      #     end
+      #
+      #     Scimitar::Resources::Group.extend_schema Scim::Schema::MyExtension
+      #
       def self.extend_schema(schema)
         derive_attributes_from_schema(schema)
         extended_schemas << schema

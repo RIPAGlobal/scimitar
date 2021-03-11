@@ -3,7 +3,7 @@ module Scimitar
 
     # Represents the complex Photo type.
     #
-    # @see Scimitar::Schema::Photo
+    # See also Scimitar::Schema::Photo
     #
     class Photo < Base
       set_schema Scimitar::Schema::Photo

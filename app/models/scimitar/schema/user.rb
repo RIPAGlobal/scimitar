@@ -1,7 +1,7 @@
 module Scimitar
   module Schema
     # Represents the schema for the User resource
-    # @see Scimitar::Resources::User
+    # See also Scimitar::Resources::User
     class User < Base
 
       def initialize(options = {})

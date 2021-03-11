@@ -3,7 +3,7 @@ module Scimitar
 
     # Represents the complex Entitlement type.
     #
-    # @see Scimitar::Schema::Entitlement
+    # See also Scimitar::Schema::Entitlement
     #
     class Entitlement < Base
       set_schema Scimitar::Schema::Entitlement

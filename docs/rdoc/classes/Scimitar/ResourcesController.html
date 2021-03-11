@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>Scimitar::ResourcesController</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../css/github.css" type="text/css" media="screen" />
+<script src="../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+
+    <meta property="og:title" value="Scimitar::ResourcesController">
+
+    <meta name="description" content="A Rails controller which is mostly idiomatic, with index, show, create and destroy methods mapping to the conventional HTTP methods in Rails.">
+    <meta property="og:description" content="A Rails controller which is mostly idiomatic, with index, show, create and destroy methods mapping to the conventional HTTP methods in Rails.">
+
+    <meta name="keywords" content="Scimitar::ResourcesController class">
+    <meta name="keywords" content="index, show, create, replace, update, destroy, storage_class, scim_pagination_info">
+</head>
+
+<body>
+    <div class="banner">
+        <h1>
+            <span class="type">Class</span>
+            Scimitar::ResourcesController
+            <span class="parent">&lt;
+                <a href="ApplicationController.html">Scimitar::ApplicationController</a>
+            </span>
+        </h1>
+        <ul class="files">
+            <li><a href="../../files/app/controllers/scimitar/resources_controller_rb.html">app/controllers/scimitar/resources_controller.rb</a></li>
+        </ul>
+    </div>
+    <div id="bodyContent">
+        <div id="content">
+    <div class="description">
+        
+<p>A Rails controller which is mostly idiomatic, with <a href="ResourcesController.html#method-i-index"><code>index</code></a>, <a href="ResourcesController.html#method-i-show"><code>show</code></a>, <a href="ResourcesController.html#method-i-create"><code>create</code></a> and <a href="ResourcesController.html#method-i-destroy"><code>destroy</code></a> methods mapping to the conventional HTTP methods in Rails. The <a href="ResourcesController.html#method-i-update"><code>update</code></a> method is used for partial-update PATCH calls, while the <a href="ResourcesController.html#method-i-replace"><code>replace</code></a> method is used for whole-update PUT calls.</p>
+
+<p>Subclass this controller to deal with resource-specific API calls, for endpoints such as Users and Groups. Any one controller is assumed to be related to one class in your application which has mixed in <a href="Resources/Mixin.html"><code>Scimitar::Resources::Mixin</code></a>. Your subclass MUST override protected method <a href="ResourcesController.html#method-i-storage_class"><code>storage_class</code></a>, which returns that class. For example, if you had a class User with the mixin included, then:</p>
+
+<pre><code>protected
+  def storage_class
+    User
+  end
+</code></pre>
+
+<p>…is sufficient.</p>
+
+<p>The controller makes no assumptions about storage method - it does not have any ActiveRecord specialisations, for example. If you do use ActiveRecord, consider subclassing <a href="ActiveRecordBackedResourcesController.html"><code>Scimitar::ActiveRecordBackedResourcesController</code></a> instead as it does most of the mapping, persistence and error handling work for you.</p>
+
+    </div>
+
+
+
+
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+        <dt>C</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-create">create</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>D</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-destroy">destroy</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>I</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-index">index</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>R</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-replace">replace</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>S</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-scim_pagination_info">scim_pagination_info</a>,
+                </li>
+                <li>
+                    <a href="#method-i-show">show</a>,
+                </li>
+                <li>
+                    <a href="#method-i-storage_class">storage_class</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>U</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-update">update</a>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+
+
+
+
+
+
+<!-- Methods -->
+
+    <div class="sectiontitle">Instance Public methods</div>
+    <div class="method">
+        <div class="title method-title" id="method-i-create">
+            <b>create</b>(&amp;block)
+            <a href="../../classes/Scimitar/ResourcesController.html#method-i-create" name="method-i-create" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>POST (create)</p>
+
+<p>Call with a block that is passed a SCIM resource instance - e.g a <a href="Resources/User.html"><code>Scimitar::Resources::User</code></a> instance - representing an item to be created. Your ::storage_class class&#39;s ::scim_resource_type method determines the kind of object you&#39;ll be given.</p>
+
+<p>See also e.g. <a href="Resources/Mixin.html#method-i-from_scim-21"><code>Scimitar::Resources::Mixin#from_scim!</code></a>.</p>
+
+<p>Evaluate to the SCIM representation of the arising created record.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-create_source')" id="l_method-i-create_source">show</a>
+            </p>
+            <div id="method-i-create_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/resources_controller.rb, line 79</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">create</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">safe_params</span>()[<span class="ruby-value">:id</span>].<span class="ruby-identifier">present?</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">ErrorResponse</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">status:</span> <span class="ruby-value">400</span>, <span class="ruby-value">detail:</span> <span class="ruby-string">&#39;&quot;id&quot; is not a valid parameter for POST&#39;</span>)
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">with_scim_resource</span>() <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">resource</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">render</span>(<span class="ruby-value">json:</span> <span class="ruby-keyword">yield</span>(<span class="ruby-identifier">resource</span>, <span class="ruby-value">:create</span>), <span class="ruby-value">status:</span> <span class="ruby-value">:created</span>)
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-destroy">
+            <b>destroy</b>()
+            <a href="../../classes/Scimitar/ResourcesController.html#method-i-destroy" name="method-i-destroy" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>DELETE (remove)</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-destroy_source')" id="l_method-i-destroy_source">show</a>
+            </p>
+            <div id="method-i-destroy_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/resources_controller.rb, line 125</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">destroy</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-keyword">yield</span>(<span class="ruby-keyword">self</span>.<span class="ruby-identifier">safe_params</span>()[<span class="ruby-value">:id</span>]) <span class="ruby-operator">!=</span> <span class="ruby-keyword">false</span>
+    <span class="ruby-identifier">head</span> <span class="ruby-value">:no_content</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">ErrorResponse</span>.<span class="ruby-identifier">new</span>(
+      <span class="ruby-value">status:</span> <span class="ruby-value">500</span>,
+      <span class="ruby-value">detail:</span> <span class="ruby-node">&quot;Failed to delete the resource with id &#39;#{params[:id]}&#39;. Please try again later.&quot;</span>
+    )
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-index">
+            <b>index</b>(pagination_info, page_of_results, &amp;block)
+            <a href="../../classes/Scimitar/ResourcesController.html#method-i-index" name="method-i-index" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>GET (list)</p>
+
+<p>Pass a <a href="Lists/Count.html"><code>Scimitar::Lists::Count</code></a> object providing pagination data along with a page of results in “your” data domain as an Enumerable, along with a block. Renders as “list” result by calling your block with each of the results, allowing you to use something like <a href="Resources/Mixin.html#method-i-to_scim"><code>Scimitar::Resources::Mixin#to_scim</code></a> to convert to a SCIM representation.</p>
+<dl class="rdoc-list note-list"><dt><code>pagination_info</code>
+<dd>
+<p>A <a href="Lists/Count.html"><code>Scimitar::Lists::Count</code></a> instance with total set. See e.g. protected method <a href="ResourcesController.html#method-i-scim_pagination_info"><code>scim_pagination_info</code></a> to assist with this.</p>
+</dd><dt><code>page_of_results</code>
+<dd>
+<p>An Enumerable single page of results.</p>
+</dd></dl>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-index_source')" id="l_method-i-index_source">show</a>
+            </p>
+            <div id="method-i-index_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/resources_controller.rb, line 46</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">index</span>(<span class="ruby-identifier">pagination_info</span>, <span class="ruby-identifier">page_of_results</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">render</span>(<span class="ruby-value">json:</span> {
+    <span class="ruby-value">schemas:</span> [
+        <span class="ruby-string">&#39;urn:ietf:params:scim:api:messages:2.0:ListResponse&#39;</span>
+    ],
+    <span class="ruby-value">totalResults:</span> <span class="ruby-identifier">pagination_info</span>.<span class="ruby-identifier">total</span>,
+    <span class="ruby-value">startIndex:</span>   <span class="ruby-identifier">pagination_info</span>.<span class="ruby-identifier">start_index</span>,
+    <span class="ruby-value">itemsPerPage:</span> <span class="ruby-identifier">pagination_info</span>.<span class="ruby-identifier">limit</span>,
+    <span class="ruby-value">Resources:</span>    <span class="ruby-identifier">page_of_results</span>.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  })
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-replace">
+            <b>replace</b>(&amp;block)
+            <a href="../../classes/Scimitar/ResourcesController.html#method-i-replace" name="method-i-replace" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>PUT (replace)</p>
+
+<p>Similar to <a href="ResourcesController.html#method-i-create"><code>create</code></a>, but you&#39;re passed an ID to find as well as the resource details to then use for all replacement attributes in that found resource. See also e.g. <a href="Resources/Mixin.html#method-i-from_scim-21"><code>Scimitar::Resources::Mixin#from_scim!</code></a>.</p>
+
+<p>Evaluate to the SCIM representation of the arising created record.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-replace_source')" id="l_method-i-replace_source">show</a>
+            </p>
+            <div id="method-i-replace_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/resources_controller.rb, line 97</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">replace</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">with_scim_resource</span>() <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">resource</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">render</span>(<span class="ruby-value">json:</span> <span class="ruby-keyword">yield</span>(<span class="ruby-keyword">self</span>.<span class="ruby-identifier">safe_params</span>()[<span class="ruby-value">:id</span>], <span class="ruby-identifier">resource</span>))
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-show">
+            <b>show</b>(&amp;block)
+            <a href="../../classes/Scimitar/ResourcesController.html#method-i-show" name="method-i-show" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>GET/id (show)</p>
+
+<p>Call with a block that is passed an ID to find in “your” domain. Evaluate to the SCIM representation of the arising found record.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-show_source')" id="l_method-i-show_source">show</a>
+            </p>
+            <div id="method-i-show_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/resources_controller.rb, line 63</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">show</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">scim_resource</span> = <span class="ruby-keyword">yield</span>(<span class="ruby-keyword">self</span>.<span class="ruby-identifier">safe_params</span>()[<span class="ruby-value">:id</span>])
+  <span class="ruby-identifier">render</span>(<span class="ruby-value">json:</span> <span class="ruby-identifier">scim_resource</span>)
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-update">
+            <b>update</b>(&amp;block)
+            <a href="../../classes/Scimitar/ResourcesController.html#method-i-update" name="method-i-update" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>PATCH (update)</p>
+
+<p>A variant of <a href="ResourcesController.html#method-i-create"><code>create</code></a> where you&#39;re again passed the resource ID (in “your” domain) to look up, but then a Hash with patch operation details from the calling client. This can be passed to e.g. <a href="Resources/Mixin.html#method-i-from_scim_patch-21"><code>Scimitar::Resources::Mixin#from_scim_patch!</code></a>.</p>
+
+<p>Evaluate to the SCIM representation of the arising created record.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-update_source')" id="l_method-i-update_source">show</a>
+            </p>
+            <div id="method-i-update_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/resources_controller.rb, line 112</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">update</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">validate_request</span>()
+
+  <span class="ruby-comment"># Params includes all of the PATCH data at the top level along with other</span>
+  <span class="ruby-comment"># other Rails-injected params like &#39;id&#39;, &#39;action&#39;, &#39;controller&#39;. These</span>
+  <span class="ruby-comment"># are harmless given no namespace collision and we&#39;re only interested in</span>
+  <span class="ruby-comment"># the &#39;Operations&#39; key for the actual patch data.</span>
+  <span class="ruby-comment">#</span>
+  <span class="ruby-identifier">render</span>(<span class="ruby-value">json:</span> <span class="ruby-keyword">yield</span>(<span class="ruby-keyword">self</span>.<span class="ruby-identifier">safe_params</span>()[<span class="ruby-value">:id</span>], <span class="ruby-keyword">self</span>.<span class="ruby-identifier">safe_params</span>().<span class="ruby-identifier">to_hash</span>()))
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="sectiontitle">Instance Protected methods</div>
+    <div class="method">
+        <div class="title method-title" id="method-i-scim_pagination_info">
+            <b>scim_pagination_info</b>(total_count = nil)
+            <a href="../../classes/Scimitar/ResourcesController.html#method-i-scim_pagination_info" name="method-i-scim_pagination_info" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>For <a href="ResourcesController.html#method-i-index"><code>index</code></a> actions, returns a <a href="Lists/Count.html"><code>Scimitar::Lists::Count</code></a> instance which can be used to access offset-vs-start-index (0-indexed or 1-indexed), per-page limit and also holds the total number-of-items count which you can optionally pass up-front here, or set via total= later.</p>
+<dl class="rdoc-list note-list"><dt><code>total_count</code>
+<dd>
+<p>Optional integer total record count across all pages, else must be set later - BEFORE passing an instance to the <a href="ResourcesController.html#method-i-index"><code>index</code></a> implementation in this class.</p>
+</dd></dl>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-scim_pagination_info_source')" id="l_method-i-scim_pagination_info_source">show</a>
+            </p>
+            <div id="method-i-scim_pagination_info_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/resources_controller.rb, line 158</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">scim_pagination_info</span>(<span class="ruby-identifier">total_count</span> = <span class="ruby-keyword">nil</span>)
+  <span class="ruby-operator">::</span><span class="ruby-constant">Scimitar</span><span class="ruby-operator">::</span><span class="ruby-constant">Lists</span><span class="ruby-operator">::</span><span class="ruby-constant">Count</span>.<span class="ruby-identifier">new</span>(
+    <span class="ruby-value">start_index:</span> <span class="ruby-identifier">params</span>[<span class="ruby-value">:startIndex</span>],
+    <span class="ruby-value">limit:</span>       <span class="ruby-identifier">params</span>[<span class="ruby-value">:count</span>],
+    <span class="ruby-value">total:</span>       <span class="ruby-identifier">total_count</span>
+  )
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-storage_class">
+            <b>storage_class</b>()
+            <a href="../../classes/Scimitar/ResourcesController.html#method-i-storage_class" name="method-i-storage_class" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>The class including <a href="Resources/Mixin.html"><code>Scimitar::Resources::Mixin</code></a> which declares mappings to the entity you return in resource_type.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-storage_class_source')" id="l_method-i-storage_class_source">show</a>
+            </p>
+            <div id="method-i-storage_class_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/controllers/scimitar/resources_controller.rb, line 145</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">storage_class</span>
+  <span class="ruby-identifier">raise</span> <span class="ruby-constant">NotImplementedError</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+    </div>
+  </body>
+</html>

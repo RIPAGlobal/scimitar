@@ -3,7 +3,7 @@ module Scimitar
 
     # Represents the complex Email type.
     #
-    # @see Scimitar::Schema::Email
+    # See also Scimitar::Schema::Email
     #
     class Email < Base
       set_schema Scimitar::Schema::Email

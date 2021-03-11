@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>Scimitar::Schema::Base</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+
+    <meta property="og:title" value="Scimitar::Schema::Base">
+
+    <meta name="description" content="The base class that each schema class must inherit from. These classes represent the schema of a SCIM resource or a complex type that could be used in a resource.">
+    <meta property="og:description" content="The base class that each schema class must inherit from. These classes represent the schema of a SCIM resource or a complex type that could be used in a resource.">
+
+    <meta name="keywords" content="Scimitar::Schema::Base class">
+    <meta name="keywords" content="new, as_json, valid?, cloned_scim_attributes, find_attribute">
+</head>
+
+<body>
+    <div class="banner">
+        <h1>
+            <span class="type">Class</span>
+            Scimitar::Schema::Base
+            <span class="parent">&lt;
+                Object
+            </span>
+        </h1>
+        <ul class="files">
+            <li><a href="../../../files/app/models/scimitar/schema/base_rb.html">app/models/scimitar/schema/base.rb</a></li>
+        </ul>
+    </div>
+    <div id="bodyContent">
+        <div id="content">
+    <div class="description">
+        
+<p>The base class that each schema class must inherit from. These classes represent the schema of a SCIM resource or a complex type that could be used in a resource.</p>
+
+    </div>
+
+
+
+
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+        <dt>A</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-as_json">as_json</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>C</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-c-cloned_scim_attributes">cloned_scim_attributes</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>F</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-c-find_attribute">find_attribute</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>N</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-c-new">new</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>V</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-c-valid-3F">valid?</a>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+
+    <!-- Includes -->
+    <div class="sectiontitle">Included Modules</div>
+    <ul>
+        <li>
+            ActiveModel::Model
+        </li>
+    </ul>
+
+
+
+
+    <!-- Section attributes -->
+    <div class="sectiontitle">Attributes</div>
+    <table border='0' cellpadding='5'>
+        <tr valign='top' id='attribute-i-description'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>description</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-id'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>id</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-meta'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>meta</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-name'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>name</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-scim_attributes'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>scim_attributes</td>
+            <td class='attr-desc'></td>
+        </tr>
+    </table>
+
+<!-- Methods -->
+
+    <div class="sectiontitle">Class Public methods</div>
+    <div class="method">
+        <div class="title method-title" id="method-c-cloned_scim_attributes">
+            <b>cloned_scim_attributes</b>()
+            <a href="../../../classes/Scimitar/Schema/Base.html#method-c-cloned_scim_attributes" name="method-c-cloned_scim_attributes" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-cloned_scim_attributes_source')" id="l_method-c-cloned_scim_attributes_source">show</a>
+            </p>
+            <div id="method-c-cloned_scim_attributes_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/schema/base.rb, line 29</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">cloned_scim_attributes</span>
+  <span class="ruby-identifier">scim_attributes</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">scim_attribute</span><span class="ruby-operator">|</span> <span class="ruby-identifier">scim_attribute</span>.<span class="ruby-identifier">clone</span> }
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-c-find_attribute">
+            <b>find_attribute</b>(*path)
+            <a href="../../../classes/Scimitar/Schema/Base.html#method-c-find_attribute" name="method-c-find_attribute" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Find a given attribute this schema, travelling down a path to any sub-attributes within. Given that callers might be dealing with paths into actual SCIM data, array indices for multi-value attributes are allowed (as integers) and simply skipped - only the names are of interest.</p>
+
+<p>This is typically used to access attribute properties such as intended mutability (&#39;readOnly&#39;, &#39;readWrite&#39;, &#39;immutable&#39;, &#39;writeOnly&#39;).</p>
+
+<p>Returns the found <a href="Attribute.html"><code>Scimitar::Schema::Attribute</code></a> or “nil”.</p>
+<dl class="rdoc-list note-list"><dt>*path
+<dd>
+<p>One or more attribute names as Strings, or Integer indices.</p>
+</dd></dl>
+
+<p>For example, in a <a href="User.html"><code>User</code></a> schema, passing “name”, “givenName” would find the “givenName” attribute. Passing “emails”, 0, “value” would find the schema attribute for “value” under “emails”, ignoring the array index (since the schema is identical for each item in an array of values).</p>
+
+<p>See also <a href="../Resources/Base.html#method-c-find_attribute"><code>Scimitar::Resources::Base::find_attribute</code></a></p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-find_attribute_source')" id="l_method-c-find_attribute_source">show</a>
+            </p>
+            <div id="method-c-find_attribute_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/schema/base.rb, line 53</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">find_attribute</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">path</span>)
+  <span class="ruby-identifier">found_attribute</span>    = <span class="ruby-keyword">nil</span>
+  <span class="ruby-identifier">current_attributes</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">scim_attributes</span>()
+
+  <span class="ruby-keyword">until</span> <span class="ruby-identifier">path</span>.<span class="ruby-identifier">empty?</span> <span class="ruby-keyword">do</span>
+    <span class="ruby-identifier">current_path_entry</span> = <span class="ruby-identifier">path</span>.<span class="ruby-identifier">shift</span>()
+    <span class="ruby-keyword">next</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">current_path_entry</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Integer</span>) <span class="ruby-comment"># Skip array indicies arising from multi-value attributes</span>
+
+    <span class="ruby-identifier">found_attribute</span> = <span class="ruby-identifier">current_attributes</span>.<span class="ruby-identifier">find</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span> <span class="ruby-identifier">attribute_to_check</span> <span class="ruby-operator">|</span>
+      <span class="ruby-identifier">attribute_to_check</span>.<span class="ruby-identifier">name</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">current_path_entry</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">found_attribute</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">path</span>.<span class="ruby-identifier">present?</span> <span class="ruby-comment"># Any sub-attributes to check?...</span>
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">found_attribute</span>.<span class="ruby-identifier">subAttributes</span>.<span class="ruby-identifier">present?</span> <span class="ruby-comment"># ...and are any defined?</span>
+        <span class="ruby-identifier">current_attributes</span> = <span class="ruby-identifier">found_attribute</span>.<span class="ruby-identifier">subAttributes</span>
+      <span class="ruby-keyword">else</span>
+        <span class="ruby-identifier">found_attribute</span> = <span class="ruby-keyword">nil</span>
+        <span class="ruby-keyword">break</span> <span class="ruby-comment"># NOTE EARLY EXIT - tried to find a sub-attribute but there are none</span>
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-keyword">break</span> <span class="ruby-comment"># NOTE EARLY EXIT - no found attribute, or found target item at end of path</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span> <span class="ruby-comment"># &quot;until path.empty() do&quot;</span>
+
+  <span class="ruby-keyword">return</span> <span class="ruby-identifier">found_attribute</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-c-new">
+            <b>new</b>(options = {})
+            <a href="../../../classes/Scimitar/Schema/Base.html#method-c-new" name="method-c-new" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
+            </p>
+            <div id="method-c-new_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/schema/base.rb, line 9</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">options</span> = {})
+  <span class="ruby-keyword">super</span>
+  <span class="ruby-ivar">@meta</span> = <span class="ruby-constant">Meta</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">resourceType:</span> <span class="ruby-string">&#39;Schema&#39;</span>)
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-c-valid-3F">
+            <b>valid?</b>(resource)
+            <a href="../../../classes/Scimitar/Schema/Base.html#method-c-valid-3F" name="method-c-valid-3F" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Validates the resource against specific validations of each attribute,for example if the type of the attribute matches the one defined in the schema. @param resource [Object] a resource object that uses this schema</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-valid-3F_source')" id="l_method-c-valid-3F_source">show</a>
+            </p>
+            <div id="method-c-valid-3F_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/schema/base.rb, line 23</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">valid?</span>(<span class="ruby-identifier">resource</span>)
+  <span class="ruby-identifier">cloned_scim_attributes</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">scim_attribute</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">resource</span>.<span class="ruby-identifier">add_errors_from_hash</span>(<span class="ruby-identifier">scim_attribute</span>.<span class="ruby-identifier">errors</span>.<span class="ruby-identifier">to_hash</span>) <span class="ruby-keyword">unless</span> <span class="ruby-identifier">scim_attribute</span>.<span class="ruby-identifier">valid?</span>(<span class="ruby-identifier">resource</span>.<span class="ruby-identifier">send</span>(<span class="ruby-identifier">scim_attribute</span>.<span class="ruby-identifier">name</span>))
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="sectiontitle">Instance Public methods</div>
+    <div class="method">
+        <div class="title method-title" id="method-i-as_json">
+            <b>as_json</b>(options = {})
+            <a href="../../../classes/Scimitar/Schema/Base.html#method-i-as_json" name="method-i-as_json" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Converts the schema to its json representation that will be returned by /SCHEMAS end-point of a SCIM service provider.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-as_json_source')" id="l_method-i-as_json_source">show</a>
+            </p>
+            <div id="method-i-as_json_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/schema/base.rb, line 15</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">as_json</span>(<span class="ruby-identifier">options</span> = {})
+  <span class="ruby-ivar">@meta</span>.<span class="ruby-identifier">location</span> = <span class="ruby-constant">Scimitar</span><span class="ruby-operator">::</span><span class="ruby-constant">Engine</span>.<span class="ruby-identifier">routes</span>.<span class="ruby-identifier">url_helpers</span>.<span class="ruby-identifier">scim_schemas_path</span>(<span class="ruby-value">name:</span> <span class="ruby-identifier">id</span>)
+  <span class="ruby-identifier">original</span> = <span class="ruby-keyword">super</span>
+  <span class="ruby-identifier">original</span>.<span class="ruby-identifier">merge</span>(<span class="ruby-string">&#39;attributes&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">original</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-string">&#39;scim_attributes&#39;</span>))
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+    </div>
+  </body>
+</html>

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>Scimitar::Schema::Name</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+
+    <meta property="og:title" value="Scimitar::Schema::Name">
+
+    <meta name="description" content="Represents the schema for the Name complex type @see Scimitar::ComplexTypes::Name.">
+    <meta property="og:description" content="Represents the schema for the Name complex type @see Scimitar::ComplexTypes::Name.">
+
+    <meta name="keywords" content="Scimitar::Schema::Name class">
+    <meta name="keywords" content="scim_attributes">
+</head>
+
+<body>
+    <div class="banner">
+        <h1>
+            <span class="type">Class</span>
+            Scimitar::Schema::Name
+            <span class="parent">&lt;
+                <a href="Base.html">Scimitar::Schema::Base</a>
+            </span>
+        </h1>
+        <ul class="files">
+            <li><a href="../../../files/app/models/scimitar/schema/name_rb.html">app/models/scimitar/schema/name.rb</a></li>
+        </ul>
+    </div>
+    <div id="bodyContent">
+        <div id="content">
+    <div class="description">
+        
+<p>Represents the schema for the <a href="Name.html"><code>Name</code></a> complex type @see <a href="../ComplexTypes/Name.html"><code>Scimitar::ComplexTypes::Name</code></a></p>
+
+    </div>
+
+
+
+
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+        <dt>S</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-c-scim_attributes">scim_attributes</a>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+
+
+
+
+
+
+<!-- Methods -->
+
+    <div class="sectiontitle">Class Public methods</div>
+    <div class="method">
+        <div class="title method-title" id="method-c-scim_attributes">
+            <b>scim_attributes</b>()
+            <a href="../../../classes/Scimitar/Schema/Name.html#method-c-scim_attributes" name="method-c-scim_attributes" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-scim_attributes_source')" id="l_method-c-scim_attributes_source">show</a>
+            </p>
+            <div id="method-c-scim_attributes_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/schema/name.rb, line 7</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">scim_attributes</span>
+  <span class="ruby-ivar">@scim_attributes</span> <span class="ruby-operator">||=</span> [
+    <span class="ruby-constant">Attribute</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&#39;familyName&#39;</span>,       <span class="ruby-value">type:</span> <span class="ruby-string">&#39;string&#39;</span>, <span class="ruby-value">required:</span> <span class="ruby-keyword">true</span>),
+    <span class="ruby-constant">Attribute</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&#39;givenName&#39;</span>,        <span class="ruby-value">type:</span> <span class="ruby-string">&#39;string&#39;</span>, <span class="ruby-value">required:</span> <span class="ruby-keyword">true</span>),
+    <span class="ruby-constant">Attribute</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&#39;middleName&#39;</span>,       <span class="ruby-value">type:</span> <span class="ruby-string">&#39;string&#39;</span>),
+    <span class="ruby-constant">Attribute</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&#39;formatted&#39;</span>,        <span class="ruby-value">type:</span> <span class="ruby-string">&#39;string&#39;</span>),
+    <span class="ruby-constant">Attribute</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&#39;honorificPrefix&#39;</span>,  <span class="ruby-value">type:</span> <span class="ruby-string">&#39;string&#39;</span>),
+    <span class="ruby-constant">Attribute</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&#39;honorificSuffix&#39;</span>,  <span class="ruby-value">type:</span> <span class="ruby-string">&#39;string&#39;</span>),
+  ]
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+    </div>
+  </body>
+</html>

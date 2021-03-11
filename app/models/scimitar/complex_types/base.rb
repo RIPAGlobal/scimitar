@@ -1,19 +1,21 @@
 module Scimitar
   module ComplexTypes
-    # This class represents complex types that could be used inside SCIM resources.
-    # Each complex type must inherit from this class. They also need to have their own schema defined.
-    # @example
-    #  module Scimitar
-    #    module ComplexTypes
-    #      class Email < Base
-    #        set_schema Scimitar::Schema::Email
+
+    # This class represents complex types that could be used inside SCIM
+    # resources. Each complex type must inherit from this class. They also need
+    # to have their own schema defined. For example:
     #
-    #        def as_json(options = {})
-    #          {'type' => 'work', 'primary' => true}.merge(super(options))
-    #        end
-    #      end
-    #    end
-    #  end
+    #     module Scimitar
+    #       module ComplexTypes
+    #         class Email < Base
+    #           set_schema Scimitar::Schema::Email
+    #
+    #           def as_json(options = {})
+    #             {'type' => 'work', 'primary' => true}.merge(super(options))
+    #           end
+    #         end
+    #       end
+    #     end
     #
     class Base
       include ActiveModel::Model
@@ -25,8 +27,10 @@ module Scimitar
         @errors = ActiveModel::Errors.new(self)
       end
 
-      # Converts the object to its SCIM representation which is always a json representation
-      # @param options [Hash] a hash that could provide default values for some of the attributes of this complex type object
+      # Converts the object to its SCIM representation, which is always JSON.
+      #
+      # +options+:: A hash that could provide default values for some of the
+      #             attributes of this complex type object.
       #
       def as_json(options={})
         options[:except] ||= ['errors']

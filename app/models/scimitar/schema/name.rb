@@ -1,7 +1,7 @@
 module Scimitar
   module Schema
     # Represents the schema for the Name complex type
-    # @see Scimitar::ComplexTypes::Name
+    # See also Scimitar::ComplexTypes::Name
     class Name < Base
 
       def self.scim_attributes

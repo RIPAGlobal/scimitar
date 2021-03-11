@@ -1,0 +1,438 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>Scimitar::Lists::QueryParser</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+
+    <meta property="og:title" value="Scimitar::Lists::QueryParser">
+
+    <meta name="description" content="Simple SCIM filter support.">
+    <meta property="og:description" content="Simple SCIM filter support.">
+
+    <meta name="keywords" content="Scimitar::Lists::QueryParser class">
+    <meta name="keywords" content="new, parse, tree, to_activerecord_query">
+</head>
+
+<body>
+    <div class="banner">
+        <h1>
+            <span class="type">Class</span>
+            Scimitar::Lists::QueryParser
+            <span class="parent">&lt;
+                Object
+            </span>
+        </h1>
+        <ul class="files">
+            <li><a href="../../../files/app/models/scimitar/lists/query_parser_rb.html">app/models/scimitar/lists/query_parser.rb</a></li>
+        </ul>
+    </div>
+    <div id="bodyContent">
+        <div id="content">
+    <div class="description">
+        
+<p>Simple SCIM filter support.</p>
+
+<p>This is currently an extremely limited query parser supporting only a single “name-operator-value” query, no boolean operations or precedence operators and it assumes “LIKE” and “%” as wildcards in SQL for any operators which require partial match (contains / “co”, starts with / “sw”, ends with / “ew”). Generic operations don&#39;t support “pr” either (&#39;presence&#39;).</p>
+
+<p>TODO: Be less, eeeh, well - frankly - lame.</p>
+
+<p>Create an instance, then construct a query appropriate for your storage back-end using attribute to get the attribute name (in terms of “your data”, via your Scimitar::Resources::Mixin-including class implementation of ::scim_queryable_attributes), operator to get a generic SQL operator such as “=” or “!=” and parameter to get the value to be found (which you MUST take care to process so as to avoid an SQL injection or similar issues - use escaping suitable for your storage system&#39;s query language).</p>
+<ul><li>
+<p>If you don&#39;t want to support LIKE just check for it in parameter&#39;s return value; it&#39;ll be upper case.</p>
+</li></ul>
+
+<p>Given the likelihood of using ActiveRecord via Rails, there&#39;s a higher level and easier method - just create the instance, then call <a href="QueryParser.html#method-i-to_activerecord_query"><code>QueryParser#to_activerecord_query</code></a> to get a given base scope narrowed down to match the filter parameters.</p>
+
+    </div>
+
+
+
+
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+        <dt>N</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-c-new">new</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>P</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-parse">parse</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>T</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-to_activerecord_query">to_activerecord_query</a>,
+                </li>
+                <li>
+                    <a href="#method-i-tree">tree</a>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+
+
+
+
+    <!-- Section constants -->
+    <div class="sectiontitle">Constants</div>
+    <table border='0' cellpadding='5'>
+        <tr valign='top' id='OPERATORS'>
+            <td class="attr-name">OPERATORS</td>
+            <td>=</td>
+            <td class="attr-value"><pre>{
+&#39;pr&#39; =&gt; 4,
+
+&#39;eq&#39; =&gt; 3,
+&#39;ne&#39; =&gt; 3,
+&#39;gt&#39; =&gt; 3,
+&#39;ge&#39; =&gt; 3,
+&#39;lt&#39; =&gt; 3,
+&#39;le&#39; =&gt; 3,
+&#39;co&#39; =&gt; 3,
+&#39;sw&#39; =&gt; 3,
+&#39;ew&#39; =&gt; 3,
+
+&#39;and&#39; =&gt; 2,
+&#39;or&#39;  =&gt; 1
+}.freeze</pre></td>
+        </tr>
+        <tr valign='top'>
+            <td>&nbsp;</td>
+            <td colspan="2" class="attr-desc"><p>Combined operator precedence.</p></td>
+        </tr>
+        <tr valign='top' id='UNARY_OPERATORS'>
+            <td class="attr-name">UNARY_OPERATORS</td>
+            <td>=</td>
+            <td class="attr-value"><pre>Set.new([
+&#39;pr&#39;
+]).freeze</pre></td>
+        </tr>
+        <tr valign='top'>
+            <td>&nbsp;</td>
+            <td colspan="2" class="attr-desc"><p>Unary operators.</p></td>
+        </tr>
+        <tr valign='top' id='SQL_COMPARISON_OPERATORS'>
+            <td class="attr-name">SQL_COMPARISON_OPERATORS</td>
+            <td>=</td>
+            <td class="attr-value"><pre>{
+&#39;eq&#39; =&gt; &#39;=&#39;,
+&#39;ne&#39; =&gt; &#39;!=&#39;,
+&#39;gt&#39; =&gt; &#39;&gt;&#39;,
+&#39;ge&#39; =&gt; &#39;&gt;=&#39;,
+&#39;lt&#39; =&gt; &#39;&lt;&#39;,
+&#39;le&#39; =&gt; &#39;&lt;=&#39;,
+&#39;co&#39; =&gt; &#39;LIKE&#39;,
+&#39;sw&#39; =&gt; &#39;LIKE&#39;,
+&#39;ew&#39; =&gt; &#39;LIKE&#39;
+}.freeze</pre></td>
+        </tr>
+        <tr valign='top'>
+            <td>&nbsp;</td>
+            <td colspan="2" class="attr-desc"><p>Map SCIM operators to generic(ish) SQL operators.</p></td>
+        </tr>
+        <tr valign='top' id='PAREN'>
+            <td class="attr-name">PAREN</td>
+            <td>=</td>
+            <td class="attr-value"><pre>/[\(\)]/.freeze</pre></td>
+        </tr>
+        <tr valign='top'>
+            <td>&nbsp;</td>
+            <td colspan="2" class="attr-desc"><h6 id="label-"></h6>
+
+<p>Tokenizing expressions</p>
+
+<h6 id="label-"></h6></td>
+        </tr>
+        <tr valign='top' id='STR'>
+            <td class="attr-name">STR</td>
+            <td>=</td>
+            <td class="attr-value"><pre>/&quot;(?:\\&quot;|[^&quot;])*&quot;/.freeze</pre></td>
+        </tr>
+        <tr valign='top'>
+            <td>&nbsp;</td>
+            <td colspan="2" class="attr-desc"></td>
+        </tr>
+        <tr valign='top' id='OP'>
+            <td class="attr-name">OP</td>
+            <td>=</td>
+            <td class="attr-value"><pre>/#{OPERATORS.keys.join(&#39;|&#39;)}/i.freeze</pre></td>
+        </tr>
+        <tr valign='top'>
+            <td>&nbsp;</td>
+            <td colspan="2" class="attr-desc"></td>
+        </tr>
+        <tr valign='top' id='WORD'>
+            <td class="attr-name">WORD</td>
+            <td>=</td>
+            <td class="attr-value"><pre>/[\w\.]+/.freeze</pre></td>
+        </tr>
+        <tr valign='top'>
+            <td>&nbsp;</td>
+            <td colspan="2" class="attr-desc"></td>
+        </tr>
+        <tr valign='top' id='SEP'>
+            <td class="attr-name">SEP</td>
+            <td>=</td>
+            <td class="attr-value"><pre>/\s?/.freeze</pre></td>
+        </tr>
+        <tr valign='top'>
+            <td>&nbsp;</td>
+            <td colspan="2" class="attr-desc"></td>
+        </tr>
+        <tr valign='top' id='NEXT_TOKEN'>
+            <td class="attr-name">NEXT_TOKEN</td>
+            <td>=</td>
+            <td class="attr-value"><pre>/\A(#{PAREN}|#{STR}|#{OP}|#{WORD})#{SEP}/.freeze</pre></td>
+        </tr>
+        <tr valign='top'>
+            <td>&nbsp;</td>
+            <td colspan="2" class="attr-desc"></td>
+        </tr>
+        <tr valign='top' id='IS_OPERATOR'>
+            <td class="attr-name">IS_OPERATOR</td>
+            <td>=</td>
+            <td class="attr-value"><pre>/\A(?:#{OP})\Z/.freeze</pre></td>
+        </tr>
+        <tr valign='top'>
+            <td>&nbsp;</td>
+            <td colspan="2" class="attr-desc"></td>
+        </tr>
+    </table>
+
+    <!-- Section attributes -->
+    <div class="sectiontitle">Attributes</div>
+    <table border='0' cellpadding='5'>
+        <tr valign='top' id='attribute-i-attribute_map'>
+            <td class='attr-rw'>
+                [R]
+            </td>
+            <td class='attr-name'>attribute_map</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-rpn'>
+            <td class='attr-rw'>
+                [R]
+            </td>
+            <td class='attr-name'>rpn</td>
+            <td class='attr-desc'></td>
+        </tr>
+    </table>
+
+<!-- Methods -->
+
+    <div class="sectiontitle">Class Public methods</div>
+    <div class="method">
+        <div class="title method-title" id="method-c-new">
+            <b>new</b>(attribute_map)
+            <a href="../../../classes/Scimitar/Lists/QueryParser.html#method-c-new" name="method-c-new" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Initialise an object.</p>
+<dl class="rdoc-list note-list"><dt><code>attribute_map</code>
+<dd>
+<p>See <a href="../Resources/Mixin.html"><code>Scimitar::Resources::Mixin</code></a> and documentation on implementing ::scim_queryable_attributes; pass that method&#39;s return value here.</p>
+</dd></dl>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
+            </p>
+            <div id="method-c-new_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/lists/query_parser.rb, line 92</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">attribute_map</span>)
+  <span class="ruby-ivar">@attribute_map</span> = <span class="ruby-identifier">attribute_map</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="sectiontitle">Instance Public methods</div>
+    <div class="method">
+        <div class="title method-title" id="method-i-parse">
+            <b>parse</b>(input)
+            <a href="../../../classes/Scimitar/Lists/QueryParser.html#method-i-parse" name="method-i-parse" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Parse SCIM filter query into RPN stack</p>
+<dl class="rdoc-list note-list"><dt><code>input</code>
+<dd>
+<p>Input filter string, e.g. &#39;giveName eq “Briony”&#39;.</p>
+</dd></dl>
+
+<p>@return [SCIM::Query::Filter::Parser]</p>
+
+<p>Returns a SCIM::Query::Filter::Parser instance. Call <a href="QueryParser.html#attribute-i-rpn"><code>rpn</code></a> on this to retrieve the parsed RPN stack. For example, given this input:</p>
+
+<pre><code>userType eq &quot;Employee&quot; and (emails co &quot;example.com&quot; or emails co &quot;example.org&quot;)
+</code></pre>
+
+<p>…returns a parser object wherein <a href="QueryParser.html#attribute-i-rpn"><code>rpn</code></a> will yield:</p>
+
+<pre><code>[
+  &#39;userType&#39;,
+  &#39;&quot;Employee&quot;&#39;,
+  &#39;eq&#39;,
+  &#39;emails&#39;,
+  &#39;&quot;example.com&quot;&#39;,
+  &#39;co&#39;,
+  &#39;emails&#39;,
+  &#39;&quot;example.org&quot;&#39;,
+  &#39;co&#39;,
+  &#39;or&#39;,
+  &#39;and&#39;
+]
+</code></pre>
+
+<p>Alternatively, call <a href="QueryParser.html#method-i-tree"><code>tree</code></a> to get an expression tree:</p>
+
+<pre><code>[
+  &#39;and&#39;,
+  [
+    &#39;eq&#39;,
+    &#39;userType&#39;,
+    &#39;&quot;Employee&quot;&#39;
+  ],
+  [
+    &#39;or&#39;,
+    [
+      &#39;co&#39;,
+      &#39;emails&#39;,
+      &#39;&quot;example.com&quot;&#39;
+    ],
+    [
+      &#39;co&#39;,
+      &#39;emails&#39;,
+      &#39;&quot;example.org&quot;&#39;
+    ]
+  ]
+]
+</code></pre>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-parse_source')" id="l_method-i-parse_source">show</a>
+            </p>
+            <div id="method-i-parse_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/lists/query_parser.rb, line 147</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse</span>(<span class="ruby-identifier">input</span>)
+  <span class="ruby-comment"># Save for error msgs</span>
+  <span class="ruby-ivar">@input</span>  = <span class="ruby-identifier">input</span>.<span class="ruby-identifier">clone</span>()
+  <span class="ruby-ivar">@tokens</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">lex</span>(<span class="ruby-identifier">input</span>)
+  <span class="ruby-ivar">@rpn</span>    = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">parse_expr</span>()
+
+  <span class="ruby-keyword">self</span>.<span class="ruby-identifier">assert_eos</span>()
+  <span class="ruby-keyword">self</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-to_activerecord_query">
+            <b>to_activerecord_query</b>(base_scope)
+            <a href="../../../classes/Scimitar/Lists/QueryParser.html#method-i-to_activerecord_query" name="method-i-to_activerecord_query" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Having called <a href="QueryParser.html#method-i-parse"><code>parse</code></a>, call here to generate an ActiveRecord query based on a given starting scope. The scope is used for all &#39;and&#39; queries and as a basis for any nested &#39;or&#39; scopes. For example, given this input:</p>
+
+<pre><code>userType eq &quot;Employee&quot; and (emails eq &quot;a@b.com&quot; or emails eq &quot;a@b.org&quot;)
+</code></pre>
+
+<p>…and if you passed &#39;User.active&#39; as a scope, there would be something along these lines sent to ActiveRecord:</p>
+
+<pre><code>User.active.where(user_type: &#39;Employee&#39;).and(User.active.where(work_email: &#39;a@b.com&#39;).or(User.active.where(work_email: &#39;a@b.org&#39;)))
+</code></pre>
+
+<p>See query_parser_spec.rb to get an idea for expected SQL based on various kinds of input, especially section “context &#39;with complex cases&#39; do”.</p>
+<dl class="rdoc-list note-list"><dt><code>base_scope</code>
+<dd>
+<p>The starting scope, e.g. User.active.</p>
+</dd></dl>
+
+<p>Returns an ActiveRecord::Relation giving an SQL query that is the gem&#39;s best attempt at interpreting the SCIM filter string.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-to_activerecord_query_source')" id="l_method-i-to_activerecord_query_source">show</a>
+            </p>
+            <div id="method-i-to_activerecord_query_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/lists/query_parser.rb, line 186</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_activerecord_query</span>(<span class="ruby-identifier">base_scope</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">to_activerecord_query_backend</span>(
+    <span class="ruby-value">base_scope:</span>      <span class="ruby-identifier">base_scope</span>,
+    <span class="ruby-value">expression_tree:</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">tree</span>()
+  )
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-tree">
+            <b>tree</b>()
+            <a href="../../../classes/Scimitar/Lists/QueryParser.html#method-i-tree" name="method-i-tree" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Transform the RPN stack into a tree, returning the result. A new tree is created each time, so you can mutate the result if need be.</p>
+
+<p>See <a href="QueryParser.html#method-i-parse"><code>parse</code></a> for more information.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-tree_source')" id="l_method-i-tree_source">show</a>
+            </p>
+            <div id="method-i-tree_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/lists/query_parser.rb, line 162</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">tree</span>
+  <span class="ruby-ivar">@stack</span> = <span class="ruby-ivar">@rpn</span>.<span class="ruby-identifier">clone</span>()
+  <span class="ruby-keyword">self</span>.<span class="ruby-identifier">get_tree</span>()
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+    </div>
+  </body>
+</html>

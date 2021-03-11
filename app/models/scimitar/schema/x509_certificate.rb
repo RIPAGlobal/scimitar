@@ -6,7 +6,7 @@ module Scimitar
     #
     # Similar to the Vdtp class, but the "value" field is of type "binary".
     #
-    # @see Scimitar::ComplexTypes::X509Certificate
+    # See also Scimitar::ComplexTypes::X509Certificate
     #
     class X509Certificate < Base
       def self.scim_attributes

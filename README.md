@@ -52,39 +52,160 @@ All three are provided under the MIT license. Scimitar is too.
 
 ## Usage
 
+Scimitar is best used with Rails and ActiveRecord, but it can be used with other persistence back-ends too - you just have to do more of the work in controllers using Scimitar's lower level controller subclasses, rather than relying on Scimitar's higher level ActiveRecord abstractions.
 
-Some of the stuff to do here:
+### Authentication
 
-* Setting up what authentication method you use
-* Building an example subclass to do basic User operations
-* How to map to/from your own User records and a Scimitar::User
-* Likewise, groups
-* Bulk operations and filters
+Noting the _Security_ section later - to set up an authentication method, create a `config/initializers/scimitar.rb` in your Rails application and define a token-based authenticator and/or a username-password authenticator in the [engine configuration section documented in the sample file](https://github.com/RIPGlobal/scimitar/blob/main/config/initializers/scimitar.rb). For example:
 
+```ruby
+Scimitar.engine_configuration = Scimitar::EngineConfiguration.new({
+  token_authenticator: Proc.new do | token, options |
 
-Scimitar neither enforces nor presumes any kind of encoding for bearer tokens. You can use anything you like, including encoding/encrypting JWTs if you so wish - https://rubygems.org/gems/jwt may be useful. The way in which a client might integrate with your SCIM service varies by client and you will have to check documentation to see how a token gets conveyed to that client in the first place (e.g. a full OAuth flow with your application, or just a static token generated in some UI which an administrator copies and pastes into their client's SCIM configuration UI).
+    # This is where you'd write the code to validate `token` - the means by
+    # which your application issues tokens to SCIM clients, or validates them,
+    # is outside the scope of the gem; the required mechanisms vary by client.
+    # More on this can be found in the 'Security' section later.
+    #
+    SomeLibraryModule.validate_access_token(token)
 
+  end
+})
+```
 
-
+When it comes to token access, Scimitar neither enforces nor presumes any kind of encoding for bearer tokens. You can use anything you like, including encoding/encrypting JWTs if you so wish - https://rubygems.org/gems/jwt may be useful. The way in which a client might integrate with your SCIM service varies by client and you will have to check documentation to see how a token gets conveyed to that client in the first place (e.g. a full OAuth flow with your application, or just a static token generated in some UI which an administrator copies and pastes into their client's SCIM configuration UI).
 
 ### Routes
 
 For each resource you support, add these lines to your `routes.rb`:
 
 ```ruby
-namespace :scim do
+namespace :scim_v2 do
   mount Scimitar::Engine, at: '/'
 
   get    'Users',     to: 'users#index'
   get    'Users/:id', to: 'users#show'
   post   'Users',     to: 'users#create'
-  put    'Users/:id', to: 'mock_users#replace'
-  patch  'Users/:id', to: 'mock_users#update'
+  put    'Users/:id', to: 'users#replace'
+  patch  'Users/:id', to: 'users#update'
   delete 'Users/:id', to: 'users#destroy'
 end
 ```
 
-All routes then will be available at `https://.../scim/...`.
+All routes then will be available at `https://.../scim_v2/...` via controllers you write in `app/controllers/scim_v2/...`, e.g. `app/controllers/scim_v2/users_controller.rb`. More on controllers later.
+
+### Data models
+
+Scimitar assumes that each SCIM resource maps to a single corresponding class in your system. This might be an abstraction over more complex underpinings, but either way, a 1:1 relationship is expected. For example, a SCIM User might map to a User ActiveRecord model in your Rails application, while a SCIM Group might map to an ActiveRecord model called 'Teams' which actually operates on some more complex set of data "under the hood".
+
+Before writing any controllers, it's a good idea to examine the SCIM specification and figure out how you intend to map SCIM attributes in any resources of interest, to your local data. A [mixin is provided](https://github.com/RIPGlobal/scimitar/blob/main/app/models/scimitar/resources/mixin.rb) which you can include in any plain old Ruby class (including, but not limited to ActiveRecord model classes).
+
+The functionality exposed by the mixin is relatively complicated because the range of operations that the SCIM API supports is quite extensive. Rather than duplicate all the information here, please see the extensive comments in the mixin linked above for more information. There are examples in the [test suite's Rails models](https://github.com/RIPGlobal/scimitar/tree/main/spec/apps/dummy/app/models), or for another example:
+
+```ruby
+class User < ActiveRecord::Base
+
+  # The attributes in the SCIM section below include a reference to this
+  # hypothesised 'groups' HABTM relationship. All of the other "leaf node"
+  # Symbols - e.g. ":first_name", ":last_name" - are expected to be defined as
+  # accessors e.g. via ActiveRecord and your related database table columns,
+  # "attr_accessor" declarations, or bespoke "def foo"/"def foo=(value)". If a
+  # write accessor is not present, the attribute will not be writable via SCIM.
+  #
+  has_and_belongs_to_many :groups
+
+  # ===========================================================================
+  # SCIM MIXIN AND REQUIRED METHODS
+  # ===========================================================================
+  #
+  # All class methods shown below are mandatory unless otherwise commented.
+
+  def self.scim_resource_type
+    return Scimitar::Resources::User
+  end
+
+  def self.scim_attributes_map
+    return {
+      id:         :id,
+      externalId: :scim_uid,
+      userName:   :username,
+      name:       {
+        givenName:  :first_name,
+        familyName: :last_name
+      },
+      emails: [
+        {
+          match: 'type',
+          with:  'work',
+          using: {
+            value:   :work_email_address,
+            primary: true
+          }
+        },
+        {
+          match: 'type',
+          with:  'home',
+          using: {
+            value:   :home_email_address,
+            primary: false
+          }
+        },
+      ],
+      phoneNumbers: [
+        {
+          match: 'type',
+          with:  'work',
+          using: {
+            value:   :work_phone_number,
+            primary: false
+          }
+        },
+      ],
+
+      # NB The 'groups' collection in a SCIM User resource is read-only, so
+      #    we provide no ":find_with" key for looking up records for writing
+      #    updates to the associated collection.
+      #
+      groups: [
+        {
+          list:  :groups,
+          using: {
+            value:   :id,
+            display: :display_name
+          }
+        }
+      ],
+      active: :is_active
+    }
+  end
+
+  def self.scim_mutable_attributes
+    return nil
+  end
+
+  def self.scim_queryable_attributes
+    return {
+      givenName:  :first_name,
+      familyName: :last_name,
+      emails:     :work_email_address,
+    }
+  end
+
+  # Optional but recommended.
+  #
+  def self.scim_timestamps_map
+    {
+      created:      :created_at,
+      lastModified: :updated_at
+    }
+  end
+
+  # If you omit any mandatory declarations, you'll get an exception raised by
+  # this inclusion which tells you which method(s) need(s) to be added.
+  #
+  include Scimitar::Resources::Mixin
+end
+```
 
 ### Controllers
 
@@ -222,7 +343,7 @@ Note that the `Scimitar::ApplicationController` parent class of `Scimitar::Resou
 
 ```ruby
 module Scim
-  class MockUsersController < Scimitar::ActiveRecordBackedResourcesController
+  class UsersController < Scimitar::ActiveRecordBackedResourcesController
 
     skip_before_action :verify_authenticity_token
 
@@ -240,39 +361,7 @@ module Scim
 end
 ```
 
-In the simplest case - that's it! All actions are taken via `#find` or `#save!`, with things like `ActiveRecord::RecordNotFound` or generalised SCIM errors handled by the various superclasses.
-
-
-
-```
-GREAT
-
-BIG
-
-TO
-
-DO
-
-LIST
-
-OF
-
-STUFF
-
-THAT
-
-NEEDS
-
-TO
-
-GO
-
-HERE
-
-:-)
-
-(I'll know it once I've built it)
-```
+In the simplest case - that's it! All actions are taken via `#find` or `#save!`, with things like `ActiveRecord::RecordNotFound` or generalised SCIM errors handled by the various superclasses. For a real Rails example of this, see the [test suite's controllers](https://github.com/RIPGlobal/scimitar/tree/main/spec/apps/dummy/app/controllers) (which are invoked via its [routing declarations](https://github.com/RIPGlobal/scimitar/blob/main/spec/apps/dummy/config/routes.rb)).
 
 
 
@@ -333,6 +422,8 @@ popd
 ```
 bundle exec rspec
 ```
+
+You can get an idea of arising test coverage by opening `coverage/index.html` in your preferred web browser.
 
 ### Internal documentation
 

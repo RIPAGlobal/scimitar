@@ -8,7 +8,7 @@ module Scimitar
     # These are always read-only, with no ability to change the
     # membership list through a User. Change via Groups instead.
     #
-    # @see Scimitar::ComplexTypes::ReferenceGroup
+    # See also Scimitar::ComplexTypes::ReferenceGroup
     #
     class ReferenceGroup < Base
       def self.scim_attributes

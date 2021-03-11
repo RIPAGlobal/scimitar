@@ -3,7 +3,7 @@ module Scimitar
 
     # Represents the complex PhoneNumber type.
     #
-    # @see Scimitar::Schema::PhoneNumber
+    # See also Scimitar::Schema::PhoneNumber
     #
     class PhoneNumber < Base
       set_schema Scimitar::Schema::PhoneNumber

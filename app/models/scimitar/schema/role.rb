@@ -3,7 +3,7 @@ module Scimitar
 
     # Represents the schema for the Role complex type.
     #
-    # @see Scimitar::ComplexTypes::Role
+    # See also Scimitar::ComplexTypes::Role
     #
     class Role < Vdtp; end
   end

@@ -10,8 +10,6 @@ module Scimitar
     # "sw", ends with / "ew"). Generic operations don't support "pr" either
     # ('presence').
     #
-    # TODO: Be less, eeeh, well - frankly - lame.
-    #
     # Create an instance, then construct a query appropriate for your storage
     # back-end using #attribute to get the attribute name (in terms of "your
     # data", via your Scimitar::Resources::Mixin-including class implementation
@@ -96,8 +94,6 @@ module Scimitar
       # Parse SCIM filter query into RPN stack
       #
       # +input+:: Input filter string, e.g. 'giveName eq "Briony"'.
-      #
-      # @return [SCIM::Query::Filter::Parser]
       #
       # Returns a SCIM::Query::Filter::Parser instance. Call #rpn on this to
       # retrieve the parsed RPN stack. For example, given this input:
@@ -225,11 +221,10 @@ module Scimitar
           ast
         end
 
-        # Split input into tokens
+        # Split input into tokens. Returns an array of strings.
         #
-        # @param input [String]
+        # +input+:: String to parse.
         #
-        # @return [Array<String>]
         def lex(input)
           input = input.clone
           tokens = []
@@ -244,9 +239,10 @@ module Scimitar
 
         # Turn parsed tokens into an RPN stack
         #
-        # @see http://en.wikipedia.org/wiki/Shunting_yard_algorithm
+        # See also http://en.wikipedia.org/wiki/Shunting_yard_algorithm
         #
-        # @param ast [Array]
+        # +ast+:: Array of parsed tokens (see e.g. #parse_expr).
+        #
         def to_rpn(ast)
           out = []
           ops = []

@@ -18,8 +18,12 @@ module Scimitar
         original.merge('attributes' => original.delete('scim_attributes'))
       end
 
-      # Validates the resource against specific validations of each attribute,for example if the type of the attribute matches the one defined in the schema.
-      # @param resource [Object] a resource object that uses this schema
+      # Validates the resource against specific validations of each attribute,
+      # for example if the type of the attribute matches the one defined in the
+      # schema.
+      #
+      # +resource+:: A resource object that uses this schema.
+      #
       def self.valid?(resource)
         cloned_scim_attributes.each do |scim_attribute|
           resource.add_errors_from_hash(scim_attribute.errors.to_hash) unless scim_attribute.valid?(resource.send(scim_attribute.name))

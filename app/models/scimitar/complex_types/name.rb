@@ -3,7 +3,7 @@ module Scimitar
 
     # Represents the complex Name type.
     #
-    # @see Scimitar::Schema::Name
+    # See also Scimitar::Schema::Name
     #
     class Name < Base
       set_schema Scimitar::Schema::Name

@@ -3,7 +3,7 @@ module Scimitar
 
     # Represents the schema for the Ims (Instant Messaging) complex type.
     #
-    # @see Scimitar::ComplexTypes::Ims
+    # See also Scimitar::ComplexTypes::Ims
     #
     class Ims < Vdtp; end
   end

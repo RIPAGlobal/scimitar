@@ -1,7 +1,7 @@
 module Scimitar
   module Schema
     # Represents the schema for the Group resource
-    # @see Scimitar::Resources::Group
+    # See also Scimitar::Resources::Group
     class Group < Base
 
       def initialize(options = {})

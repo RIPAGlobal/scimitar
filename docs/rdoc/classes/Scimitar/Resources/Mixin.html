@@ -1,0 +1,1130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>Scimitar::Resources::Mixin</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+
+    <meta property="og:title" value="Scimitar::Resources::Mixin">
+
+    <meta name="description" content="The mixin included by any class in your application which is to be mapped to and exposed via a SCIM interface.">
+    <meta property="og:description" content="The mixin included by any class in your application which is to be mapped to and exposed via a SCIM interface.">
+
+    <meta name="keywords" content="Scimitar::Resources::Mixin class">
+    <meta name="keywords" content="scim_mutable_attributes, scim_queryable_attributes, to_scim, from_scim!, from_scim_patch!, to_scim_backend, from_scim_backend!, from_patch_backend!, from_patch_backend_traverse!, from_patch_backend_apply!, extract_filter_from, all_matching_filter">
+</head>
+
+<body>
+    <div class="banner">
+        <h1>
+            <span class="type">Module</span>
+            Scimitar::Resources::Mixin
+        </h1>
+        <ul class="files">
+            <li><a href="../../../files/app/models/scimitar/resources/mixin_rb.html">app/models/scimitar/resources/mixin.rb</a></li>
+        </ul>
+    </div>
+    <div id="bodyContent">
+        <div id="content">
+    <div class="description">
+        
+<p>The mixin included by any class in your application which is to be mapped to and exposed via a SCIM interface. Any one such class must have one corresponding <a href="../ResourcesController.html"><code>ResourcesController</code></a> subclass declaring its association to that model.</p>
+
+<p>Your class becomes responsible for implementing various *class methods* as described below. YOU MUST DECLARE THESE *<strong>BEFORE</strong>* YOU INCLUDE THE MIXIN MODULE because Ruby parses classes top-down and the mixin checks to make sure that required methods exist, so these must be defined <strong>first</strong>.</p>
+
+<h2 id="module-Scimitar::Resources::Mixin-label-scim_resource_type">scim_resource_type</h2>
+
+<p>Define this method to return the <a href="../../Scimitar.html"><code>Scimitar</code></a> resource class that corresponds to the mixing-in class.</p>
+
+<p>For example, if you have an ActiveRecord “User” class that maps to a SCIM “User” resource type:</p>
+
+<pre><code>def self.scim_resource_type
+  return Scimitar::Resources::User
+end
+</code></pre>
+
+<p>This is used to render SCIM JSON data via <a href="Mixin.html#method-i-to_scim"><code>to_scim</code></a>.</p>
+
+<h2 id="module-Scimitar::Resources::Mixin-label-scim_attributes_map">scim_attributes_map</h2>
+
+<p>Define this method to return a Hash that maps SCIM attributes to corresponding supported accessor methods in the mixing-in class.</p>
+
+<p>Define read-only, write-only or read-write attributes here. <a href="../../Scimitar.html"><code>Scimitar</code></a> will check for an appropriate accessor depending on whether SCIM operations are read or write and acts accordingly. At each level of the Ruby Hash, the keys are case-sensitive attributes from the SCIM schema and values are either Symbols, giving a corresponding read/write accessor name in the mixing-in class, Hashes for nested SCIM schema data as shown below or for Array entries, special structures described later.</p>
+
+<p>For example, for a <a href="User.html"><code>User</code></a> model &lt;-&gt; SCIM user:</p>
+
+<pre><code>def self.scim_attributes_map
+  return {
+    id:         :id,
+    externalId: :scim_external_id,
+    userName:   :user_name,
+    name:       {
+      givenName:  :given_name,
+      familyName: :last_name
+    },
+    active: :is_active?
+  }
+end
+</code></pre>
+
+<p>Note that providing storage and filter (search) support for externalId is VERY STRONGLY recommended (bordering on mandatory) for your service to provide adequate support for typical clients to function smoothly. See “scim_queryable_attributes” below for filtering.</p>
+
+<p>This omits things like “email” because in SCIM those are specified in an Array, where each entry has a “type” field - e.g. “home”, “work”. Within SCIM this is common but there are also just free lists of data, such as the list of Members in a <a href="Group.html"><code>Group</code></a>. This makes the mapping description more complex. You can provide two kinds of mapping data:</p>
+<ul><li>
+<p>One where a specific SCIM attribute is present in each array entry and can contain only a set of specific, discrete values; your mapping defines entries for each value of interest. E-mail is an example here, where “type” is the SCIM attribute and you might map “work” and “home”.</p>
+</li></ul>
+
+<p>For discrete matches, you declare the Array containing Hashes with key “match”, where the value gives the name of the SCIM attribute to read or write for each array entry; “with”, where the value gives the thing to match at this attribute; then “using”, where the value is a Hash giving a mapping schema just as described herein (schema can nest as deeply as you like).</p>
+
+<p>Given that e-mails in SCIM look something like this:</p>
+
+<pre><code>&quot;emails&quot;: [
+  {
+    &quot;value&quot;: &quot;bjensen@example.com&quot;,
+    &quot;type&quot;: &quot;work&quot;,
+    &quot;primary&quot;: true
+  },
+  {
+    &quot;value&quot;: &quot;babs@jensen.org&quot;,
+    &quot;type&quot;: &quot;home&quot;
+  }
+]
+</code></pre>
+
+<p>…then we could extend the above attributes map example thus:</p>
+
+<pre><code>def self.scim_attributes_map
+  # ...
+  emails: [
+    {
+      match: &#39;type&#39;,
+      with:  &#39;work&#39;,
+      using: {
+        value:   :work_email_address,
+        primary: true
+      }
+    },
+    {
+      match: &#39;type&#39;,
+      with:  &#39;home&#39;,
+      using: { value: :home_email_address }
+    }
+  ],
+  # ...
+end
+</code></pre>
+
+<p>…where the including class would have a work_email_address accessor and we&#39;re hard-coding this as the primary (preferred) address (but could just as well map this to another accessor, e.g. :work_email_is_primary?).</p>
+<ul><li>
+<p>One where a SCIM array contains just a list of arbitrary entries, each with a known schema, and these map attribute-by-attribute to same-index items in a corresponding array in the mixing-in model. <a href="Group.html"><code>Group</code></a> members are the example use case here.</p>
+</li></ul>
+
+<p>For things like a group&#39;s list of members, again include an array in the attribute map as above but this time have a key “list” with a value that is the attribute accessor in your mixing in model that returns an Enumerable of values to map, then as above, “using” which provides the nested schema saying how each of those objects should be mapped.</p>
+
+<p>Suppose you were mixing this module into a Team class and there was an association Team#users that provided an Enumerable of team member <a href="User.html"><code>User</code></a> objects:</p>
+
+<pre><code>def self.scim_attributes_map
+  # ...
+  groups: [
+    {
+      list: :users,          # &lt;-- i.e. Team.users,
+      using: {
+        value:   :id,        # &lt;-- i.e. Team.users[n].id
+        display: :full_name  # &lt;-- i.e. Team.users[n].full_name
+      },
+      find_with: -&gt; (scim_list_entry) {...} # See below
+    }
+  ],
+  #...
+end
+</code></pre>
+
+<p>The mixing-in class _must+ implement the read accessor identified by the value of the “list” key, returning any indexed, Enumerable collection (e.g. an Array or ActiveRecord::Relation instance). The optional key “:find_with” is defined with a Proc that&#39;s passed the SCIM entry at each list position. It must use this to look up the equivalent entry for association via the write accessor described by the “:list” key. In the example above, “find_with”&#39;s Proc might look at a SCIM entry value which is expected to be a user ID and find that <a href="User.html"><code>User</code></a>. The mapped set of <a href="User.html"><code>User</code></a> data thus found would be written back with “#users=”, due to the “:list” key declaring the method name “:users”.</p>
+
+<p>Note that you can only use either:</p>
+<ul><li>
+<p>One or more static maps where each matches some other piece of source SCIM data field value, so that specific SCIM array entries are matched</p>
+</li><li>
+<p>A single dynamic list entry which maps app SCIM array entries.</p>
+</li></ul>
+
+<p>A mixture of static and dynamic data, or multiple dynamic entries in a single mapping array value will produce undefined behaviour.</p>
+
+<h2 id="module-Scimitar::Resources::Mixin-label-scim_mutable_attributes"><a href="Mixin.html#method-i-scim_mutable_attributes"><code>scim_mutable_attributes</code></a></h2>
+
+<p>Define this method to return a Set (preferred) or Array of names of attributes which may be written in the mixing-in class.</p>
+
+<p>If you return <code>nil</code>, it is assumed that <code>any</code> attribute mapped by ::scim_attributes_map which has a write accessor will be eligible for assignment during SCIM creation or update operations.</p>
+
+<p>For example, if everything in ::scim_attributes_map with a write accessor is to be mutable over SCIM:</p>
+
+<pre><code>def self.scim_mutable_attributes
+  return nil
+end
+</code></pre>
+
+<p>Note that as a common special case, any mapped attribute of the Symbol value “:id” will be removed from the list, as it is assumed to be e.g. a primary key or similar. So, even though it&#39;ll have a write accessor, it is not something that should be mutable over SCIM - it&#39;s taken to be your internal record ID. If you do want :id included as mutable or if you have a different primary key attribute name, you&#39;ll just need to return the mutable attribute list directly in your ::scim_mutable_attributes method rather than relying on the list extracted from ::scim_attributes_map.</p>
+
+<h2 id="module-Scimitar::Resources::Mixin-label-scim_queryable_attributes"><a href="Mixin.html#method-i-scim_queryable_attributes"><code>scim_queryable_attributes</code></a></h2>
+
+<p>Define this method to return a Hash that maps field names you wish to support in SCIM filter queries to corresponding attributes in the in the mixing-in class. If <code>nil</code> then filtering is not supported in the ResouceController subclass which declares that it maps to the mixing-in class. If not <code>nil</code> but a SCIM filter enquiry is made for an unmapped attribute, that part of the filter will be ignored.</p>
+
+<p>For example, the SCIM &#39;emails&#39; attribute has an array value with its own set of properties for each entry therein, but is just searched in SCIM via key “emails”.</p>
+
+<pre><code>def self.scim_queryable_attributes
+  return {
+    externalId: :scim_external_id,
+    emails:     :work_email_address
+  }
+end
+</code></pre>
+
+<p>Filtering is currently limited and searching within e.g. arrays of data is not supported; only simple top-level keys can be mapped.</p>
+
+<h2 id="module-Scimitar::Resources::Mixin-label-Optional+methods">Optional methods</h2>
+
+<h3 id="module-Scimitar::Resources::Mixin-label-scim_timestamps_map">scim_timestamps_map</h3>
+
+<p>If you implement this class method, it should return a Hash with one or both of the keys &#39;created&#39; and &#39;lastModified&#39;, as Symbols. The values should be methods that the including method supports which return a creation or most-recently-updated time, respectively. The returned object mustsupport iso8601 to convert to a String representation. Example for a typical ActiveRecord object with standard timestamps:</p>
+
+<pre><code>def self.scim_timestamps_map
+  {
+    created:      :created_at,
+    lastModified: :updated_at
+  }
+end
+</code></pre>
+
+    </div>
+
+
+
+
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+        <dt>A</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-all_matching_filter">all_matching_filter</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>E</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-extract_filter_from">extract_filter_from</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>F</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-from_patch_backend-21">from_patch_backend!</a>,
+                </li>
+                <li>
+                    <a href="#method-i-from_patch_backend_apply-21">from_patch_backend_apply!</a>,
+                </li>
+                <li>
+                    <a href="#method-i-from_patch_backend_traverse-21">from_patch_backend_traverse!</a>,
+                </li>
+                <li>
+                    <a href="#method-i-from_scim-21">from_scim!</a>,
+                </li>
+                <li>
+                    <a href="#method-i-from_scim_backend-21">from_scim_backend!</a>,
+                </li>
+                <li>
+                    <a href="#method-i-from_scim_patch-21">from_scim_patch!</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>S</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-scim_mutable_attributes">scim_mutable_attributes</a>,
+                </li>
+                <li>
+                    <a href="#method-i-scim_queryable_attributes">scim_queryable_attributes</a>
+                </li>
+            </ul>
+        </dd>
+        <dt>T</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-i-to_scim">to_scim</a>,
+                </li>
+                <li>
+                    <a href="#method-i-to_scim_backend">to_scim_backend</a>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+
+
+
+
+
+
+<!-- Methods -->
+
+    <div class="sectiontitle">Instance Public methods</div>
+    <div class="method">
+        <div class="title method-title" id="method-i-all_matching_filter">
+            <b>all_matching_filter</b>(filter:, within_array:, &amp;block)
+            <a href="../../../classes/Scimitar/Resources/Mixin.html#method-i-all_matching_filter" name="method-i-all_matching_filter" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Given a SCIM filter string and array of Hashes from a SCIM object, search for matches within the array and invoke a given block for each.</p>
+
+<p>Obtain filter strings by calling <a href="Mixin.html#method-i-extract_filter_from"><code>extract_filter_from</code></a>.</p>
+
+<p>TODO: Support more complex matchers than &#39;attr eq “value”&#39;.</p>
+
+<p>Named parameters:</p>
+<dl class="rdoc-list note-list"><dt><code>filter</code>
+<dd>
+<p><a href="../Filter.html"><code>Filter</code></a> string, e.g. &#39;type eq “work”&#39;.</p>
+</dd><dt><code>within_array</code>
+<dd>
+<p>Array to search.</p>
+</dd></dl>
+
+<p>You must pass a block. It is invoked with each matching array entry (a Hash) and the index into <code>within_array</code> at which this was found.</p>
+
+<p>Happily throws exceptions if data is not as expected / required.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-all_matching_filter_source')" id="l_method-i-all_matching_filter_source">show</a>
+            </p>
+            <div id="method-i-all_matching_filter_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/resources/mixin.rb, line 903</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">all_matching_filter</span>(<span class="ruby-value">filter:</span>, <span class="ruby-value">within_array:</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">filter_components</span> = <span class="ruby-identifier">filter</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39; &#39;</span>)
+  <span class="ruby-identifier">raise</span> <span class="ruby-node">&quot;Unsupported matcher #{filter.inspect}&quot;</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">filter_components</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">==</span> <span class="ruby-value">3</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">filter_components</span>[<span class="ruby-value">1</span>].<span class="ruby-identifier">downcase</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;eq&#39;</span>
+
+  <span class="ruby-identifier">attribute</span> = <span class="ruby-identifier">filter_components</span>[<span class="ruby-value">0</span>]
+  <span class="ruby-identifier">value</span>     = <span class="ruby-identifier">filter_components</span>[<span class="ruby-value">2</span>]
+  <span class="ruby-identifier">value</span>     = <span class="ruby-identifier">value</span>[<span class="ruby-value">1</span><span class="ruby-operator">..</span><span class="ruby-value">-2</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-string">&#39;&quot;&#39;</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">end_with?</span>(<span class="ruby-string">&#39;&quot;&#39;</span>)
+
+  <span class="ruby-identifier">within_array</span>.<span class="ruby-identifier">each</span>.<span class="ruby-identifier">with_index</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span> <span class="ruby-identifier">hash</span>, <span class="ruby-identifier">index</span> <span class="ruby-operator">|</span>
+    <span class="ruby-identifier">matched</span> = <span class="ruby-identifier">hash</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-identifier">attribute</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">hash</span>[<span class="ruby-identifier">attribute</span>]&amp;.<span class="ruby-identifier">to_s</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">value</span>&amp;.<span class="ruby-identifier">to_s</span>
+    <span class="ruby-keyword">yield</span>(<span class="ruby-identifier">hash</span>, <span class="ruby-identifier">index</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">matched</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-extract_filter_from">
+            <b>extract_filter_from</b>(path_component:)
+            <a href="../../../classes/Scimitar/Resources/Mixin.html#method-i-extract_filter_from" name="method-i-extract_filter_from" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Given a path element from SCIM, splits this into the attribute and filter parts. Returns a tuple of [attribute, filter] where <code>filter</code> will be <code>nil</code> if no filter string was given.</p>
+
+<p>Named parameters:</p>
+<dl class="rdoc-list note-list"><dt><code>path_component</code>
+<dd>
+<p>Path component to examine (a String), e.g. &#39;userName&#39; or &#39;emails[type eq “work”]&#39;.</p>
+</dd></dl>
+
+<p>Happily throws exceptions if data is not as expected / required.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-extract_filter_from_source')" id="l_method-i-extract_filter_from_source">show</a>
+            </p>
+            <div id="method-i-extract_filter_from_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/resources/mixin.rb, line 873</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">extract_filter_from</span>(<span class="ruby-value">path_component:</span>)
+  <span class="ruby-identifier">filter</span> = <span class="ruby-keyword">nil</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">path_component</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-string">&#39;[&#39;</span>)
+    <span class="ruby-identifier">composition</span>    = <span class="ruby-identifier">path_component</span>.<span class="ruby-identifier">split</span>(<span class="ruby-regexp">/[\[\]]/</span>) <span class="ruby-comment"># &quot;attribute_name[filter_string]&quot; -&gt; [&quot;attribute_name&quot;, &quot;filter_string&quot;]</span>
+    <span class="ruby-identifier">path_component</span> = <span class="ruby-identifier">composition</span>.<span class="ruby-identifier">first</span>
+    <span class="ruby-identifier">filter</span>         = <span class="ruby-identifier">composition</span>.<span class="ruby-identifier">last</span>
+  <span class="ruby-keyword">end</span>
+
+  [<span class="ruby-identifier">path_component</span>, <span class="ruby-identifier">filter</span>]
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-from_patch_backend-21">
+            <b>from_patch_backend!</b>(nature:, path:, value:, altering_hash:)
+            <a href="../../../classes/Scimitar/Resources/Mixin.html#method-i-from_patch_backend-21" name="method-i-from_patch_backend-21" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Recursive back-end for <a href="Mixin.html#method-i-from_scim_patch-21"><code>from_scim_patch!</code></a> which traverses paths down into one or - if multiple-match filters are encountered - multiple attributes and performs updates on a SCIM Hash representation of &#39;self&#39;. Throws <a href="../ErrorResponse.html"><code>Scimitar::ErrorResponse</code></a> (or a subclass thereof) upon encountering any errors.</p>
+
+<p>Named parameters:</p>
+<dl class="rdoc-list note-list"><dt><code>nature</code>
+<dd>
+<p>The PATCH operation nature - MUST be a lower case String of &#39;add&#39;, &#39;remove&#39; or &#39;replace&#39; ONLY.</p>
+</dd><dt><code>path</code>
+<dd>
+<p>Operation path, as a series of array entries (so an inbound dot-separated path string would first be split into an array by the caller). For internal recursive calls, this will</p>
+</dd><dt><code>value</code>
+<dd>
+<p>The value to apply at the attribute(s) identified by <code>path</code>. Ignored for &#39;remove&#39; operations.</p>
+</dd><dt><code>altering_hash</code>
+<dd>
+<p>The Hash to operate on at the current <code>path</code>. For recursive calls, this will be some way down into the SCIM representation of &#39;self&#39;.</p>
+</dd></dl>
+
+<p>Note that SCIM PATCH operations permit <strong>no</strong> path for &#39;replace&#39; and &#39;add&#39; operations, meaning “apply to whole object”. To avoid special case code in the back-end, callers should in such cases add their own wrapping Hash with a single key addressing the SCIM object of interest and supply this key as the sole array entry in <code>path</code>.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-from_patch_backend-21_source')" id="l_method-i-from_patch_backend-21_source">show</a>
+            </p>
+            <div id="method-i-from_patch_backend-21_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/resources/mixin.rb, line 696</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">from_patch_backend!</span>(<span class="ruby-value">nature:</span>, <span class="ruby-value">path:</span>, <span class="ruby-value">value:</span>, <span class="ruby-value">altering_hash:</span>)
+
+  <span class="ruby-comment"># These all throw exceptions if data is not as expected / required,</span>
+  <span class="ruby-comment"># any of which are rescued below.</span>
+  <span class="ruby-comment">#</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">path</span>.<span class="ruby-identifier">count</span> <span class="ruby-operator">==</span> <span class="ruby-value">1</span>
+    <span class="ruby-identifier">from_patch_backend_apply!</span>(
+      <span class="ruby-value">nature:</span>        <span class="ruby-identifier">nature</span>,
+      <span class="ruby-value">path:</span>          <span class="ruby-identifier">path</span>,
+      <span class="ruby-value">value:</span>         <span class="ruby-identifier">value</span>,
+      <span class="ruby-value">altering_hash:</span> <span class="ruby-identifier">altering_hash</span>
+    )
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">from_patch_backend_traverse!</span>(
+      <span class="ruby-value">nature:</span>        <span class="ruby-identifier">nature</span>,
+      <span class="ruby-value">path:</span>          <span class="ruby-identifier">path</span>,
+      <span class="ruby-value">value:</span>         <span class="ruby-identifier">value</span>,
+      <span class="ruby-value">altering_hash:</span> <span class="ruby-identifier">altering_hash</span>
+    )
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-comment"># Treat all exceptions as a malformed or unsupported PATCH.</span>
+  <span class="ruby-comment">#</span>
+  <span class="ruby-keyword">rescue</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">_exception</span> <span class="ruby-comment"># You can use _exception if debugging</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">Scimitar</span><span class="ruby-operator">::</span><span class="ruby-constant">InvalidSyntaxError</span>.<span class="ruby-identifier">new</span>(<span class="ruby-string">&#39;PATCH describes unrecognised attributes and/or unsupported filters&#39;</span>)
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-from_patch_backend_apply-21">
+            <b>from_patch_backend_apply!</b>(nature:, path:, value:, altering_hash:)
+            <a href="../../../classes/Scimitar/Resources/Mixin.html#method-i-from_patch_backend_apply-21" name="method-i-from_patch_backend_apply-21" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Called by <a href="Mixin.html#method-i-from_patch_backend-21"><code>from_patch_backend!</code></a> when dealing with path the last path element; applies the operation nature and value. Deals with filters etc. in this final path position (filters only being relevant for &#39;remove&#39; or &#39;replace&#39; operations).</p>
+
+<p>Parameters are as for <a href="Mixin.html#method-i-from_patch_backend-21"><code>from_patch_backend!</code></a>, where <code>path</code> is assumed to have exactly one entry only.</p>
+
+<p>Happily throws exceptions if data is not as expected / required.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-from_patch_backend_apply-21_source')" id="l_method-i-from_patch_backend_apply-21_source">show</a>
+            </p>
+            <div id="method-i-from_patch_backend_apply-21_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/resources/mixin.rb, line 796</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">from_patch_backend_apply!</span>(<span class="ruby-value">nature:</span>, <span class="ruby-value">path:</span>, <span class="ruby-value">value:</span>, <span class="ruby-value">altering_hash:</span>)
+  <span class="ruby-identifier">path_component</span>, <span class="ruby-identifier">filter</span> = <span class="ruby-identifier">extract_filter_from</span>(<span class="ruby-value">path_component:</span> <span class="ruby-identifier">path</span>.<span class="ruby-identifier">first</span>)
+  <span class="ruby-identifier">current_data_at_path</span>   = <span class="ruby-identifier">altering_hash</span>[<span class="ruby-identifier">path_component</span>]
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">current_data_at_path</span>.<span class="ruby-identifier">nil?</span>
+    <span class="ruby-keyword">case</span> <span class="ruby-identifier">nature</span>
+      <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;add&#39;</span>, <span class="ruby-string">&#39;replace&#39;</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">filter</span>.<span class="ruby-identifier">present?</span> <span class="ruby-comment"># Implies we expected to replace/add to an item matched inside an array</span>
+          <span class="ruby-identifier">altering_hash</span>[<span class="ruby-identifier">path_component</span>] = [<span class="ruby-identifier">value</span>]
+        <span class="ruby-keyword">else</span>
+          <span class="ruby-identifier">altering_hash</span>[<span class="ruby-identifier">path_component</span>] = <span class="ruby-identifier">value</span>
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;remove&#39;</span>
+        <span class="ruby-comment"># Nothing to do - no data here anyway</span>
+    <span class="ruby-keyword">end</span>
+
+  <span class="ruby-comment"># Path filters are not described for &#39;add&#39; and assumed to have no</span>
+  <span class="ruby-comment"># meaning - https://tools.ietf.org/html/rfc7644#section-3.5.2.1</span>
+  <span class="ruby-comment">#</span>
+  <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">filter</span>.<span class="ruby-identifier">present?</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">nature</span> <span class="ruby-operator">!=</span> <span class="ruby-string">&#39;add&#39;</span>
+    <span class="ruby-identifier">compact_after</span> = <span class="ruby-keyword">false</span>
+    <span class="ruby-identifier">found_matches</span> = <span class="ruby-keyword">false</span>
+
+    <span class="ruby-identifier">all_matching_filter</span>(<span class="ruby-value">filter:</span> <span class="ruby-identifier">filter</span>, <span class="ruby-value">within_array:</span> <span class="ruby-identifier">current_data_at_path</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span> <span class="ruby-identifier">matched_hash</span>, <span class="ruby-identifier">index</span> <span class="ruby-operator">|</span>
+      <span class="ruby-identifier">found_matches</span> = <span class="ruby-keyword">true</span>
+
+      <span class="ruby-keyword">case</span> <span class="ruby-identifier">nature</span>
+        <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;remove&#39;</span>
+          <span class="ruby-identifier">current_data_at_path</span>[<span class="ruby-identifier">index</span>] = <span class="ruby-keyword">nil</span>
+          <span class="ruby-identifier">compact_after</span> = <span class="ruby-keyword">true</span>
+        <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;replace&#39;</span>
+          <span class="ruby-identifier">matched_hash</span>.<span class="ruby-identifier">reject!</span> { <span class="ruby-keyword">true</span> }
+          <span class="ruby-identifier">matched_hash</span>.<span class="ruby-identifier">merge!</span>(<span class="ruby-identifier">value</span>)
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-identifier">current_data_at_path</span>.<span class="ruby-identifier">compact!</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">compact_after</span>
+
+    <span class="ruby-comment"># https://tools.ietf.org/html/rfc7644#section-3.5.2.1</span>
+    <span class="ruby-comment">#</span>
+    <span class="ruby-comment"># o  If the target location specifies an attribute that does not exist</span>
+    <span class="ruby-comment">#    (has no value), the attribute is added with the new value.</span>
+    <span class="ruby-comment">#</span>
+    <span class="ruby-comment"># https://tools.ietf.org/html/rfc7644#section-3.5.2.3</span>
+    <span class="ruby-comment">#</span>
+    <span class="ruby-comment"># o  If the target location path specifies an attribute that does not</span>
+    <span class="ruby-comment">#    exist, the service provider SHALL treat the operation as an &quot;add&quot;.</span>
+    <span class="ruby-comment">#</span>
+    <span class="ruby-identifier">current_data_at_path</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">value</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">found_matches</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">nature</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;remove&#39;</span>
+
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-keyword">case</span> <span class="ruby-identifier">nature</span>
+      <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;add&#39;</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">current_data_at_path</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Array</span>)
+          <span class="ruby-identifier">altering_hash</span>[<span class="ruby-identifier">path_component</span>] <span class="ruby-operator">+=</span> <span class="ruby-identifier">value</span>
+        <span class="ruby-keyword">else</span>
+          <span class="ruby-identifier">altering_hash</span>[<span class="ruby-identifier">path_component</span>] = <span class="ruby-identifier">value</span>
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;replace&#39;</span>
+        <span class="ruby-identifier">altering_hash</span>[<span class="ruby-identifier">path_component</span>] = <span class="ruby-identifier">value</span>
+      <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;remove&#39;</span>
+        <span class="ruby-identifier">altering_hash</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-identifier">path_component</span>)
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-from_patch_backend_traverse-21">
+            <b>from_patch_backend_traverse!</b>(nature:, path:, value:, altering_hash:)
+            <a href="../../../classes/Scimitar/Resources/Mixin.html#method-i-from_patch_backend_traverse-21" name="method-i-from_patch_backend_traverse-21" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Called by <a href="Mixin.html#method-i-from_patch_backend-21"><code>from_patch_backend!</code></a> when dealing with path elements that is not yet the final (leaf) entry. Deals with filters etc. and traverses down one path level, making one or more recursive calls back up into <a href="Mixin.html#method-i-from_patch_backend-21"><code>from_patch_backend!</code></a></p>
+
+<p>Parameters are as for <a href="Mixin.html#method-i-from_patch_backend-21"><code>from_patch_backend!</code></a>, where <code>path</code> is assumed to have at least two entries.</p>
+
+<p>Happily throws exceptions if data is not as expected / required.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-from_patch_backend_traverse-21_source')" id="l_method-i-from_patch_backend_traverse-21_source">show</a>
+            </p>
+            <div id="method-i-from_patch_backend_traverse-21_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/resources/mixin.rb, line 733</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">from_patch_backend_traverse!</span>(<span class="ruby-value">nature:</span>, <span class="ruby-value">path:</span>, <span class="ruby-value">value:</span>, <span class="ruby-value">altering_hash:</span>)
+  <span class="ruby-identifier">path_component</span>, <span class="ruby-identifier">filter</span> = <span class="ruby-identifier">extract_filter_from</span>(<span class="ruby-value">path_component:</span> <span class="ruby-identifier">path</span>.<span class="ruby-identifier">first</span>)
+
+  <span class="ruby-comment"># https://tools.ietf.org/html/rfc7644#section-3.5.2.1</span>
+  <span class="ruby-comment">#</span>
+  <span class="ruby-comment"># o  If the target location specifies an attribute that does not exist</span>
+  <span class="ruby-comment">#    (has no value), the attribute is added with the new value.</span>
+  <span class="ruby-comment">#</span>
+  <span class="ruby-comment"># https://tools.ietf.org/html/rfc7644#section-3.5.2.3</span>
+  <span class="ruby-comment">#</span>
+  <span class="ruby-comment"># o  If the target location path specifies an attribute that does not</span>
+  <span class="ruby-comment">#    exist, the service provider SHALL treat the operation as an &quot;add&quot;.</span>
+  <span class="ruby-comment">#</span>
+  <span class="ruby-comment"># Harmless in this context for &#39;remove&#39;.</span>
+  <span class="ruby-comment">#</span>
+  <span class="ruby-identifier">altering_hash</span>[<span class="ruby-identifier">path_component</span>] <span class="ruby-operator">||=</span> {}
+
+  <span class="ruby-comment"># Unless the PATCH is bad, inner data is an Array or Hash always as</span>
+  <span class="ruby-comment"># by definition this method is only called at path positions above</span>
+  <span class="ruby-comment"># the leaf (target attribute-to-modify) node.</span>
+  <span class="ruby-comment">#</span>
+  <span class="ruby-identifier">inner_data</span> = <span class="ruby-identifier">altering_hash</span>[<span class="ruby-identifier">path_component</span>]
+
+  <span class="ruby-identifier">found_data_for_recursion</span> = <span class="ruby-keyword">if</span> <span class="ruby-identifier">filter</span>
+    <span class="ruby-identifier">matched_hashes</span> = []
+
+    <span class="ruby-identifier">all_matching_filter</span>(<span class="ruby-value">filter:</span> <span class="ruby-identifier">filter</span>, <span class="ruby-value">within_array:</span> <span class="ruby-identifier">inner_data</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span> <span class="ruby-identifier">matched_hash</span> <span class="ruby-operator">|</span>
+      <span class="ruby-identifier">matched_hashes</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">matched_hash</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-comment"># Same reason as section 3.5.2.1 / 3.5.2.3 RFC quotes above.</span>
+    <span class="ruby-comment">#</span>
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">nature</span> <span class="ruby-operator">!=</span> <span class="ruby-string">&#39;remove&#39;</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">matched_hashes</span>.<span class="ruby-identifier">empty?</span>
+      <span class="ruby-identifier">new_hash</span> = {}
+      <span class="ruby-identifier">altering_hash</span>[<span class="ruby-identifier">path_component</span>] = [<span class="ruby-identifier">new_hash</span>]
+      <span class="ruby-identifier">matched_hashes</span>                = [<span class="ruby-identifier">new_hash</span>]
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-identifier">matched_hashes</span>
+  <span class="ruby-keyword">else</span>
+    [ <span class="ruby-identifier">inner_data</span> ]
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">found_data_for_recursion</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span> <span class="ruby-identifier">found_data</span> <span class="ruby-operator">|</span>
+    <span class="ruby-keyword">self</span>.<span class="ruby-identifier">from_patch_backend!</span>(
+      <span class="ruby-value">nature:</span>        <span class="ruby-identifier">nature</span>,
+      <span class="ruby-value">path:</span>          <span class="ruby-identifier">path</span>[<span class="ruby-value">1</span><span class="ruby-operator">..</span><span class="ruby-value">-1</span>],
+      <span class="ruby-value">value:</span>         <span class="ruby-identifier">value</span>,
+      <span class="ruby-value">altering_hash:</span> <span class="ruby-identifier">found_data</span>
+    )
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-from_scim-21">
+            <b>from_scim!</b>(scim_hash:)
+            <a href="../../../classes/Scimitar/Resources/Mixin.html#method-i-from_scim-21" name="method-i-from_scim-21" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Update self from a SCIM object using ::scim_attributes_map. This does NOT PERSIST (“save”) &#39;this&#39; instance - it just sets attribute values within it.</p>
+
+<p>If you are mixing into an ActiveRecord subclass then depending on how your ::scim_attributes_map updates associated objects (if any), Rails might make database writes to update those associations immediately. Given this, it is highly recommended that you wrap calls to this method and your subsequent save of &#39;self&#39; inside a transaction.</p>
+
+<pre><code>ActiveRecord::Base.transaction do
+  record.from_scim!(scim_hash: some_payload)
+  record.save!
+end
+</code></pre>
+
+<p>Call ONLY for POST or PUT. For PATCH, see <a href="Mixin.html#method-i-from_scim_patch-21"><code>from_scim_patch!</code></a>.</p>
+<dl class="rdoc-list note-list"><dt><code>scim_hash</code>
+<dd>
+<p>A Hash that&#39;s the result of parsing a JSON payload from an inbound POST or PUT request.</p>
+</dd></dl>
+
+<p>Returns &#39;self&#39;, for convenience of e.g. chaining other methods.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-from_scim-21_source')" id="l_method-i-from_scim-21_source">show</a>
+            </p>
+            <div id="method-i-from_scim-21_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/resources/mixin.rb, line 350</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">from_scim!</span>(<span class="ruby-value">scim_hash:</span>)
+  <span class="ruby-identifier">scim_hash</span>.<span class="ruby-identifier">freeze</span>()
+  <span class="ruby-identifier">map</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">scim_attributes_map</span>().<span class="ruby-identifier">freeze</span>()
+
+  <span class="ruby-keyword">self</span>.<span class="ruby-identifier">from_scim_backend!</span>(<span class="ruby-value">attrs_map_or_leaf_value:</span> <span class="ruby-identifier">map</span>, <span class="ruby-value">scim_hash_or_leaf_value:</span> <span class="ruby-identifier">scim_hash</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">self</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-from_scim_backend-21">
+            <b>from_scim_backend!</b>( attrs_map_or_leaf_value:, scim_hash_or_leaf_value:, path: [] )
+            <a href="../../../classes/Scimitar/Resources/Mixin.html#method-i-from_scim_backend-21" name="method-i-from_scim_backend-21" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Given a SCIM resource representation (left) and an attribute map to an instance of the mixin-including class / &#39;self&#39; (right), walk the attribute map, looking up equivalent values in the SCIM resource. Mutable attributes will be set from the SCIM data, or cleared if the SCIM data has nothing set (“PUT” semantics; splat resource data in full, writing all mapped attributes).</p>
+<ul><li>
+<p>Literal map values like &#39;true&#39; are for read-time uses; ignored.</p>
+</li><li>
+<p>Symbol map values are treated as read accessor method names and a write accessor checked for by adding “=”. If this method exists, a value write is attempted using the SCIM resource data.</p>
+</li><li>
+<p>Static and dynamic array mappings perform as documented for ::scim_attributes_map.</p>
+
+<pre><code>{                                                     | {
+  &quot;userName&quot;: &quot;foo&quot;,                                  |   &quot;id&quot;: &quot;id&quot;,
+  &quot;name&quot;: {                                           |   &quot;externalId&quot;: :scim_uid&quot;,
+    &quot;givenName&quot;: &quot;Foo&quot;,                               |   &quot;userName&quot;: :username&quot;,
+    &quot;familyName&quot;: &quot;Bar&quot;                               |   &quot;name&quot;: {
+  },                                                  |     &quot;givenName&quot;: :first_name&quot;,
+  &quot;active&quot;: true,                                     |     &quot;familyName&quot;: :last_name&quot;
+  &quot;emails&quot;: [                                         |   },
+    {                                                 |   &quot;emails&quot;: [
+      &quot;type&quot;: &quot;work&quot;,                  &lt;------\       |     {
+      &quot;primary&quot;: true,                         \------+---    &quot;match&quot;: &quot;type&quot;,
+      &quot;value&quot;: &quot;foo.bar@test.com&quot;                     |       &quot;with&quot;: &quot;work&quot;,
+    }                                                 |       &quot;using&quot;: {
+  ],                                                  |         &quot;value&quot;: :work_email_address&quot;,
+  &quot;phoneNumbers&quot;: [                                   |         &quot;primary&quot;: true
+    {                                                 |       }
+      &quot;type&quot;: &quot;work&quot;,                                 |     }
+      &quot;primary&quot;: false,                               |   ],
+      &quot;value&quot;: &quot;+642201234567&quot;                        |   groups: [
+    }                                                 |     {
+  ],                                                  |       list:  :groups,
+  &quot;id&quot;: &quot;42&quot;,                                         |       using: {
+  &quot;externalId&quot;: &quot;AA02984&quot;,                            |         value:   :id,
+  &quot;meta&quot;: {                                           |         display: :full_name
+    &quot;location&quot;: &quot;https://test.com/mock_users/42&quot;,     |       }
+    &quot;resourceType&quot;: &quot;User&quot;                            |     }
+  },                                                  |   ],
+  &quot;schemas&quot;: [                                        |   &quot;active&quot;: :is_active&quot;
+    &quot;urn:ietf:params:scim:schemas:core:2.0:User&quot;      | }
+  ]                                                   |
+}                                                     |
+</code></pre>
+</li></ul>
+
+<p>Named parameters:</p>
+<dl class="rdoc-list note-list"><dt><code>attrs_map_or_leaf_value</code>
+<dd>
+<p>Attribute map; recursive calls just pass in the fragment for recursion, so at the deepest level, this ends up being a leaf node which may have a Symbol method name, used to look for a write accessor; or a read-only literal, which is ignored.</p>
+</dd><dt><code>scim_hash_or_leaf_value</code>
+<dd>
+<p>Similar to <code>attrs_map_or_leaf_value</code> but tracks the SCIM schema data being read as input source material.</p>
+</dd><dt><code>path</code>
+<dd>
+<p>Array of SCIM attribute names giving a path into the SCIM schema where iteration has reached. Used to find the schema attribute definiton and check mutability before writing.</p>
+</dd></dl>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-from_scim_backend-21_source')" id="l_method-i-from_scim_backend-21_source">show</a>
+            </p>
+            <div id="method-i-from_scim_backend-21_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/resources/mixin.rb, line 577</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">from_scim_backend!</span>(
+  <span class="ruby-value">attrs_map_or_leaf_value:</span>,
+  <span class="ruby-value">scim_hash_or_leaf_value:</span>,
+  <span class="ruby-value">path:</span> []
+)
+  <span class="ruby-identifier">attrs_map_or_leaf_value</span> = <span class="ruby-identifier">attrs_map_or_leaf_value</span>.<span class="ruby-identifier">with_indifferent_access</span>() <span class="ruby-keyword">if</span> <span class="ruby-identifier">attrs_map_or_leaf_value</span>.<span class="ruby-identifier">instance_of?</span>(<span class="ruby-constant">Hash</span>)
+
+  <span class="ruby-comment"># We get the schema via this instance&#39;s class&#39;s resource type, even</span>
+  <span class="ruby-comment"># if we end up in collections of other types - because it&#39;s *this*</span>
+  <span class="ruby-comment"># schema at the top level that defines the attributes of interest</span>
+  <span class="ruby-comment"># within any collections, not SCIM schema - if any - for the items</span>
+  <span class="ruby-comment"># within the collection (a User&#39;s &quot;groups&quot; per-array-entry schema</span>
+  <span class="ruby-comment"># is quite different from the Group schema).</span>
+  <span class="ruby-comment">#</span>
+  <span class="ruby-identifier">resource_class</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">scim_resource_type</span>()
+
+  <span class="ruby-keyword">case</span> <span class="ruby-identifier">attrs_map_or_leaf_value</span>
+    <span class="ruby-keyword">when</span> <span class="ruby-constant">Hash</span> <span class="ruby-comment"># Nested attribute-value pairs</span>
+      <span class="ruby-identifier">attrs_map_or_leaf_value</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span> <span class="ruby-identifier">scim_attribute</span>, <span class="ruby-identifier">sub_attrs_map_or_leaf_value</span> <span class="ruby-operator">|</span>
+        <span class="ruby-keyword">next</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">scim_attribute</span>&amp;.<span class="ruby-identifier">to_s</span>&amp;.<span class="ruby-identifier">downcase</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;id&#39;</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">path</span>.<span class="ruby-identifier">empty?</span>
+
+        <span class="ruby-identifier">sub_scim_hash_or_leaf_value</span> = <span class="ruby-identifier">scim_hash_or_leaf_value</span>&amp;.<span class="ruby-identifier">dig</span>(<span class="ruby-identifier">scim_attribute</span>.<span class="ruby-identifier">to_s</span>)
+
+        <span class="ruby-keyword">self</span>.<span class="ruby-identifier">from_scim_backend!</span>(
+          <span class="ruby-value">attrs_map_or_leaf_value:</span> <span class="ruby-identifier">sub_attrs_map_or_leaf_value</span>,
+          <span class="ruby-value">scim_hash_or_leaf_value:</span> <span class="ruby-identifier">sub_scim_hash_or_leaf_value</span>, <span class="ruby-comment"># May be &#39;nil&#39;</span>
+          <span class="ruby-value">path:</span>                    <span class="ruby-identifier">path</span> <span class="ruby-operator">+</span> [<span class="ruby-identifier">scim_attribute</span>]
+        )
+      <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">when</span> <span class="ruby-constant">Array</span> <span class="ruby-comment"># Static or dynamic maps</span>
+      <span class="ruby-identifier">attrs_map_or_leaf_value</span>.<span class="ruby-identifier">each_with_index</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span> <span class="ruby-identifier">mapped_array_entry</span> <span class="ruby-operator">|</span>
+        <span class="ruby-keyword">next</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">mapped_array_entry</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Hash</span>)
+
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">mapped_array_entry</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-value">:match</span>) <span class="ruby-comment"># Static map</span>
+          <span class="ruby-identifier">attr_to_match</span>  = <span class="ruby-identifier">mapped_array_entry</span>[<span class="ruby-value">:match</span>].<span class="ruby-identifier">to_s</span>
+          <span class="ruby-identifier">value_to_match</span> = <span class="ruby-identifier">mapped_array_entry</span>[<span class="ruby-value">:with</span>]
+          <span class="ruby-identifier">sub_attrs_map</span>  = <span class="ruby-identifier">mapped_array_entry</span>[<span class="ruby-value">:using</span>]
+
+          <span class="ruby-comment"># Search for the array entry in the SCIM object that</span>
+          <span class="ruby-comment"># matches the thing we&#39;re looking for via :match &amp; :with.</span>
+          <span class="ruby-comment">#</span>
+          <span class="ruby-identifier">found_source_list_entry</span> = <span class="ruby-identifier">scim_hash_or_leaf_value</span>&amp;.<span class="ruby-identifier">find</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span> <span class="ruby-identifier">scim_array_entry</span> <span class="ruby-operator">|</span>
+            <span class="ruby-identifier">scim_array_entry</span>[<span class="ruby-identifier">attr_to_match</span>] <span class="ruby-operator">==</span> <span class="ruby-identifier">value_to_match</span>
+          <span class="ruby-keyword">end</span>
+
+          <span class="ruby-keyword">self</span>.<span class="ruby-identifier">from_scim_backend!</span>(
+            <span class="ruby-value">attrs_map_or_leaf_value:</span> <span class="ruby-identifier">sub_attrs_map</span>,
+            <span class="ruby-value">scim_hash_or_leaf_value:</span> <span class="ruby-identifier">found_source_list_entry</span>, <span class="ruby-comment"># May be &#39;nil&#39;</span>
+            <span class="ruby-value">path:</span>                    <span class="ruby-identifier">path</span>
+          )
+
+        <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">mapped_array_entry</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-value">:list</span>) <span class="ruby-comment"># Dynamic mapping of each complex list item</span>
+          <span class="ruby-identifier">attribute</span> = <span class="ruby-identifier">resource_class</span>.<span class="ruby-identifier">find_attribute</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">path</span>)
+          <span class="ruby-identifier">method</span>    = <span class="ruby-node">&quot;#{mapped_array_entry[:list]}=&quot;</span>
+
+          <span class="ruby-keyword">if</span> (<span class="ruby-identifier">attribute</span>&amp;.<span class="ruby-identifier">mutability</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;readWrite&#39;</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">attribute</span>&amp;.<span class="ruby-identifier">mutability</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;writeOnly&#39;</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">method</span>)
+            <span class="ruby-identifier">find_with_proc</span> = <span class="ruby-identifier">mapped_array_entry</span>[<span class="ruby-value">:find_with</span>]
+
+            <span class="ruby-keyword">unless</span> <span class="ruby-identifier">find_with_proc</span>.<span class="ruby-identifier">nil?</span>
+              <span class="ruby-identifier">mapped_list</span> = <span class="ruby-identifier">scim_hash_or_leaf_value</span>.<span class="ruby-identifier">map</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span> <span class="ruby-identifier">source_list_entry</span> <span class="ruby-operator">|</span>
+                <span class="ruby-identifier">find_with_proc</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">source_list_entry</span>)
+              <span class="ruby-keyword">end</span>
+
+              <span class="ruby-identifier">mapped_list</span>.<span class="ruby-identifier">compact!</span>
+
+              <span class="ruby-keyword">self</span>.<span class="ruby-identifier">public_send</span>(<span class="ruby-identifier">method</span>, <span class="ruby-identifier">mapped_list</span>)
+            <span class="ruby-keyword">end</span>
+          <span class="ruby-keyword">end</span>
+        <span class="ruby-keyword">end</span> <span class="ruby-comment"># &quot;elsif mapped_array_entry.key?(:list)&quot;</span>
+      <span class="ruby-keyword">end</span> <span class="ruby-comment"># &quot;map_entry&amp;.each do | mapped_array_entry |&quot;</span>
+
+    <span class="ruby-keyword">when</span> <span class="ruby-constant">Symbol</span> <span class="ruby-comment"># Setter/getter method at leaf position in attribute map</span>
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">path</span> <span class="ruby-operator">==</span> [<span class="ruby-string">&#39;externalId&#39;</span>] <span class="ruby-comment"># Special case held only in schema base class</span>
+        <span class="ruby-identifier">mutable</span> = <span class="ruby-keyword">true</span>
+      <span class="ruby-keyword">else</span>
+        <span class="ruby-identifier">attribute</span> = <span class="ruby-identifier">resource_class</span>.<span class="ruby-identifier">find_attribute</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">path</span>)
+        <span class="ruby-identifier">mutable</span>   = <span class="ruby-identifier">attribute</span>&amp;.<span class="ruby-identifier">mutability</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;readWrite&#39;</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">attribute</span>&amp;.<span class="ruby-identifier">mutability</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;writeOnly&#39;</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">mutable</span>
+        <span class="ruby-identifier">method</span> = <span class="ruby-node">&quot;#{attrs_map_or_leaf_value}=&quot;</span>
+        <span class="ruby-keyword">self</span>.<span class="ruby-identifier">public_send</span>(<span class="ruby-identifier">method</span>, <span class="ruby-identifier">scim_hash_or_leaf_value</span>) <span class="ruby-keyword">if</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">method</span>)
+      <span class="ruby-keyword">end</span>
+
+    <span class="ruby-comment"># else - fixed value of interest in #to_scim only.</span>
+
+  <span class="ruby-keyword">end</span> <span class="ruby-comment"># &quot;case scim_hash_or_leaf_value&quot;</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-from_scim_patch-21">
+            <b>from_scim_patch!</b>(patch_hash:)
+            <a href="../../../classes/Scimitar/Resources/Mixin.html#method-i-from_scim_patch-21" name="method-i-from_scim_patch-21" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Update self from a SCIM object representing a PATCH operation. This does NOT PERSIST (“save”) &#39;this&#39; instance - it just sets attribute values within it.</p>
+
+<p>SCIM patch operations are complex. A series of operations is given, each asking to add, remove or replace specific attributes or, via filters, potentially multiple attributes if the filter matches many.</p>
+
+<p>Pass the PATCH payload. Then:</p>
+<ul><li>
+<p>This instance (self) is converted to a SCIM representation via calling <a href="Mixin.html#method-i-to_scim"><code>to_scim</code></a>.</p>
+</li><li>
+<p>The inbound operations are applied. A <a href="../ErrorResponse.html"><code>Scimitar::ErrorResponse</code></a> may be thrown if the patch data looks bad - if you are calling from a <a href="../ActiveRecordBackedResourcesController.html"><code>Scimitar::ActiveRecordBackedResourcesController</code></a> subclass, this will be handled for you and returned as an appropriate HTTP response. Otherwise, you&#39;ll need to rescue it yourself and e.g. make use of <a href="../ApplicationController.html#method-i-handle_scim_error"><code>Scimitar::ApplicationController#handle_scim_error</code></a>, passing the exception object to it, if you are a subclass of that base class.</p>
+</li><li>
+<p>The (possibly) updated SCIM representation of &#39;self&#39; is pushed back into &#39;this&#39; instance via <a href="Mixin.html#method-i-from_scim-21"><code>from_scim!</code></a>.</p>
+</li></ul>
+
+<p>IMPORTANT: Please see <a href="Mixin.html#method-i-from_scim-21"><code>from_scim!</code></a> for notes about associations and use of transactions with ActiveRecord.</p>
+
+<p>Call ONLY for PATCH. For POST and PUT, see <a href="Mixin.html#method-i-from_scim-21"><code>from_scim!</code></a>.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-from_scim_patch-21_source')" id="l_method-i-from_scim_patch-21_source">show</a>
+            </p>
+            <div id="method-i-from_scim_patch-21_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/resources/mixin.rb, line 387</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">from_scim_patch!</span>(<span class="ruby-value">patch_hash:</span>)
+  <span class="ruby-identifier">patch_hash</span>.<span class="ruby-identifier">freeze</span>()
+  <span class="ruby-identifier">scim_hash</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">to_scim</span>(<span class="ruby-value">location:</span> <span class="ruby-string">&#39;(unused)&#39;</span>).<span class="ruby-identifier">as_json</span>()
+
+  <span class="ruby-identifier">patch_hash</span>[<span class="ruby-string">&#39;Operations&#39;</span>].<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">operation</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">nature</span>   = <span class="ruby-identifier">operation</span>[<span class="ruby-string">&#39;op&#39;</span>   ]&amp;.<span class="ruby-identifier">downcase</span>
+    <span class="ruby-identifier">path_str</span> = <span class="ruby-identifier">operation</span>[<span class="ruby-string">&#39;path&#39;</span> ]
+    <span class="ruby-identifier">value</span>    = <span class="ruby-identifier">operation</span>[<span class="ruby-string">&#39;value&#39;</span>]
+
+    <span class="ruby-keyword">unless</span> [<span class="ruby-string">&#39;add&#39;</span>, <span class="ruby-string">&#39;remove&#39;</span>, <span class="ruby-string">&#39;replace&#39;</span>].<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">nature</span>)
+      <span class="ruby-identifier">raise</span> <span class="ruby-constant">Scimitar</span><span class="ruby-operator">::</span><span class="ruby-constant">InvalidSyntaxError</span>.<span class="ruby-identifier">new</span>(<span class="ruby-node">&quot;Unrecognised PATCH \&quot;op\&quot; value of \&quot;#{nature}\&quot;&quot;</span>)
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-comment"># https://tools.ietf.org/html/rfc7644#section-3.5.2.2</span>
+    <span class="ruby-comment">#</span>
+    <span class="ruby-comment"># o  If &quot;path&quot; is unspecified, the operation fails with HTTP status</span>
+    <span class="ruby-comment">#    code 400 and a &quot;scimType&quot; error code of &quot;noTarget&quot;.</span>
+    <span class="ruby-comment">#</span>
+    <span class="ruby-comment"># (...for &quot;add&quot; or &quot;replace&quot;, no path means &quot;whole object&quot;).</span>
+    <span class="ruby-comment">#</span>
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">nature</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;remove&#39;</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">path_str</span>.<span class="ruby-identifier">blank?</span>
+      <span class="ruby-identifier">raise</span> <span class="ruby-constant">Scimitar</span><span class="ruby-operator">::</span><span class="ruby-constant">ErrorResponse</span>.<span class="ruby-identifier">new</span>(
+        <span class="ruby-value">status:</span>    <span class="ruby-value">400</span>,
+        <span class="ruby-value">scimType:</span> <span class="ruby-string">&#39;noTarget&#39;</span>,
+        <span class="ruby-value">detail:</span>   <span class="ruby-string">&#39;No &quot;path&quot; target given for &quot;replace&quot; operation&#39;</span>
+      )
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-comment"># Deal with the exception case of no path, where the entire object</span>
+    <span class="ruby-comment"># is addressed. It&#39;s easier internally to treat a path as a set of</span>
+    <span class="ruby-comment"># steps towards a final Hash key (attribute) with an associated</span>
+    <span class="ruby-comment"># value to change (and filters may apply if the value is an Array).</span>
+    <span class="ruby-comment">#</span>
+    <span class="ruby-identifier">extract_root</span> = <span class="ruby-keyword">false</span>
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">path_str</span>.<span class="ruby-identifier">blank?</span>
+      <span class="ruby-identifier">extract_root</span> = <span class="ruby-keyword">true</span>
+      <span class="ruby-identifier">path_str</span>     = <span class="ruby-string">&#39;root&#39;</span>
+      <span class="ruby-identifier">scim_hash</span>    = { <span class="ruby-string">&#39;root&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">scim_hash</span> }
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">self</span>.<span class="ruby-identifier">from_patch_backend!</span>(
+      <span class="ruby-value">nature:</span>        <span class="ruby-identifier">nature</span>,
+      <span class="ruby-value">path:</span>          (<span class="ruby-identifier">path_str</span> <span class="ruby-operator">||</span> <span class="ruby-string">&#39;&#39;</span>).<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39;.&#39;</span>),
+      <span class="ruby-value">value:</span>         <span class="ruby-identifier">value</span>,
+      <span class="ruby-value">altering_hash:</span> <span class="ruby-identifier">scim_hash</span>
+    )
+
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">extract_root</span>
+      <span class="ruby-identifier">scim_hash</span> = <span class="ruby-identifier">scim_hash</span>[<span class="ruby-string">&#39;root&#39;</span>]
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">self</span>.<span class="ruby-identifier">from_scim!</span>(<span class="ruby-value">scim_hash:</span> <span class="ruby-identifier">scim_hash</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">self</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-scim_mutable_attributes">
+            <b>scim_mutable_attributes</b>()
+            <a href="../../../classes/Scimitar/Resources/Mixin.html#method-i-scim_mutable_attributes" name="method-i-scim_mutable_attributes" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>An instance-level method which calls ::scim_mutable_attributes and either uses its returned array of mutable attribute names or reads ::scim_attributes_map and determines the list from that. Caches the result in an instance variable.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-scim_mutable_attributes_source')" id="l_method-i-scim_mutable_attributes_source">show</a>
+            </p>
+            <div id="method-i-scim_mutable_attributes_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/resources/mixin.rb, line 262</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">scim_mutable_attributes</span>
+  <span class="ruby-ivar">@scim_mutable_attributes</span> <span class="ruby-operator">||=</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">scim_mutable_attributes</span>()
+
+  <span class="ruby-keyword">if</span> <span class="ruby-ivar">@scim_mutable_attributes</span>.<span class="ruby-identifier">nil?</span>
+    <span class="ruby-ivar">@scim_mutable_attributes</span> = <span class="ruby-constant">Set</span>.<span class="ruby-identifier">new</span>
+
+    <span class="ruby-comment"># Variant of https://stackoverflow.com/a/49315255</span>
+    <span class="ruby-comment">#</span>
+    <span class="ruby-identifier">extractor</span> = <span class="ruby-operator">-&gt;</span>(<span class="ruby-identifier">outer_enum</span>) <span class="ruby-keyword">do</span>
+      <span class="ruby-identifier">outer_enum</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">key</span>, <span class="ruby-identifier">value</span><span class="ruby-operator">|</span>
+        <span class="ruby-identifier">enum</span> = [<span class="ruby-identifier">key</span>, <span class="ruby-identifier">value</span>].<span class="ruby-identifier">detect</span>(<span class="ruby-operator">&amp;</span><span class="ruby-constant">Enumerable</span>.<span class="ruby-identifier">method</span>(<span class="ruby-value">:===</span>))
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">enum</span>.<span class="ruby-identifier">nil?</span>
+          <span class="ruby-ivar">@scim_mutable_attributes</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">value</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Symbol</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-node">&quot;#{value}=&quot;</span>)
+        <span class="ruby-keyword">else</span>
+          <span class="ruby-keyword">if</span> <span class="ruby-identifier">enum</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Hash</span>)
+            <span class="ruby-identifier">extractor</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">enum</span>)
+          <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">enum</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Array</span>)
+            <span class="ruby-identifier">enum</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span> <span class="ruby-identifier">static_or_dynamic_mapping</span> <span class="ruby-operator">|</span>
+              <span class="ruby-keyword">if</span> <span class="ruby-identifier">static_or_dynamic_mapping</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-value">:match</span>) <span class="ruby-comment"># Static</span>
+                <span class="ruby-identifier">extractor</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">static_or_dynamic_mapping</span>[<span class="ruby-value">:using</span>])
+              <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">static_or_dynamic_mapping</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-value">:find_with</span>) <span class="ruby-comment"># Dynamic</span>
+                <span class="ruby-ivar">@scim_mutable_attributes</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">static_or_dynamic_mapping</span>[<span class="ruby-value">:list</span>]
+              <span class="ruby-keyword">end</span>
+            <span class="ruby-keyword">end</span>
+          <span class="ruby-keyword">end</span>
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-identifier">extractor</span>.<span class="ruby-identifier">call</span>(<span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">scim_attributes_map</span>())
+    <span class="ruby-ivar">@scim_mutable_attributes</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value">:id</span>)
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-ivar">@scim_mutable_attributes</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-scim_queryable_attributes">
+            <b>scim_queryable_attributes</b>()
+            <a href="../../../classes/Scimitar/Resources/Mixin.html#method-i-scim_queryable_attributes" name="method-i-scim_queryable_attributes" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>An instance level method which calls ::scim_queryable_attributes and caches the result in an instance variable, for symmetry with <a href="Mixin.html#method-i-scim_mutable_attributes"><code>scim_mutable_attributes</code></a> and to permit potential future enhancements for how the return value of ::scim_queryable_attributes is handled.</p>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-scim_queryable_attributes_source')" id="l_method-i-scim_queryable_attributes_source">show</a>
+            </p>
+            <div id="method-i-scim_queryable_attributes_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/resources/mixin.rb, line 303</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">scim_queryable_attributes</span>
+  <span class="ruby-ivar">@scim_queryable_attributes</span> <span class="ruby-operator">||=</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">scim_queryable_attributes</span>()
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-to_scim">
+            <b>to_scim</b>(location:)
+            <a href="../../../classes/Scimitar/Resources/Mixin.html#method-i-to_scim" name="method-i-to_scim" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>Render self as a SCIM object using ::scim_attributes_map.</p>
+<dl class="rdoc-list note-list"><dt><code>location</code>
+<dd>
+<p>The location (HTTP(S) full URI) of this resource, in the domain of the object including this mixin - “your” IDs, not the remote SCIM client&#39;s external IDs. url_for is a good way to generate this.</p>
+</dd></dl>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-to_scim_source')" id="l_method-i-to_scim_source">show</a>
+            </p>
+            <div id="method-i-to_scim_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/resources/mixin.rb, line 314</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_scim</span>(<span class="ruby-value">location:</span>)
+  <span class="ruby-identifier">map</span>             = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">scim_attributes_map</span>()
+  <span class="ruby-identifier">timestamps_map</span>  = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">scim_timestamps_map</span>() <span class="ruby-keyword">if</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:scim_timestamps_map</span>)
+  <span class="ruby-identifier">attrs_hash</span>      = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">to_scim_backend</span>(<span class="ruby-value">data_source:</span> <span class="ruby-keyword">self</span>, <span class="ruby-value">attrs_map_or_leaf_value:</span> <span class="ruby-identifier">map</span>)
+  <span class="ruby-identifier">resource</span>        = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">scim_resource_type</span>().<span class="ruby-identifier">new</span>(<span class="ruby-identifier">attrs_hash</span>)
+  <span class="ruby-identifier">meta_attrs_hash</span> = { <span class="ruby-value">location:</span> <span class="ruby-identifier">location</span> }
+
+  <span class="ruby-identifier">meta_attrs_hash</span>[<span class="ruby-value">:created</span>     ] = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">send</span>(<span class="ruby-identifier">timestamps_map</span>[<span class="ruby-value">:created</span>     ])&amp;.<span class="ruby-identifier">iso8601</span>(<span class="ruby-value">0</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">timestamps_map</span>&amp;.<span class="ruby-identifier">key?</span>(<span class="ruby-value">:created</span>)
+  <span class="ruby-identifier">meta_attrs_hash</span>[<span class="ruby-value">:lastModified</span>] = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">send</span>(<span class="ruby-identifier">timestamps_map</span>[<span class="ruby-value">:lastModified</span>])&amp;.<span class="ruby-identifier">iso8601</span>(<span class="ruby-value">0</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">timestamps_map</span>&amp;.<span class="ruby-identifier">key?</span>(<span class="ruby-value">:lastModified</span>)
+
+  <span class="ruby-identifier">resource</span>.<span class="ruby-identifier">meta</span> = <span class="ruby-constant">Meta</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">meta_attrs_hash</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-identifier">resource</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-i-to_scim_backend">
+            <b>to_scim_backend</b>(data_source:, attrs_map_or_leaf_value:)
+            <a href="../../../classes/Scimitar/Resources/Mixin.html#method-i-to_scim_backend" name="method-i-to_scim_backend" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            <p>A recursive method that takes a Hash mapping SCIM attributes to the mixing in class&#39;s attributes and via ::scim_attributes_map replaces symbols in the schema with the corresponding value from the user.</p>
+
+<p>Given a schema with symbols, this method will search through the object for the symbols, send those symbols to the model and replace the symbol with the return value.</p>
+<dl class="rdoc-list note-list"><dt><code>data_source</code>
+<dd>
+<p>The source of data. At the top level, this is “self” (an instance of the class mixing in this module).</p>
+</dd><dt><code>attrs_map_or_leaf_value</code>
+<dd>
+<p>The attribute map. At the top level, this is from ::scim_attributes_map.</p>
+</dd></dl>
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-to_scim_backend_source')" id="l_method-i-to_scim_backend_source">show</a>
+            </p>
+            <div id="method-i-to_scim_backend_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/resources/mixin.rb, line 460</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_scim_backend</span>(<span class="ruby-value">data_source:</span>, <span class="ruby-value">attrs_map_or_leaf_value:</span>)
+  <span class="ruby-keyword">case</span> <span class="ruby-identifier">attrs_map_or_leaf_value</span>
+    <span class="ruby-keyword">when</span> <span class="ruby-constant">Hash</span> <span class="ruby-comment"># Expected at top-level of any map, or nested within</span>
+      <span class="ruby-identifier">attrs_map_or_leaf_value</span>.<span class="ruby-identifier">each</span>.<span class="ruby-identifier">with_object</span>({}) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span>(<span class="ruby-identifier">key</span>, <span class="ruby-identifier">value</span>), <span class="ruby-identifier">hash</span><span class="ruby-operator">|</span>
+        <span class="ruby-identifier">hash</span>[<span class="ruby-identifier">key</span>] = <span class="ruby-identifier">to_scim_backend</span>(<span class="ruby-value">data_source:</span> <span class="ruby-identifier">data_source</span>, <span class="ruby-value">attrs_map_or_leaf_value:</span> <span class="ruby-identifier">value</span>)
+      <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">when</span> <span class="ruby-constant">Array</span> <span class="ruby-comment"># Static or dynamic mapping against lists in data source</span>
+      <span class="ruby-identifier">built_dynamic_list</span> = <span class="ruby-keyword">false</span>
+      <span class="ruby-identifier">mapped_array</span> = <span class="ruby-identifier">attrs_map_or_leaf_value</span>.<span class="ruby-identifier">map</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">value</span><span class="ruby-operator">|</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-operator">!</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Hash</span>)
+          <span class="ruby-identifier">raise</span> <span class="ruby-string">&#39;Bad attribute map: Array contains someting other than mapping Hash(es)&#39;</span>
+
+        <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-value">:match</span>) <span class="ruby-comment"># Static map</span>
+          <span class="ruby-identifier">static_hash</span> = { <span class="ruby-identifier">value</span>[<span class="ruby-value">:match</span>] <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">value</span>[<span class="ruby-value">:with</span>] }
+          <span class="ruby-identifier">static_hash</span>.<span class="ruby-identifier">merge!</span>(<span class="ruby-identifier">to_scim_backend</span>(<span class="ruby-value">data_source:</span> <span class="ruby-identifier">data_source</span>, <span class="ruby-value">attrs_map_or_leaf_value:</span> <span class="ruby-identifier">value</span>[<span class="ruby-value">:using</span>]))
+          <span class="ruby-identifier">static_hash</span>
+
+        <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-value">:list</span>) <span class="ruby-comment"># Dynamic mapping of each complex list item</span>
+          <span class="ruby-identifier">built_dynamic_list</span> = <span class="ruby-keyword">true</span>
+          <span class="ruby-identifier">list</span> = <span class="ruby-identifier">data_source</span>.<span class="ruby-identifier">public_send</span>(<span class="ruby-identifier">value</span>[<span class="ruby-value">:list</span>])
+          <span class="ruby-identifier">list</span>.<span class="ruby-identifier">map</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">list_entry</span><span class="ruby-operator">|</span>
+            <span class="ruby-identifier">to_scim_backend</span>(<span class="ruby-value">data_source:</span> <span class="ruby-identifier">list_entry</span>, <span class="ruby-value">attrs_map_or_leaf_value:</span> <span class="ruby-identifier">value</span>[<span class="ruby-value">:using</span>])
+          <span class="ruby-keyword">end</span>
+
+        <span class="ruby-keyword">else</span> <span class="ruby-comment"># Unknown type, just treat as flat values</span>
+          <span class="ruby-identifier">raise</span> <span class="ruby-string">&#39;Bad attribute map: Mapping Hash inside Array does not contain supported data&#39;</span>
+
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-comment"># If a dynamic list was generated, it&#39;s sitting as a nested</span>
+      <span class="ruby-comment"># Array in the first index of the mapped result; pull it out.</span>
+      <span class="ruby-comment">#</span>
+      <span class="ruby-identifier">mapped_array</span> = <span class="ruby-identifier">mapped_array</span>.<span class="ruby-identifier">first</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">built_dynamic_list</span>
+      <span class="ruby-identifier">mapped_array</span>
+
+    <span class="ruby-keyword">when</span> <span class="ruby-constant">Symbol</span> <span class="ruby-comment"># Leaf node, Symbol -&gt; reader method to call on data source</span>
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">data_source</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">attrs_map_or_leaf_value</span>) <span class="ruby-comment"># A read-accessor exists?</span>
+        <span class="ruby-identifier">value</span> = <span class="ruby-identifier">data_source</span>.<span class="ruby-identifier">public_send</span>(<span class="ruby-identifier">attrs_map_or_leaf_value</span>)
+        <span class="ruby-identifier">value</span> = <span class="ruby-identifier">value</span>.<span class="ruby-identifier">to_s</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Numeric</span>)
+        <span class="ruby-identifier">value</span>
+      <span class="ruby-keyword">else</span>
+        <span class="ruby-keyword">nil</span>
+      <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">else</span> <span class="ruby-comment"># Leaf node, other type -&gt; literal static value to use</span>
+      <span class="ruby-identifier">attrs_map_or_leaf_value</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+    </div>
+  </body>
+</html>

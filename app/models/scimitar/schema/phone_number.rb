@@ -3,7 +3,7 @@ module Scimitar
 
     # Represents the schema for the PhoneNumber complex type.
     #
-    # @see Scimitar::ComplexTypes::PhoneNumber
+    # See also Scimitar::ComplexTypes::PhoneNumber
     #
     class PhoneNumber < Vdtp; end
   end

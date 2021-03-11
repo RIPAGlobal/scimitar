@@ -1,10 +1,18 @@
 module Scimitar
   module Schema
-    # Represents an attribute of a SCIM resource that is declared in its schema.
-    # Attributes can be simple or complex. A complex attribute needs to have its own schema that is passed to the initialize method when the attribute is instantiated.
-    # @example
-    #  Attribute.new(name: 'userName', type: 'string', uniqueness: 'server')
-    #  Attribute.new(name: 'name', complexType: Scimitar::ComplexTypes::Name)
+
+    # Represents an attribute of a SCIM resource that is declared in its
+    # schema.
+    #
+    # Attributes can be simple or complex. A complex attribute needs to have
+    # its own schema that is passed to the initialize method when the attribute
+    # is instantiated.
+    #
+    # Examples:
+    #
+    #     Attribute.new(name: 'userName', type: 'string', uniqueness: 'server')
+    #     Attribute.new(name: 'name', complexType: Scimitar::ComplexTypes::Name)
+    #
     class Attribute
       include ActiveModel::Model
       include Scimitar::Errors
@@ -21,7 +29,11 @@ module Scimitar
                     :complexType,
                     :canonicalValues
 
-      # @param options [Hash] a hash of values to be used for instantiating the attribute object. Some of the instance variables of the objects will have default values if this hash does not contain anything for them.
+      # +options+:: Hash of values to be used for instantiating the attribute
+      #             object. Some of the instance variables of the objects will
+      #             have default values if this hash does not contain anything
+      #             for them.
+      #
       def initialize(options = {})
         defaults = {
           multiValued:     false,
@@ -40,9 +52,18 @@ module Scimitar
         super(defaults.merge(options || {}))
       end
 
-      # Validates a value against this attribute object. For simple attributes, it checks if blank is valid or not and if the type matches. For complex attributes, it delegates it to the valid? method of the complex type schema.
-      # If the value is not valid, validation message(s) are added to the errors attribute of this object.
-      # @return [Boolean] whether or not the value is valid for this attribute
+      # Validates a value against this attribute object. For simple attributes,
+      # it checks if blank is valid or not and if the type matches. For complex
+      # attributes, it delegates it to the valid? method of the complex type
+      # schema.
+      #
+      # If the value is not valid, validation message(s) are added to the
+      # #errors attribute of this object.
+      #
+      # +value+:: Value to check.
+      #
+      # Returns +true+ if value is valid for this attribute, else +false+.
+      #
       def valid?(value)
         return valid_blank? if value.blank? && !value.is_a?(FalseClass)
 

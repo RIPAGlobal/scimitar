@@ -3,7 +3,7 @@ module Scimitar
 
     # Represents the complex Address type.
     #
-    # @see Scimitar::Schema::Address
+    # See also Scimitar::Schema::Address
     #
     class Address < Base
       set_schema Scimitar::Schema::Address

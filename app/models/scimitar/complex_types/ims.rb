@@ -3,7 +3,7 @@ module Scimitar
 
     # Represents the complex Instant Messaging type.
     #
-    # @see Scimitar::Schema::Ims
+    # See also Scimitar::Schema::Ims
     #
     class Ims < Base
       set_schema Scimitar::Schema::Ims

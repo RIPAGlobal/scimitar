@@ -3,7 +3,7 @@ module Scimitar
 
     # Represents the schema for the Email complex type.
     #
-    # @see Scimitar::ComplexTypes::Email
+    # See also Scimitar::ComplexTypes::Email
     #
     class Email < Vdtp; end
   end

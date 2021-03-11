@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>Scimitar::AuthenticationScheme</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../css/github.css" type="text/css" media="screen" />
+<script src="../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+
+    <meta property="og:title" value="Scimitar::AuthenticationScheme">
+
+
+    <meta name="keywords" content="Scimitar::AuthenticationScheme class">
+    <meta name="keywords" content="basic, bearer">
+</head>
+
+<body>
+    <div class="banner">
+        <h1>
+            <span class="type">Class</span>
+            Scimitar::AuthenticationScheme
+            <span class="parent">&lt;
+                Object
+            </span>
+        </h1>
+        <ul class="files">
+            <li><a href="../../files/app/models/scimitar/authentication_scheme_rb.html">app/models/scimitar/authentication_scheme.rb</a></li>
+        </ul>
+    </div>
+    <div id="bodyContent">
+        <div id="content">
+
+
+
+
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+        <dt>B</dt>
+        <dd>
+            <ul>
+                <li>
+                    <a href="#method-c-basic">basic</a>,
+                </li>
+                <li>
+                    <a href="#method-c-bearer">bearer</a>
+                </li>
+            </ul>
+        </dd>
+    </dl>
+
+    <!-- Includes -->
+    <div class="sectiontitle">Included Modules</div>
+    <ul>
+        <li>
+            ActiveModel::Model
+        </li>
+    </ul>
+
+
+
+
+    <!-- Section attributes -->
+    <div class="sectiontitle">Attributes</div>
+    <table border='0' cellpadding='5'>
+        <tr valign='top' id='attribute-i-description'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>description</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-name'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>name</td>
+            <td class='attr-desc'></td>
+        </tr>
+        <tr valign='top' id='attribute-i-type'>
+            <td class='attr-rw'>
+                [RW]
+            </td>
+            <td class='attr-name'>type</td>
+            <td class='attr-desc'></td>
+        </tr>
+    </table>
+
+<!-- Methods -->
+
+    <div class="sectiontitle">Class Public methods</div>
+    <div class="method">
+        <div class="title method-title" id="method-c-basic">
+            <b>basic</b>()
+            <a href="../../classes/Scimitar/AuthenticationScheme.html#method-c-basic" name="method-c-basic" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-basic_source')" id="l_method-c-basic_source">show</a>
+            </p>
+            <div id="method-c-basic_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/authentication_scheme.rb, line 6</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">basic</span>
+  <span class="ruby-identifier">new</span> <span class="ruby-value">type:</span>        <span class="ruby-string">&#39;httpbasic&#39;</span>,
+      <span class="ruby-value">name:</span>        <span class="ruby-string">&#39;HTTP Basic&#39;</span>,
+      <span class="ruby-value">description:</span> <span class="ruby-string">&#39;Authentication scheme using the HTTP Basic Standard&#39;</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+    <div class="method">
+        <div class="title method-title" id="method-c-bearer">
+            <b>bearer</b>()
+            <a href="../../classes/Scimitar/AuthenticationScheme.html#method-c-bearer" name="method-c-bearer" class="permalink">Link</a>
+        </div>
+
+        <div class="description">
+            
+        </div>
+
+
+
+        <div class="sourcecode">
+
+            <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-bearer_source')" id="l_method-c-bearer_source">show</a>
+            </p>
+            <div id="method-c-bearer_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File app/models/scimitar/authentication_scheme.rb, line 12</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">bearer</span>
+  <span class="ruby-identifier">new</span> <span class="ruby-value">type:</span>        <span class="ruby-string">&#39;oauthbearertoken&#39;</span>,
+      <span class="ruby-value">name:</span>        <span class="ruby-string">&#39;OAuth Bearer Token&#39;</span>,
+      <span class="ruby-value">description:</span> <span class="ruby-string">&#39;Authentication scheme using the OAuth Bearer Token Standard&#39;</span>
+<span class="ruby-keyword">end</span></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+    </div>
+  </body>
+</html>
