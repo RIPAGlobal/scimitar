@@ -6,7 +6,7 @@ _site
 .byebug_history
 
 coverage/
-doc/
+docs/
 
 **/log/*
 **/tmp/*
