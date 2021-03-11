@@ -126,8 +126,11 @@ module Scimitar
       #
       # +record+:: ActiveRecord subclass to save (via #save!).
       #
+      # Returns a SCIM representation of the saved record.
+      #
       def save!(record)
         record.save!
+        return record.to_scim(location: url_for(action: :show, id: record.id))
       rescue ActiveRecord::RecordInvalid => exception
         raise Scimitar::ResourceInvalidError.new(record.errors.full_messages.join('; '))
       end

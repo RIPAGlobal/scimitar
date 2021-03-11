@@ -68,9 +68,13 @@ module Scimitar
     # POST (create)
     #
     # Call with a block that is passed a SCIM resource instance - e.g a
-    # Scimitar::Resources::User instance - representing an item to be created,
-    # along with a second parameter that is always ":create".  Evaluate to the
-    # SCIM representation of the arising found record.
+    # Scimitar::Resources::User instance - representing an item to be created.
+    # Your ::storage_class class's ::scim_resource_type method determines the
+    # kind of object you'll be given.
+    #
+    # See also e.g. Scimitar::Resources::Mixin#from_scim!.
+    #
+    # Evaluate to the SCIM representation of the arising created record.
     #
     def create(&block)
       if self.safe_params()[:id].present?
@@ -84,6 +88,12 @@ module Scimitar
 
     # PUT (replace)
     #
+    # Similar to #create, but you're passed an ID to find as well as the
+    # resource details to then use for all replacement attributes in that found
+    # resource. See also e.g. Scimitar::Resources::Mixin#from_scim!.
+    #
+    # Evaluate to the SCIM representation of the arising created record.
+    #
     def replace(&block)
       with_scim_resource() do |resource|
         render(json: yield(self.safe_params()[:id], resource))
@@ -91,6 +101,13 @@ module Scimitar
     end
 
     # PATCH (update)
+    #
+    # A variant of #create where you're again passed the resource ID (in "your"
+    # domain) to look up, but then a Hash with patch operation details from the
+    # calling client. This can be passed to e.g.
+    # Scimitar::Resources::Mixin#from_scim_patch!.
+    #
+    # Evaluate to the SCIM representation of the arising created record.
     #
     def update(&block)
       validate_request()

@@ -134,7 +134,7 @@ module Scim
     def show
       super do |user_id|
         user = find_user(user_id)
-        # Return the instance as a SCIM object, e.g. via Scimitar::Resources::Mixin#to_scim
+        # Evaluate to the record as a SCIM object, e.g. via Scimitar::Resources::Mixin#to_scim
         user.to_scim(location: url_for(action: :show, id: user_id))
       end
     end
@@ -147,6 +147,8 @@ module Scim
         record = self.storage_class().new
         record.from_scim!(scim_hash: scim_resource.as_json())
         self.save!(record)
+        # Evaluate to the record as a SCIM object (or do that via "self.save!")
+        user.to_scim(location: url_for(action: :show, id: user_id))
       end
     end
 
@@ -158,6 +160,8 @@ module Scim
         record = self.find_record(record_id)
         record.from_scim!(scim_hash: scim_resource.as_json())
         self.save!(record)
+        # Evaluate to the record as a SCIM object (or do that via "self.save!")
+        user.to_scim(location: url_for(action: :show, id: user_id))
       end
     end
 
@@ -169,6 +173,8 @@ module Scim
         record = self.find_record(record_id)
         record.from_scim_patch!(patch_hash: patch_hash)
         self.save!(record)
+        # Evaluate to the record as a SCIM object (or do that via "self.save!")
+        user.to_scim(location: url_for(action: :show, id: user_id))
       end
     end
 
