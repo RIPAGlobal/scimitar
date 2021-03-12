@@ -603,17 +603,29 @@ module Scimitar
           scim_parameter:
         )
           query        = base_scope
-          column_names = self.activerecord_attribute(scim_attribute)
+          column_names = self.activerecord_columns(scim_attribute)
           safe_value   = self.sql_modified_value(scim_operator, self.activerecord_parameter(scim_parameter))
 
           if safe_value.nil? # Presence ("pr") assumed
-            query = base_scope.where.not(column_name => ['', nil])
+            column_names.each.with_index do | column_name, index |
+              if index == 0
+                query = base_scope.where.not(column_names.shift() => ['', nil])
+              else
+                query = query.or(base_scope.where.not(column_names.shift() => ['', nil]))
+              end
+            end
           else
             sql_operator = self.activerecord_operator(scim_operator)
 
             if sql_operator.present?
-              safe_column_name = ActiveRecord::Base.connection.quote_column_name(column_name)
-              query            = base_scope.where("#{safe_column_name} #{sql_operator} ?", safe_value)
+              column_names.each.with_index do | column_name, index |
+                safe_column_name = ActiveRecord::Base.connection.quote_column_name(column_name)
+                if index == 0
+                  query = base_scope.where("#{safe_column_name} #{sql_operator} ?", safe_value)
+                else
+                  query = query.or(base_scope.where("#{safe_column_name} #{sql_operator} ?", safe_value))
+                end
+              end
             else
               raise Scimitar::FilterError
             end
@@ -623,22 +635,22 @@ module Scimitar
         end
 
         # Returns the mapped-to-your-domain column name(s) that a filter string
-        # is operating upon. If +nil+, the attribute is supposed to be ignored.
-        # If entirely unmapped (thus, unsupported), an exception is raised.
+        # is operating upon, in an Array. If empty, the attribute is to be
+        # ignored. Raises an exception if entirey unmapped (thus unsupported).
         #
-        # Note plural - if non-nil, the return value is always an array of
-        # names any of which should be used (implicit 'OR').
+        # Note plural - the return value is always an array any of which should
+        # be used (implicit 'OR').
         #
         # +scim_attribute+:: SCIM attribute from a filter string.
         #
-        def activerecord_attribute(scim_attribute)
+        def activerecord_columns(scim_attribute)
           raise Scimitar::FilterError if scim_attribute.blank?
 
           mapped_attribute = self.attribute_map()[scim_attribute]
           raise Scimitar::FilterError if mapped_attribute.blank?
 
           if mapped_attribute[:ignore]
-            return nil
+            return []
           elsif mapped_attribute[:column]
             return [mapped_attribute[:column]]
           elsif mapped_attribute[:columns]
