@@ -42,13 +42,6 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
       u2 = MockUser.create(first_name: 'Foo', last_name: 'Bar', home_email_address: 'home_2@test.com')
       u3 = MockUser.create(first_name: 'Foo',                   home_email_address: 'home_3@test.com')
 
-
-
-
-
-
-
-
       get '/Users', params: {
         format: :scim,
         filter: 'name.givenName eq "Foo" and name.familyName pr'# and emails ne "home_1@test.com"'

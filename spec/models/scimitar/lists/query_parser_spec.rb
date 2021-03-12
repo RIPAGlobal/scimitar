@@ -245,6 +245,55 @@ RSpec.describe Scimitar::Lists::QueryParser do
   end # "context 'basic parsing' do"
 
   # ===========================================================================
+  # INTERNAL FILTER FLATTENING
+  #
+  # Attempts to reduce query parser complexity while tolerating a wider range
+  # of input "styles" of filter
+  # ===========================================================================
+
+  context '#flatten_filter (private)' do
+    it 'flattens simple cases' do
+      result = @instance.send(:flatten_filter, 'userType eq "Employee" and emails[type eq "work" and value co "@example.com"]')
+      expect(result).to eql('userType eq "Employee" and emails.type eq "work" and emails.value co "@example.com"')
+    end
+
+    it 'correctly processes more than one inner filter' do
+      result = @instance.send(:flatten_filter, 'emails[type eq "work" and value co "@example.com"] or userType eq "Admin" or ims[type eq "xmpp" and value co "@foo.com"]')
+      expect(result).to eql('emails.type eq "work" and emails.value co "@example.com" or userType eq "Admin" or ims.type eq "xmpp" and ims.value co "@foo.com"')
+    end
+
+    it 'flattens nested cases' do
+      result = @instance.send(:flatten_filter, 'userType ne "Employee" and not (emails[value co "example.com" or (value co "example.org")]) and userName="foo"')
+      expect(result).to eql('userType ne "Employee" and not (emails.value co "example.com" or (emails.value co "example.org")) and userName="foo"')
+    end
+
+    it 'handles spaces in quoted values' do
+      result = @instance.send(:flatten_filter, 'userType eq "Employee spaces" or userName pr and emails[type eq "with spaces" and value co "@example.com"]')
+      expect(result).to eql('userType eq "Employee spaces" or userName pr and emails.type eq "with spaces" and emails.value co "@example.com"')
+    end
+
+    it 'handles escaped quotes in quoted values' do
+      result = @instance.send(:flatten_filter, 'userType eq "Emplo\\"yee" and emails[type eq "\\"work\\"" and value co "@example.com"]')
+      expect(result).to eql('userType eq "Emplo\\"yee" and emails.type eq "\\"work\\"" and emails.value co "@example.com"')
+    end
+
+    it 'handles escaped opening square brackets' do
+      result = @instance.send(:flatten_filter, 'userType eq \\[Employee and emails[type eq "work" and value co "@example.com"]')
+      expect(result).to eql('userType eq \\[Employee and emails.type eq "work" and emails.value co "@example.com"')
+    end
+
+    it 'handles escaped closing square brackets' do
+      result = @instance.send(:flatten_filter, 'userType eq "Employee" and emails[type eq "work" and value co Unquoted\\]]')
+      expect(result).to eql('userType eq "Employee" and emails.type eq "work" and emails.value co Unquoted\\]')
+    end
+
+    it 'handles spaces before closing square brackets' do
+      result = @instance.send(:flatten_filter, 'emails[type eq "work" and value co "@example.com"    ] or userType eq "Admin" or ims[type eq "xmpp" and value co "@foo.com"]')
+      expect(result).to eql('emails.type eq "work" and emails.value co "@example.com" or userType eq "Admin" or ims.type eq "xmpp" and ims.value co "@foo.com"')
+    end
+  end # "context '#flatten_filter (private)' do"
+
+  # ===========================================================================
   # ACTIVERECORD QUERIES
   #
   # If you have issues here, check that private method unit tests are passing

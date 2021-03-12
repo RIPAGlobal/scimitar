@@ -393,7 +393,27 @@ Often, you'll find that bearer tokens are in use by SCIM API consumers, but the 
 
 ### Omissions
 
-* Only whole-resource `PUT` is supported for updates, not the complicated `PATCH` mechanism. The mandatory former maps very closely to Rails behaviour while the optional latter would require very extensive extra code, especially around multiple operation types and `path` handling, with its filter-like strings.
+* List ("index") endpoint [filters in SCIM](https://tools.ietf.org/html/rfc7644#section-3.4.2.2) are _extremely_ complicated. There is a syntax for specifying equals, not-equals, precedence through parentheses and things like "and"/"or"/"not" along the lines of "attribute operator value", which Scimitar supports to a reasonably comprehensive degree but with some limitations discussed shortly. That aside, it isn't at all clear what some of the [examples in the RFC](https://tools.ietf.org/html/rfc7644#page-23) are even meant to mean. Consider:
+
+  - `filter=userType eq "Employee" and (emails co "example.com" or emails.value co "example.org")`
+
+  It's very strange just specifying `emails co...`, since this is an Array which contains complex types. Is the filter there meant to try and match every attribute of the nested types in all array entries? I.e. if `type` happened to contain `example.com`, is that meant to match? It's strongly implied, because the next part of the filter specifically says `emails.value`. Again, we have to reach a little and assume that `emails.value` means "in _any_ of the objects in the `emails` Array, match all things where `value` contains `example.org`. It seems likely that this is a specification error and both of the specifiers should be `emails.value`.
+
+  Adding even more complexity - the specification shows filters _which include filters within them_. In the same way that PATCH operations use paths to identify attributes not just by name, but by filter matches within collections - e.g. `emails[type eq "work"]`, for all e-mail objects inside the `emails` array with a `type` attribute that has a value of `work`) - so also can a filter _contain a filter_, which isn't supported. So, this [example from the RFC](https://tools.ietf.org/html/rfc7644#page-23) is not supported by Scimitar:
+
+  - `filter=userType eq "Employee" and emails[type eq "work" and value co "@example.com"]`
+
+  Another filter shows a potential workaround:
+
+  - `filter=userType eq "Employee" and (emails.type eq "work")`
+
+  ...which is just a match on `emails.type`, so if you have a querable attribute mapping defined for `emails.type`, that would become queryable. Likewise, you could rewrite the more complex prior example thus:
+
+  - `filter=userType eq "Employee" and emails.type eq "work" and emails.value co "@example.com"`
+
+  ...so adding a mapping for `emails.value` would then allow a database query to be constructed.
+
+* The `PATCH` mechanism is supported, but where filters are included, only a single "attribute eq value" is permitted - no other operators or combinations. For example, a work e-mail address's value could be replaced by a PATCH patch of `emails[type eq "work"].value`. For in-path filters such as this, other operators such as `ne` are not supported; combinations with "and"/"or" are not supported; negation with "not" is not supported.
 
 
 

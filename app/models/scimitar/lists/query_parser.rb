@@ -55,6 +55,10 @@ module Scimitar
         'pr'
       ]).freeze
 
+      # Binary operators.
+      #
+      BINARY_OPERATORS = Set.new(OPERATORS.keys.reject { |op| UNARY_OPERATORS.include?(op) }).freeze
+
       # Map SCIM operators to generic(ish) SQL operators.
       #
       SQL_COMPARISON_OPERATORS = {
@@ -93,10 +97,10 @@ module Scimitar
 
       # Parse SCIM filter query into RPN stack
       #
-      # +input+:: Input filter string, e.g. 'giveName eq "Briony"'.
+      # +input+:: Input filter string, e.g. 'givenName eq "Briony"'.
       #
-      # Returns a SCIM::Query::Filter::Parser instance. Call #rpn on this to
-      # retrieve the parsed RPN stack. For example, given this input:
+      # Returns a "self" for convenience. Call #rpn thereafter to retrieve the
+      # parsed RPN stack. For example, given this input:
       #
       #     userType eq "Employee" and (emails co "example.com" or emails co "example.org")
       #
@@ -141,9 +145,10 @@ module Scimitar
       #     ]
       #
       def parse(input)
-        # Save for error msgs
-        @input  = input.clone()
-        @tokens = self.lex(input)
+        preprocessed_input = flatten_filter(input) rescue input
+
+        @input  = input.clone() # Saved just for error msgs
+        @tokens = self.lex(preprocessed_input)
         @rpn    = self.parse_expr()
 
         self.assert_eos()
@@ -278,6 +283,180 @@ module Scimitar
             end
           end
           tree
+        end
+
+        # =====================================================================
+        # Flattening
+        # =====================================================================
+
+        # A depressingly heavyweight method that attempts to partly rationalise
+        # some of the simpler cases of filters-in-filters by realising that the
+        # expression can be done in two ways.
+        #
+        # https://tools.ietf.org/html/rfc7644#page-23 includes these examples:
+        #
+        #     filter=userType eq "Employee" and (emails.type eq "work")
+        #     filter=userType eq "Employee" and emails[type eq "work" and value co "@example.com"]
+        #
+        # Ignoring the extra 'and', we can see that using either a nested
+        # filter-like path *or* the dotted notation are equivalent here. So, if
+        # we were to step along the string looking for an unescaped "[" at the
+        # start of an inner filter, we could extract attributes therein and use
+        # the part before the "[" as a prefix - "emails[type" to "emails.type",
+        # with similar substitutions therein.
+        #
+        # This method tries to flatten things thus. It throws exceptions if any
+        # problems arise at all. Some limitations:
+        #
+        # * Inner filters with further complex filters inside will not work.
+        # * Spaces immediately after an opening "[" will break the flattener.
+        # * 'not' can only be used in the context of 'and not' / 'or not'; it
+        #   isn't supported stand-alone at the start of expressions (e.g.
+        #   'not userType eq "Employee')
+        #
+        # Examples:
+        #
+        #     <- userType eq "Employee" and emails[type eq "work" and value co "@example.com"]
+        #     => userType eq "Employee" and emails.type eq "work" and emails.value co "@example.com"
+        #
+        #     <- emails[type eq "work" and value co "@example.com"] or ims[type eq "xmpp" and value co "@foo.com"]
+        #     => emails.type eq "work" and emails.value co "@example.com" or ims.type eq "xmpp" and ims.value co "@foo.com"
+        #
+        #     <- userType eq "Employee" or userName pr and emails[type eq "with spaces" and value co "@example.com"]
+        #     => userType eq "Employee" or userName pr and emails.type eq "with spaces" and emails.value co "@example.com"
+        #
+        #     <- userType ne "Employee" and not (emails[value co "example.com" or (value co "example.org")]) and userName="foo"
+        #     => userType ne "Employee" and not (emails.value co "example.com" or (emails.value co "example.org")) and userName="foo"
+        #
+        # +filter+:: Input filter string. Returns a possibly modified String,
+        #            with the hopefully equivalent but flattened filter inside.
+        #
+        def flatten_filter(filter)
+          rewritten                 = []
+          components                = filter.gsub(/\s+\]/, ']').split(' ')
+          expecting_attribute       = true
+          expecting_closing_bracket = false
+          attribute_prefix          = nil
+          expecting_operator        = false
+          expecting_value           = false
+          expecting_closing_quote   = false
+          expecting_logic_word      = false
+          skip_next_component       = false
+
+          components.each.with_index do | component, index |
+            if skip_next_component == true
+              skip_next_component = false
+              next
+            end
+
+            downcased = component.downcase.strip
+
+            if (expecting_attribute)
+              if downcased.match?(/[^\\]\[/) # Not backslash then literal '['
+                attribute_prefix       = component.match(/(.*?[^\\])\[/   )[1] # Everything before no-backslash-then-literal (unescaped) '['
+                first_attribute_inside = component.match(    /[^\\]\[(.*)/)[1] # Everything  after no-backslash-then-literal (unescaped) '['
+                opening_paren          = '(' if attribute_prefix.start_with?('(')
+                rewritten << "#{opening_paren}#{apply_attribute_prefix(attribute_prefix, first_attribute_inside)}"
+                expecting_closing_bracket = true
+              else # No inner filter component being started, but might be inside one with a prefix set
+                rewritten << apply_attribute_prefix(attribute_prefix, component)
+              end
+              expecting_attribute = false
+              expecting_operator  = true
+
+            elsif (expecting_operator)
+              rewritten << component
+              if BINARY_OPERATORS.include?(downcased)
+                expecting_operator = false
+                expecting_value    = true
+              elsif UNARY_OPERATORS.include?(downcased)
+                expecting_operator   = false
+                expecting_logic_word = true
+              else
+                raise 'Expected operator'
+              end
+
+            elsif (expecting_value)
+              matches = downcased.match(/([^\\])\]/) # Contains no-backslash-then-literal (unescaped) ']'
+              unless matches.nil? # Contains no-backslash-then-literal (unescaped) ']'
+                character_before_closing_bracket = matches[1]
+                component.gsub!(/[^\\]\]/, character_before_closing_bracket)
+
+                if expecting_closing_bracket
+                  attribute_prefix          = nil
+                  expecting_closing_bracket = false
+                else
+                  raise 'Unexpected closing "]"'
+                end
+              end
+
+              rewritten << component
+
+              if downcased.start_with?('"')
+                expecting_closing_quote = true
+                downcased = downcased[1..-1] # Strip off opening '"' to avoid false-positive on 'contains closing quote' check below
+              elsif expecting_closing_quote == false # If not expecting a closing quote, then the component must be the entire no-spaces value
+                expecting_value      = false
+                expecting_logic_word = true
+              end
+
+              if expecting_closing_quote
+                if downcased.match?(/[^\\]\"/) # Contains no-backslash-then-literal (unescaped) '"'
+                  expecting_closing_quote = false
+                  expecting_value         = false
+                  expecting_logic_word    = true
+                end
+              end
+
+            elsif (expecting_logic_word)
+              if downcased == 'and' || downcased == 'or'
+                rewritten << component
+                next_downcased_component = components[index + 1].downcase.strip
+                if next_downcased_component == 'not' # Special case "and not" / "or not"
+                  skip_next_component = true
+                  rewritten << 'not'
+                end
+                expecting_logic_word = false
+                expecting_attribute  = true
+              else
+                raise 'Expected "and" or "or"'
+              end
+            end
+          end
+
+          return rewritten.join(' ')
+        end
+
+        # Service method to DRY up #flatten_filter a little. Applies a prefix
+        # to a component, but is careful with opening parentheses.
+        #
+        # +attribute_prefix+:: Prefix from before a "[", which may include an
+        #                      opening "(" itself.
+        #
+        # +component+::        Component attribute to receive the prefix, which
+        #                      may also include an opening "(" itself.
+        #
+        # The result will be "prefix.component", with a "(" at the start if
+        # the *component* had an opening paren. If the prefix includes one, the
+        # caller must deal with it as only the caller knows if this application
+        # of prefix is being done for the first attribute within an inner
+        # filter (in which case a wrapping opening paren should be included) or
+        # subsequent attributes inside that filter (in which case the original
+        # wrapping opening paren should not be repeated).
+        #
+        def apply_attribute_prefix(attribute_prefix, component)
+          return component if attribute_prefix.nil?
+
+          if attribute_prefix.nil?
+            component
+          else
+            attribute_prefix = attribute_prefix[1..-1] if attribute_prefix.start_with?('(')
+            if component.start_with?('(')
+              "(#{attribute_prefix}.#{component[1..-1]}"
+            else
+              "#{attribute_prefix}.#{component}"
+            end
+          end
         end
 
         # =====================================================================
@@ -423,9 +602,9 @@ module Scimitar
           scim_operator:,
           scim_parameter:
         )
-          query       = base_scope
-          column_name = self.activerecord_attribute(scim_attribute)
-          safe_value  = self.sql_modified_value(scim_operator, self.activerecord_parameter(scim_parameter))
+          query        = base_scope
+          column_names = self.activerecord_attribute(scim_attribute)
+          safe_value   = self.sql_modified_value(scim_operator, self.activerecord_parameter(scim_parameter))
 
           if safe_value.nil? # Presence ("pr") assumed
             query = base_scope.where.not(column_name => ['', nil])
@@ -443,19 +622,30 @@ module Scimitar
           return query
         end
 
-        # Returns the mapped-to-your-domain attribute that a filter string is
-        # operating upon. If +nil+, there is no match.
+        # Returns the mapped-to-your-domain column name(s) that a filter string
+        # is operating upon. If +nil+, the attribute is supposed to be ignored.
+        # If entirely unmapped (thus, unsupported), an exception is raised.
+        #
+        # Note plural - if non-nil, the return value is always an array of
+        # names any of which should be used (implicit 'OR').
         #
         # +scim_attribute+:: SCIM attribute from a filter string.
         #
         def activerecord_attribute(scim_attribute)
           raise Scimitar::FilterError if scim_attribute.blank?
 
-          scim_attribute   = scim_attribute.to_sym
           mapped_attribute = self.attribute_map()[scim_attribute]
-
           raise Scimitar::FilterError if mapped_attribute.blank?
-          return mapped_attribute
+
+          if mapped_attribute[:ignore]
+            return nil
+          elsif mapped_attribute[:column]
+            return [mapped_attribute[:column]]
+          elsif mapped_attribute[:columns]
+            return mapped_attribute[:columns]
+          else
+            raise "Malformed scim_queryable_attributes entry for #{scim_attribute.inspect}"
+          end
         end
 
         # Returns an SQL operator equivalent to that given in a filter string.
