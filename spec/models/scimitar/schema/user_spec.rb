@@ -691,7 +691,7 @@ RSpec.describe Scimitar::Schema::User do
         "description": "Represents a User",
         "meta": {
           "resourceType": "Schema",
-          "location": "/scim_v2/Schemas?name=urn%3Aietf%3Aparams%3Ascim%3Aschemas%3Acore%3A2.0%3AUser"
+          "location": "/Schemas?name=urn%3Aietf%3Aparams%3Ascim%3Aschemas%3Acore%3A2.0%3AUser"
         },
         "attributes": #{expected_attributes()}
       }
@@ -700,11 +700,11 @@ RSpec.describe Scimitar::Schema::User do
 
   it 'returns User schema as JSON' do
     actual_full_schema = Scimitar::Schema::User.new
-    expect(JSON.parse(expected_full_schema())).to eql(JSON.parse(actual_full_schema.to_json))
+    expect(JSON.parse(actual_full_schema.to_json)).to eql(JSON.parse(expected_full_schema()))
   end
 
   it 'returns the schema attributes as JSON' do
     actual_attributes = Scimitar::Schema::User.scim_attributes
-    expect(JSON.parse(expected_attributes())).to eql(JSON.parse(actual_attributes.to_json))
+    expect(JSON.parse(actual_attributes.to_json)).to eql(JSON.parse(expected_attributes()))
   end
 end

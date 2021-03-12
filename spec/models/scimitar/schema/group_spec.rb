@@ -58,7 +58,7 @@ RSpec.describe Scimitar::Schema::Group do
         "description": "Represents a Group",
         "meta": {
           "resourceType": "Schema",
-          "location": "/scim_v2/Schemas?name=urn%3Aietf%3Aparams%3Ascim%3Aschemas%3Acore%3A2.0%3AGroup"
+          "location": "/Schemas?name=urn%3Aietf%3Aparams%3Ascim%3Aschemas%3Acore%3A2.0%3AGroup"
         },
         "attributes": #{expected_attributes()}
       }
@@ -67,11 +67,11 @@ RSpec.describe Scimitar::Schema::Group do
 
   it 'returns Group schema as JSON' do
     actual_full_schema = Scimitar::Schema::Group.new
-    expect(JSON.parse(expected_full_schema())).to eql(JSON.parse(actual_full_schema.to_json))
+    expect(JSON.parse(actual_full_schema.to_json)).to eql(JSON.parse(expected_full_schema()))
   end
 
   it 'returns the schema attributes as JSON' do
     actual_attributes = Scimitar::Schema::Group.scim_attributes
-    expect(JSON.parse(expected_attributes())).to eql(JSON.parse(actual_attributes.to_json))
+    expect(JSON.parse(actual_attributes.to_json)).to eql(JSON.parse(expected_attributes()))
   end
 end

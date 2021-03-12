@@ -58,10 +58,14 @@ RSpec.describe Scimitar::ResourcesController do
       end
     end
 
-    def update
+    def replace
       super do |resource|
         resource
       end
+    end
+
+    def update # PATCH
+      raise NotImplementedError
     end
 
     def destroy
@@ -84,7 +88,6 @@ RSpec.describe Scimitar::ResourcesController do
   context 'GET show' do
     it 'renders the resource' do
       get :show, params: { id: '10', format: :scim }
-
       expect(response).to be_ok
       expect(response_body).to include(id: '10')
     end
@@ -104,14 +107,23 @@ RSpec.describe Scimitar::ResourcesController do
     end
 
     it 'renders error if resource object cannot be built from the params' do
+      @routes.draw do
+        put 'scimitar/resources/:id', action: 'replace', controller: 'scimitar/resources'
+      end
       put :replace, params: { id: 'group-id', name: {email: 'a@b.com'}, format: :scim }
+
       expect(response.status).to eql(400)
       expect(response_body[:detail]).to match(/^Invalid/)
     end
 
     it 'renders application side error' do
       allow_any_instance_of(Scimitar::Resources::Group).to receive(:to_json).and_raise(Scimitar::ErrorResponse.new(status: 400, detail: 'gaga'))
+
+      @routes.draw do
+        put 'scimitar/resources/:id', action: 'replace', controller: 'scimitar/resources'
+      end
       put :replace, params: { id: 'group-id', displayName: 'invalid name', format: :scim }
+
       expect(response.status).to eql(400)
       expect(response_body[:detail]).to eql('gaga')
     end
@@ -135,26 +147,43 @@ RSpec.describe Scimitar::ResourcesController do
 
   context 'PUT update' do
     it 'returns error if body is missing' do
+      @routes.draw do
+        put 'scimitar/resources/:id', action: 'replace', controller: 'scimitar/resources'
+      end
       put :replace, params: { id: 'group-id', format: :scim }
+
       expect(response.status).to eql(400)
       expect(response_body[:detail]).to eql('must provide a request body')
     end
 
     it 'works if the request is valid' do
+      @routes.draw do
+        put 'scimitar/resources/:id', action: 'replace', controller: 'scimitar/resources'
+      end
       put :replace, params: { id: 'group-id', displayName: 'sauron', format: :scim }
+
       expect(response.status).to eql(200)
       expect(response_body[:displayName]).to eql('sauron')
     end
 
     it 'renders error if resource object cannot be built from the params' do
+      @routes.draw do
+        put 'scimitar/resources/:id', action: 'replace', controller: 'scimitar/resources'
+      end
       put :replace, params: { id: 'group-id', name: {email: 'a@b.com'}, format: :scim }
+
       expect(response.status).to eql(400)
       expect(response_body[:detail]).to match(/^Invalid/)
     end
 
     it 'renders application side error' do
       allow_any_instance_of(Scimitar::Resources::Group).to receive(:to_json).and_raise(Scimitar::ErrorResponse.new(status: 400, detail: 'gaga'))
+
+      @routes.draw do
+        put 'scimitar/resources/:id', action: 'replace', controller: 'scimitar/resources'
+      end
       put :replace, params: { id: 'group-id', displayName: 'invalid name', format: :scim }
+
       expect(response.status).to eql(400)
       expect(response_body[:detail]).to eql('gaga')
     end
