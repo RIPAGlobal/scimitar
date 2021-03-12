@@ -206,16 +206,35 @@ module Scimitar
     # mixing-in class. If +nil+ then filtering is not supported in the
     # ResouceController subclass which declares that it maps to the mixing-in
     # class. If not +nil+ but a SCIM filter enquiry is made for an unmapped
-    # attribute, that part of the filter will be ignored.
+    # attribute, an 'invalid filter' exception is raised.
     #
-    # For example, the SCIM 'emails' attribute has an array value with its own
-    # set of properties for each entry therein, but is just searched in SCIM
-    # via key "emails".
+    # If using ActiveRecord support in Scimitar::Lists::QueryParser, the mapped
+    # entites are columns and that's expressed in the names of keys described
+    # below; if you have other approaches to searching, these might be virtual
+    # attributes or other such constructs rather than columns. That would be up
+    # to your non-ActiveRecord's implementation to decide.
+    #
+    # Each STRING field name(s) represents a *flat* attribute path that might
+    # be encountered in a filter - e.g. "name.familyName", "emails.value" (and
+    # often it makes sense to define "emails" and "emails.value" identically to
+    # allow for different client searching "styles", given ambiguities in RFC
+    # 7644 filter examples).
+    #
+    # Each value is a Hash with Symbol keys ':column', naming just one simple
+    # column for a mapping; ':columns', with an Array of column names that you
+    # want to map using 'OR' for a single search on the corresponding SCIM
+    # attribute; or ':ignore' with value 'true', which means that a fitler on
+    # the matching attribute is ignored rather than resulting in an "invalid
+    # filter" exception - beware possibilities for surprised clients getting a
+    # broader result set than expected. Example:
     #
     #     def self.scim_queryable_attributes
     #       return {
-    #         externalId: :scim_external_id,
-    #         emails:     :work_email_address
+    #         'name.givenName'  => { column: :first_name },
+    #         'name.familyName' => { column: :last_name  },
+    #         'emails'          => { columns: [ :work_email_address, :home_email_address ] },
+    #         'emails.value'    => { columns: [ :work_email_address, :home_email_address ] },
+    #         'emails.type'     => { ignore: true }
     #       }
     #     end
     #
