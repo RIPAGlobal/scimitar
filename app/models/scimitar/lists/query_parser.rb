@@ -62,8 +62,8 @@ module Scimitar
       # Map SCIM operators to generic(ish) SQL operators.
       #
       SQL_COMPARISON_OPERATORS = {
-        'eq' => 'LIKE',
-        'ne' => 'NOT LIKE',
+        'eq' => '=',
+        'ne' => '!=',
         'gt' => '>',
         'ge' => '>=',
         'lt' => '<',
@@ -594,7 +594,15 @@ module Scimitar
         #
         # Optional named parameters:
         #
-        # +case_sensitive+:: Default is +false+, with any LIKE query changed to
+        # +case_sensitive+:: Default is +false+; see notes below on +true+.
+        #
+        # Case sensitivity in databases is tricky. If you wanted case sensitive
+        # behaviour then it might need configuration in your engine; qe
+
+
+
+
+         with any LIKE query changed to
         #                    ILIKE (but ranged / greater-or-less-than style
         #                    filters are always performed case-exact).
         #
@@ -620,10 +628,58 @@ module Scimitar
           else
             sql_operator = self.activerecord_operator(scim_operator)
 
-            if sql_operator.present?
+            unless sql_operator.nil?
+              arel_table = base_scope.model.arel_table[column_name.to_sym]
+
               column_names.each.with_index do | column_name, index |
-                where_args = if sql_operator.include?('LIKE') && ! case_sensitive
-                  if sql_operator.include?('NOT')
+                column = table[arel_table]
+
+                unless column.nil?
+                  arel_operation = if case_sensitive
+                    case sql_operator
+                      when '='
+                        arel_table.eq(safe_value)
+                      when '!='
+                        arel_table.not_eq(safe_value)
+                      when '>'
+                        arel_table.gt(safe_value)
+                      when '>='
+                        arel_table.gteq(safe_value)
+                      when '<'
+                        arel_table.lt(safe_value)
+                      when '<='
+                        arel_table.lteq(safe_value)
+                      when 'LIKE'
+                        arel_table.matches(safe_value, nil, true) # true -> case sensitive
+                      else
+                    end
+                  else # Case insensitive
+                    case sql_operator
+                      when '='
+                        arel_table.matches(safe_value, nil, false) # false -> case insensitive
+                      when '!='
+                        arel_table.does_not_match(safe_value, nil, false) # false -> case insensitive
+                      when '>'
+                      when '>='
+                      when '<'
+                      when '<='
+                      when 'LIKE'
+                        arel_table.matches(safe_value, nil, false) # false -> case insensitive
+                      else
+                    end
+                  end
+
+
+
+                end
+
+
+              query = base_scope.where(arel_operation)
+
+
+              column_names.each.with_index do | column_name, index |
+                where_args = if sql_operator.include?('LIKE') || ((sql_operator == '=' || sql_operator == '!=') && case_sensitive == false)
+                  if sql_operator == '!=' || sql_operator.include?('NOT')
                     [base_scope.model.arel_table[column_name.to_sym].does_not_match(safe_value)]
                   else
                     [base_scope.model.arel_table[column_name.to_sym].matches(safe_value)]
