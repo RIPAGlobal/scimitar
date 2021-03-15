@@ -528,8 +528,9 @@ module Scimitar
             return apply_scim_filter( # NOTE EARLY EXIT
               base_scope:     query,
               scim_attribute: expression_tree[1],
-              scim_operator:  expression_tree[0],
-              scim_parameter: expression_tree[2]
+              scim_operator:  expression_tree[0]&.downcase,
+              scim_parameter: expression_tree[2],
+              case_sensitive: false
             )
           end
 
@@ -550,8 +551,9 @@ module Scimitar
               query_component = apply_scim_filter(
                 base_scope:     base_scope,
                 scim_attribute: entry[1],
-                scim_operator:  entry[0],
-                scim_parameter: entry[2]
+                scim_operator:  entry[0]&.downcase,
+                scim_parameter: entry[2],
+                case_sensitive: false
               )
             end
 
@@ -577,10 +579,7 @@ module Scimitar
         # +scim_attribute+:: SCIM domain attribute, e.g. 'familyName'
         # +scim_operator+::  SCIM operator, e.g. 'eq', 'co', 'pr'
         # +scim_parameter+:: Parameter to match, or +nil+ for operator 'pr'
-        #
-        # Optional named parameters:
-        #
-        # +case_sensitive+:: Default is +false+; see notes below on +true+.
+        # +case_sensitive+:: Boolean; see notes below on case sensitivity.
         #
         # Case sensitivity in databases is tricky. If you wanted case sensitive
         # behaviour then it might need configuration in your engine. Internally
@@ -594,7 +593,7 @@ module Scimitar
           scim_attribute:,
           scim_operator:,
           scim_parameter:,
-          case_sensitive: false
+          case_sensitive:
         )
           scim_operator  = scim_operator.downcase
           query          = base_scope
@@ -602,9 +601,9 @@ module Scimitar
           column_names   = self.activerecord_columns(scim_attribute)
           value          = self.activerecord_parameter(scim_parameter)
           value_for_like = self.sql_modified_value(scim_operator, value)
+          all_supported  = column_names.all? { | column_name | base_scope.model.column_names.include?(column_name.to_s) }
 
-          unsupported = column_names.any? { | column_name | arel_table[column_name].nil? }
-          raise Scimitar::FilterError if unsupported
+          raise Scimitar::FilterError unless all_supported
 
           column_names.each.with_index do | column_name, index |
             arel_column    = arel_table[column_name]

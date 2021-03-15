@@ -362,64 +362,22 @@ RSpec.describe Scimitar::Lists::QueryParser do
   # ===========================================================================
 
   context '#to_activerecord_query' do
-    it 'generates expected SQL with binary operators' do
 
-      # Hand-written instead of using a constant, so we check one set of hand
-      # drawn mappings against another and hopefully increase the chances of
-      # spotting an error.
-      #
-      # Note use of ILIKE - the underlying system is based around "LIKE" and
-      # will use AREL #matches / #does_not_match for query generation when
-      # wanting case-insensitivity, so we expect SQL to have "ILIKE" given that
-      # the underlying database is PostgreSQL.
-      #
-      expected_mapping = {
-        'eQ' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE 'BAZ'},
-        'Ne' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" NOT ILIKE 'BAZ'},
-        'GT' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" > 'BAZ'},
-        'ge' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" >= 'BAZ'},
-        'LT' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" < 'BAZ'},
-        'Le' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" <= 'BAZ'},
-        'cO' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE '%BAZ%'},
-        'sw' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE 'BAZ%'},
-        'eW' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE '%BAZ'},
-      }
+    # Means we don't need to iterate over every SCIM operator here, as we can
+    # have confidence that the lower level unit tests provide coverage.
+    #
+    it 'uses heavily-unit-tested #apply_scim_filter under the hood' do
+      @instance.parse("name.familyName EQ \"BAZ\"") # Note "EQ" upper case
 
-      # Self-check: Is test coverage up to date?
-      #
-      expect(Scimitar::Lists::QueryParser::BINARY_OPERATORS.to_a - expected_mapping.keys.map(&:downcase)).to match_array(['and', 'or'])
+      expect(@instance).to receive(:apply_scim_filter).with(
+        base_scope:     MockUser.all,
+        scim_attribute: 'name.familyName',
+        scim_operator:  'eq', # Note 'eq' lower case
+        scim_parameter: '"BAZ"',
+        case_sensitive: false
+      )
 
-      expected_mapping.each do | input, expected_output |
-        @instance.parse("name.familyName #{input} \"BAZ\"")
-        query = @instance.to_activerecord_query(MockUser.all)
-
-        # Run a count just to prove the result is at least of valid syntax and
-        # check the SQL against expectations.
-        #
-        expect { query.count }.to_not raise_error
-        expect(query.to_sql).to eql(expected_output)
-      end
-    end
-
-    it 'generates expected SQL with unary operators' do
-      expected_mapping = {
-        'pr' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("mock_users"."last_name" != '' AND "mock_users"."last_name" IS NOT NULL)},
-      }
-
-      # Self-check: Is test coverage up to date?
-      #
-      expect(Scimitar::Lists::QueryParser::UNARY_OPERATORS.to_a - expected_mapping.keys.map(&:downcase)).to be_empty
-
-      expected_mapping.each do | input, expected_output |
-        @instance.parse("name.familyName #{input}")
-        query = @instance.to_activerecord_query(MockUser.all)
-
-        # Run a count just to prove the result is at least of valid syntax and
-        # check the SQL against expectations.
-        #
-        expect { query.count }.to_not raise_error
-        expect(query.to_sql).to eql(expected_output)
-      end
+      @instance.to_activerecord_query(MockUser.all)
     end
 
     # Technically tests #parse :-) but I hit this when writing the test that
@@ -667,5 +625,139 @@ RSpec.describe Scimitar::Lists::QueryParser do
         expect(@instance.send(:activerecord_parameter, 'BA"Z"' )).to eql('BA"Z"')
       end
     end # "context '#parameter' do"
+
+    # =========================================================================
+    # Low level queries
+    # =========================================================================
+
+    context '#apply_scim_filter' do
+
+      # Use 'let' to define :binary_expectations and :unary_operators, mapping
+      # lower case SCIM operators to expected SQL output assuming a base scope
+      # of "MockUser.all".
+      #
+      shared_examples 'generates expected query data' do | is_case_sensitive: |
+        it 'with binary operators' do
+
+          # Self-check: Is test coverage up to date?
+          #
+          expect(Scimitar::Lists::QueryParser::BINARY_OPERATORS.to_a - binary_expectations().keys).to match_array(['and', 'or'])
+
+          binary_expectations().each do | input, expected_output |
+            query = @instance.send(
+              :apply_scim_filter,
+
+              base_scope:     MockUser.all,
+              scim_attribute: 'name.familyName',
+              scim_operator:  input,
+              scim_parameter: '"BAZ"',
+              case_sensitive: is_case_sensitive
+            )
+
+            # Run a count just to prove the result is at least of valid syntax and
+            # check the SQL against expectations.
+            #
+            expect { query.count }.to_not raise_error
+            expect(query.to_sql).to eql(expected_output)
+          end
+        end
+
+        it 'with unary operators' do
+
+          # Self-check: Is test coverage up to date?
+          #
+          expect(Scimitar::Lists::QueryParser::UNARY_OPERATORS.to_a - unary_expectations().keys).to be_empty
+
+          unary_expectations().each do | input, expected_output |
+            query = @instance.send(
+              :apply_scim_filter,
+
+              base_scope:     MockUser.all,
+              scim_attribute: 'name.familyName',
+              scim_operator:  input,
+              scim_parameter: nil,
+              case_sensitive: is_case_sensitive
+            )
+
+            # Run a count just to prove the result is at least of valid syntax and
+            # check the SQL against expectations.
+            #
+            expect { query.count }.to_not raise_error
+            expect(query.to_sql).to eql(expected_output)
+          end
+        end
+      end # "shared_examples 'generates expected query data' do"
+
+      context 'case sensitive' do
+        let(:binary_expectations) {{
+          'eq' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" = 'BAZ'},
+          'ne' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" != 'BAZ'},
+          'gt' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" > 'BAZ'},
+          'ge' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" >= 'BAZ'},
+          'lt' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" < 'BAZ'},
+          'le' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" <= 'BAZ'},
+          'co' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" LIKE '%BAZ%'},
+          'sw' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" LIKE 'BAZ%'},
+          'ew' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" LIKE '%BAZ'},
+        }}
+
+        let(:unary_expectations) {{
+          'pr' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("mock_users"."last_name" != '' AND "mock_users"."last_name" IS NOT NULL)},
+        }}
+
+        include_examples 'generates expected query data', is_case_sensitive: true
+      end #  "context 'case sensitive' do"
+
+      context 'case insensitive' do
+        let(:binary_expectations) {{
+          'eq' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE 'BAZ'},
+          'ne' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" NOT ILIKE 'BAZ'},
+          'gt' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" > 'BAZ'},
+          'ge' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" >= 'BAZ'},
+          'lt' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" < 'BAZ'},
+          'le' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" <= 'BAZ'},
+          'co' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE '%BAZ%'},
+          'sw' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE 'BAZ%'},
+          'ew' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE '%BAZ'},
+        }}
+
+        let(:unary_expectations) {{
+          'pr' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("mock_users"."last_name" != '' AND "mock_users"."last_name" IS NOT NULL)},
+        }}
+
+        include_examples 'generates expected query data', is_case_sensitive: false
+      end # "context 'case insensitive' do"
+
+      context 'error handling' do
+        it 'raises Scimitar::FilterError for unsupported operators' do
+          expect {
+            query = @instance.send(
+              :apply_scim_filter,
+
+              base_scope:     MockUser.all,
+              scim_attribute: 'name.familyName',
+              scim_operator:  'zz',
+              scim_parameter: '"BAZ"',
+              case_sensitive: false
+            )
+          }.to raise_error(Scimitar::FilterError)
+        end
+
+        it 'raises Scimitar::FilterError for unsupported columnsx' do
+          expect(@instance).to receive(:activerecord_columns).with('name.familyName').and_return(['non_existant_column_name'])
+          expect {
+            query = @instance.send(
+              :apply_scim_filter,
+
+              base_scope:     MockUser.all,
+              scim_attribute: 'name.familyName',
+              scim_operator:  'eq',
+              scim_parameter: '"BAZ"',
+              case_sensitive: false
+            )
+          }.to raise_error(Scimitar::FilterError)
+        end
+      end # "context 'error handling' do"
+    end # "context '#apply_scim_filter' do
   end # "context 'unit tests for internal methods' do"
 end # "RSpec.describe Scimitar::Lists::QueryParser do"
