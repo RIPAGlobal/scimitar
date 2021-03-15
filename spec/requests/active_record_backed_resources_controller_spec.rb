@@ -210,6 +210,21 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
       end
     end
 
+    it 'returns 409 for duplicates (by Rails validation)' do
+      expect_any_instance_of(MockUsersController).to receive(:create).once.and_call_original
+      expect {
+        post "/Users", params: {
+          format: :scim,
+          userName: '1' # Already exists
+        }
+      }.to_not change { MockUser.count }
+
+      expect(response.status).to eql(409)
+      result = JSON.parse(response.body)
+      expect(result['scimType']).to eql('uniqueness')
+      expect(result['detail']).to include('already been taken')
+    end
+
     it 'notes schema validation failures' do
       expect {
         post "/Users", params: {

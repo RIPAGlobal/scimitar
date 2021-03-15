@@ -26,7 +26,7 @@ class MockUser < ActiveRecord::Base
   # A test hook to force validation failures.
   #
   INVALID_USERNAME = 'invalid username'
-  validates :username, exclusion: { in: [INVALID_USERNAME] }
+  validates :username, uniqueness: true, exclusion: { in: [INVALID_USERNAME] }
 
   # ===========================================================================
   # SCIM MIXIN AND REQUIRED METHODS

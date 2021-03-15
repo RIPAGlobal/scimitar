@@ -65,14 +65,14 @@ RSpec.describe Scimitar::Schema::Attribute do
       expect(described_class.new(name: 'quantity', type: 'integer').valid?(123.3)).to be(false)
     end
 
-    it 'is valid if type is dateTime  and given value is an ISO8601 date time' do
+    it 'is valid if type is dateTime and given value is an ISO8601 date time' do
       expect(described_class.new(name: 'startDate', type: 'dateTime').valid?('2018-07-26T11:59:43-06:00')).to be(true)
     end
 
-    it 'is not valid if type is dateTime  and given value is a valid date but not in  ISO8601 format' do
+    it 'is not valid if type is dateTime and given value is a valid date but not in  ISO8601 format' do
       expect(described_class.new(name: 'startDate', type: 'dateTime').valid?('2018-07-26')).to be(false)
     end
-    it 'is not valid if type is dateTime  and given value is not a valid date' do
+    it 'is not valid if type is dateTime and given value is not a valid date' do
       expect(described_class.new(name: 'startDate', type: 'dateTime').valid?('gaga')).to be(false)
     end
   end

@@ -421,9 +421,9 @@ RSpec.describe Scimitar::Lists::QueryParser do
     end
 
     it 'operates correctly with a few hand-chosen basic queries' do
-      user_1 = MockUser.create(first_name: 'Jane', last_name: 'Doe')
-      user_2 = MockUser.create(first_name: 'John', last_name: 'Smithe')
-      user_3 = MockUser.create(                    last_name: 'Davis')
+      user_1 = MockUser.create(username: '1', first_name: 'Jane', last_name: 'Doe')
+      user_2 = MockUser.create(username: '2', first_name: 'John', last_name: 'Smithe')
+      user_3 = MockUser.create(username: '3',                     last_name: 'Davis')
 
       # Test the various "LIKE" wildcards
 
@@ -528,9 +528,9 @@ RSpec.describe Scimitar::Lists::QueryParser do
         end
 
         it 'finds expected items' do
-          user_1 = MockUser.create(first_name: 'Jane', last_name: 'Davis')
-          user_2 = MockUser.create(first_name: 'John', last_name: 'Doe')
-          user_3 = MockUser.create(                    last_name: 'Doe')
+          user_1 = MockUser.create(username: '1', first_name: 'Jane', last_name: 'Davis')
+          user_2 = MockUser.create(username: '2', first_name: 'John', last_name: 'Doe')
+          user_3 = MockUser.create(username: '3',                     last_name: 'Doe')
 
           @instance.parse('name.givenName pr AND name.familyName eq "Doe"')
           query = @instance.to_activerecord_query(MockUser.all)
@@ -549,9 +549,9 @@ RSpec.describe Scimitar::Lists::QueryParser do
         end
 
         it 'finds expected items' do
-          user_1 = MockUser.create(first_name: 'Jane', last_name: 'Davis')
-          user_2 = MockUser.create(                    last_name: 'Doe')
-          user_3 = MockUser.create(                    last_name: 'Smith')
+          user_1 = MockUser.create(username: '1', first_name: 'Jane', last_name: 'Davis')
+          user_2 = MockUser.create(username: '2',                     last_name: 'Doe')
+          user_3 = MockUser.create(username: '3',                     last_name: 'Smith')
 
           @instance.parse('name.givenName pr OR name.familyName eq "Doe"')
           query = @instance.to_activerecord_query(MockUser.all)
@@ -570,14 +570,14 @@ RSpec.describe Scimitar::Lists::QueryParser do
         end
 
         it 'finds expected items' do
-          user_1 = MockUser.create(first_name: 'Jane', last_name: 'Davis')   # Match
-          user_2 = MockUser.create(first_name: 'Jane', last_name: 'Smith')   # Match
-          user_3 = MockUser.create(first_name: 'Jane', last_name: 'Moreith') # Match
-          user_4 = MockUser.create(first_name: 'Jane', last_name: 'Doe')     # No last name match
-          user_5 = MockUser.create(first_name: 'Doe',  last_name: 'Smith')   # No first name match
-          user_6 = MockUser.create(first_name: 'Bill', last_name: 'Davis')   # No first name match
-          user_7 = MockUser.create(                    last_name: 'Davis')   # Missing first name
-          user_8 = MockUser.create(                    last_name: 'Smith')   # Missing first name
+          user_1 = MockUser.create(username: '1', first_name: 'Jane', last_name: 'Davis')   # Match
+          user_2 = MockUser.create(username: '2', first_name: 'Jane', last_name: 'Smith')   # Match
+          user_3 = MockUser.create(username: '3', first_name: 'Jane', last_name: 'Moreith') # Match
+          user_4 = MockUser.create(username: '4', first_name: 'Jane', last_name: 'Doe')     # No last name match
+          user_5 = MockUser.create(username: '5', first_name: 'Doe',  last_name: 'Smith')   # No first name match
+          user_6 = MockUser.create(username: '6', first_name: 'Bill', last_name: 'Davis')   # No first name match
+          user_7 = MockUser.create(username: '7',                     last_name: 'Davis')   # Missing first name
+          user_8 = MockUser.create(username: '8',                     last_name: 'Smith')   # Missing first name
 
           @instance.parse('name.givenName eq "Jane" and (name.familyName co "avi" or name.familyName ew "ith")')
           query = @instance.to_activerecord_query(MockUser.all)

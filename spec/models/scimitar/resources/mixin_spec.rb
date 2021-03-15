@@ -394,9 +394,9 @@ RSpec.describe Scimitar::Resources::Mixin do
         it 'honouring read-write lists' do
           g1 = MockGroup.create!(display_name: 'Nested group')
 
-          u1 = MockUser.create!(first_name: 'Member 1')
-          u2 = MockUser.create!(first_name: 'Member 2')
-          u3 = MockUser.create!(first_name: 'Member 3')
+          u1 = MockUser.create!(username: '1', first_name: 'Member 1')
+          u2 = MockUser.create!(username: '2', first_name: 'Member 2')
+          u3 = MockUser.create!(username: '3', first_name: 'Member 3')
 
           hash = {
             'displayName' => 'Foo Group',

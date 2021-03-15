@@ -153,8 +153,27 @@ module Scimitar
       #
       def save!(record)
         record.save!
+
       rescue ActiveRecord::RecordInvalid => exception
-        raise Scimitar::ResourceInvalidError.new(record.errors.full_messages.join('; '))
+        joined_errors = record.errors.full_messages.join('; ')
+
+        # https://tools.ietf.org/html/rfc7644#page-12
+        #
+        #   If the service provider determines that the creation of the requested
+        #   resource conflicts with existing resources (e.g., a "User" resource
+        #   with a duplicate "userName"), the service provider MUST return HTTP
+        #   status code 409 (Conflict) with a "scimType" error code of
+        #   "uniqueness"
+        #
+        if record.errors.any? { | e | e.type == :taken }
+          raise Scimitar::ErrorResponse.new(
+            status:   409,
+            scimType: 'uniqueness',
+            detail:   joined_errors
+          )
+        else
+          raise Scimitar::ResourceInvalidError.new(joined_errors)
+        end
       end
 
   end
