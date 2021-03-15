@@ -59,20 +59,6 @@ module Scimitar
       #
       BINARY_OPERATORS = Set.new(OPERATORS.keys.reject { |op| UNARY_OPERATORS.include?(op) }).freeze
 
-      # Map SCIM operators to generic(ish) SQL operators.
-      #
-      SQL_COMPARISON_OPERATORS = {
-        'eq' => '=',
-        'ne' => '!=',
-        'gt' => '>',
-        'ge' => '>=',
-        'lt' => '<',
-        'le' => '<=',
-        'co' => 'LIKE',
-        'sw' => 'LIKE',
-        'ew' => 'LIKE'
-      }.freeze
-
       # =======================================================================
       # Tokenizing expressions
       # =======================================================================
@@ -597,14 +583,11 @@ module Scimitar
         # +case_sensitive+:: Default is +false+; see notes below on +true+.
         #
         # Case sensitivity in databases is tricky. If you wanted case sensitive
-        # behaviour then it might need configuration in your engine; qe
-
-
-
-
-         with any LIKE query changed to
-        #                    ILIKE (but ranged / greater-or-less-than style
-        #                    filters are always performed case-exact).
+        # behaviour then it might need configuration in your engine. Internally
+        # Scimitar uses AREL operations to try and get appropriate behaviour so
+        # if your database adapter is doing the right thing there should be the
+        # right outcome - even so, check your database adapter documentation to
+        # be sure.
         #
         def apply_scim_filter(
           base_scope:,
@@ -613,90 +596,51 @@ module Scimitar
           scim_parameter:,
           case_sensitive: false
         )
-          query        = base_scope
-          column_names = self.activerecord_columns(scim_attribute)
-          safe_value   = self.sql_modified_value(scim_operator, self.activerecord_parameter(scim_parameter))
+          scim_operator  = scim_operator.downcase
+          query          = base_scope
+          arel_table     = base_scope.model.arel_table
+          column_names   = self.activerecord_columns(scim_attribute)
+          value          = self.activerecord_parameter(scim_parameter)
+          value_for_like = self.sql_modified_value(scim_operator, value)
 
-          if safe_value.nil? # Presence ("pr") assumed
-            column_names.each.with_index do | column_name, index |
-              if index == 0
-                query = base_scope.where.not(column_name => ['', nil])
+          unsupported = column_names.any? { | column_name | arel_table[column_name].nil? }
+          raise Scimitar::FilterError if unsupported
+
+          column_names.each.with_index do | column_name, index |
+            arel_column    = arel_table[column_name]
+            arel_operation = case scim_operator
+              when 'eq'
+                if case_sensitive
+                  arel_column.eq(value)
+                else
+                  arel_column.matches(value_for_like, nil, false) # false -> case insensitive
+                end
+              when 'ne'
+                if case_sensitive
+                  arel_column.not_eq(value)
+                else
+                  arel_column.does_not_match(value_for_like, nil, false) # false -> case insensitive
+                end
+              when 'gt'
+                arel_column.gt(value)
+              when 'ge'
+                arel_column.gteq(value)
+              when 'lt'
+                arel_column.lt(value)
+              when 'le'
+                arel_column.lteq(value)
+              when 'co', 'sw', 'ew'
+                arel_column.matches(value_for_like, nil, case_sensitive)
+              when 'pr'
+                arel_table.grouping(arel_column.not_eq_all(['', nil]))
               else
-                query = query.or(base_scope.where.not(column_name => ['', nil]))
-              end
+                raise Scimitar::FilterError
             end
-          else
-            sql_operator = self.activerecord_operator(scim_operator)
 
-            unless sql_operator.nil?
-              arel_table = base_scope.model.arel_table[column_name.to_sym]
-
-              column_names.each.with_index do | column_name, index |
-                column = table[arel_table]
-
-                unless column.nil?
-                  arel_operation = if case_sensitive
-                    case sql_operator
-                      when '='
-                        arel_table.eq(safe_value)
-                      when '!='
-                        arel_table.not_eq(safe_value)
-                      when '>'
-                        arel_table.gt(safe_value)
-                      when '>='
-                        arel_table.gteq(safe_value)
-                      when '<'
-                        arel_table.lt(safe_value)
-                      when '<='
-                        arel_table.lteq(safe_value)
-                      when 'LIKE'
-                        arel_table.matches(safe_value, nil, true) # true -> case sensitive
-                      else
-                    end
-                  else # Case insensitive
-                    case sql_operator
-                      when '='
-                        arel_table.matches(safe_value, nil, false) # false -> case insensitive
-                      when '!='
-                        arel_table.does_not_match(safe_value, nil, false) # false -> case insensitive
-                      when '>'
-                      when '>='
-                      when '<'
-                      when '<='
-                      when 'LIKE'
-                        arel_table.matches(safe_value, nil, false) # false -> case insensitive
-                      else
-                    end
-                  end
-
-
-
-                end
-
-
+            if index == 0
               query = base_scope.where(arel_operation)
-
-
-              column_names.each.with_index do | column_name, index |
-                where_args = if sql_operator.include?('LIKE') || ((sql_operator == '=' || sql_operator == '!=') && case_sensitive == false)
-                  if sql_operator == '!=' || sql_operator.include?('NOT')
-                    [base_scope.model.arel_table[column_name.to_sym].does_not_match(safe_value)]
-                  else
-                    [base_scope.model.arel_table[column_name.to_sym].matches(safe_value)]
-                  end
-                else
-                  safe_column_name = ActiveRecord::Base.connection.quote_column_name(column_name)
-                  ["#{safe_column_name} #{sql_operator} ?", safe_value]
-                end
-
-                if index == 0
-                  query = base_scope.where(*where_args)
-                else
-                  query = query.or(base_scope.where(*where_args))
-                end
-              end
             else
-              raise Scimitar::FilterError
+              query = query.or(base_scope.where(arel_operation))
             end
           end
 
@@ -729,24 +673,6 @@ module Scimitar
           end
         end
 
-        # Returns an SQL operator equivalent to that given in a filter string.
-        #
-        # Raises Scimitar::FilterError if the filter cannot be handled. A quite
-        # likely case is for "pr" (presence), which has no simple generic (ish)
-        # SQL equivalent. Note that "LIKE" is returned for some comparison
-        # operations and "NOT LIKE" for 'ne'. Note that these will require
-        # transformation for case sensitivity depending on whether the database
-        # engine at hand is case-sensitive or case-insensitive by default.
-        #
-        # +scim_operator+:: SCIM operator from a filter string.
-        #
-        def activerecord_operator(scim_operator)
-          mapped_operator = self.sql_comparison_operator(scim_operator)
-
-          raise Scimitar::FilterError if mapped_operator.blank?
-          return mapped_operator
-        end
-
         # Return the parameter that you're looking for, from a filter string.
         # This might be blank, e.g. for "pr" (presence), but is never +nil+. Use
         # this to construct your storage-system-specific search string but be
@@ -767,41 +693,26 @@ module Scimitar
           end
         end
 
-        # https://tools.ietf.org/html/rfc7644#section-3.4.2.2
+        # Pass a SCIM operation and a value from e.g. #activerecord_parameter.
+        # Returns a safe-for-"LIKE" string with potential internal wildcards
+        # escaped, along with actual wildcards added for "co" (contains), "sw"
+        # (starts with) or "ew" (ends with) operators.
         #
-        # Translates a SCIM test operator into a generic (ish, given "LIKE" is
-        # included here) SQL operator. Returns it.
+        # Escapes values for "eq" and "ne" operations on assumption of a LIKE
+        # style query by the caller - the caller should use the modified value
+        # only if that is indeed their intended use case. If just using e.g.
+        # SQL "=" or "!=", use the #activerecord_parameter (or other original
+        # 'raw' value) instead.
         #
-        # If there's no equivalent in generic SQL, returns +nil+.
+        # For other operators, just returns the given value directly.
         #
-        # +element+:: The SCIM operator. It can be upper/lower/mixed case. For
-        #             example - "gE" (greater than or equal to). Returns +nil+
-        #             if given +nil+.
+        # +scim_operator+:: The SCIM operator, lower case.
+        # +value+::         Parameter (value) to potentially escape or modify.
         #
-        def sql_comparison_operator(element)
-          SQL_COMPARISON_OPERATORS[element&.downcase]
-        end
+        def sql_modified_value(scim_operator, value)
+          safe_for_LIKE_value  = ActiveRecord::Base.sanitize_sql_like(value) if value.present?
 
-        # Takes a parameter value from a SCIM filter string and the filter
-        # operation (e.g. "ge", greater than or equal to). Translates the value
-        # into a "safe for LIKE expressions" value that might include wildcards
-        # or, for "presence", will be returned as +nil+ - note, not blank, as
-        # would be returned by #parameter.
-        #
-        # +element+:: The SCIM operator. It can be upper/lower/mixed case. For
-        #             example - "gE" (greater than or equal to). See also e.g.
-        #             #scim_operator.
-        #
-        # +value+::   Parameter to translate. Might be returned as-is, or have
-        #             special characters escaped and wildcards added; or even
-        #             be ignored for "pr" (presence) checks. This should be
-        #             run through SCIM translation prior (if any is needed) by
-        #             obtaining the value through #parameter.
-        #
-        def sql_modified_value(element, value)
-          safe_for_LIKE_value  = ActiveRecord::Base.sanitize_sql_like(value)
-
-          case element&.downcase
+          case scim_operator
             when 'eq', 'ne'
               safe_for_LIKE_value
             when 'co'
@@ -810,8 +721,6 @@ module Scimitar
               "#{safe_for_LIKE_value}%"
             when 'ew'
               "%#{safe_for_LIKE_value}"
-            when 'pr'
-              nil
             else
               value
           end

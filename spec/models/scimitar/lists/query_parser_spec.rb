@@ -362,7 +362,7 @@ RSpec.describe Scimitar::Lists::QueryParser do
   # ===========================================================================
 
   context '#to_activerecord_query' do
-    it 'generates expected SQL' do
+    it 'generates expected SQL with binary operators' do
 
       # Hand-written instead of using a constant, so we check one set of hand
       # drawn mappings against another and hopefully increase the chances of
@@ -376,10 +376,10 @@ RSpec.describe Scimitar::Lists::QueryParser do
       expected_mapping = {
         'eQ' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE 'BAZ'},
         'Ne' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" NOT ILIKE 'BAZ'},
-        'GT' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" > 'BAZ')},
-        'ge' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" >= 'BAZ')},
-        'LT' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" < 'BAZ')},
-        'Le' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" <= 'BAZ')},
+        'GT' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" > 'BAZ'},
+        'ge' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" >= 'BAZ'},
+        'LT' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" < 'BAZ'},
+        'Le' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" <= 'BAZ'},
         'cO' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE '%BAZ%'},
         'sw' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE 'BAZ%'},
         'eW' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE '%BAZ'},
@@ -387,7 +387,7 @@ RSpec.describe Scimitar::Lists::QueryParser do
 
       # Self-check: Is test coverage up to date?
       #
-      expect(expected_mapping.keys.map(&:downcase)).to match_array(Scimitar::Lists::QueryParser::SQL_COMPARISON_OPERATORS.keys)
+      expect(Scimitar::Lists::QueryParser::BINARY_OPERATORS.to_a - expected_mapping.keys.map(&:downcase)).to match_array(['and', 'or'])
 
       expected_mapping.each do | input, expected_output |
         @instance.parse("name.familyName #{input} \"BAZ\"")
@@ -401,14 +401,25 @@ RSpec.describe Scimitar::Lists::QueryParser do
       end
     end
 
-    it 'handles "pr" (presence) checks' do
-      @instance.parse("name.familyName Pr")
-      query = @instance.to_activerecord_query(MockUser.all)
+    it 'generates expected SQL with unary operators' do
+      expected_mapping = {
+        'pr' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("mock_users"."last_name" != '' AND "mock_users"."last_name" IS NOT NULL)},
+      }
 
-      # NB ActiveRecord SQL quirk leads to double parentheses after the WHERE
-      # NOT clause; this is harmless.
+      # Self-check: Is test coverage up to date?
       #
-      expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE NOT (("mock_users"."last_name" = '' OR "mock_users"."last_name" IS NULL))})
+      expect(Scimitar::Lists::QueryParser::UNARY_OPERATORS.to_a - expected_mapping.keys.map(&:downcase)).to be_empty
+
+      expected_mapping.each do | input, expected_output |
+        @instance.parse("name.familyName #{input}")
+        query = @instance.to_activerecord_query(MockUser.all)
+
+        # Run a count just to prove the result is at least of valid syntax and
+        # check the SQL against expectations.
+        #
+        expect { query.count }.to_not raise_error
+        expect(query.to_sql).to eql(expected_output)
+      end
     end
 
     # Technically tests #parse :-) but I hit this when writing the test that
@@ -491,14 +502,14 @@ RSpec.describe Scimitar::Lists::QueryParser do
           @instance.parse('emails pr')
           query = @instance.to_activerecord_query(MockUser.all)
 
-          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE (NOT (("mock_users"."work_email_address" = '' OR "mock_users"."work_email_address" IS NULL)) OR NOT (("mock_users"."home_email_address" = '' OR "mock_users"."home_email_address" IS NULL)))})
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE (("mock_users"."work_email_address" != '' AND "mock_users"."work_email_address" IS NOT NULL) OR ("mock_users"."home_email_address" != '' AND "mock_users"."home_email_address" IS NOT NULL))})
         end
 
         it 'works with other query elements using correct precedence' do
           @instance.parse('name.familyName eq "John" and emails pr')
           query = @instance.to_activerecord_query(MockUser.all)
 
-          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE 'John' AND (NOT (("mock_users"."work_email_address" = '' OR "mock_users"."work_email_address" IS NULL)) OR NOT (("mock_users"."home_email_address" = '' OR "mock_users"."home_email_address" IS NULL)))})
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE 'John' AND (("mock_users"."work_email_address" != '' AND "mock_users"."work_email_address" IS NOT NULL) OR ("mock_users"."home_email_address" != '' AND "mock_users"."home_email_address" IS NOT NULL))})
         end
       end # "context 'with unary operators' do
     end # "context 'when mapped to multiple columns' do"
@@ -512,24 +523,13 @@ RSpec.describe Scimitar::Lists::QueryParser do
       end
     end # "context 'when instructed to ignore an attribute' do"
 
-    context 'internal self-check filed under "should never happen" - with an unrecognised operator *after* parsing' do
-      it 'raises a filter error' do
-        @instance.parse('emails.type eq "work"')
-
-        expect {
-          expect(@instance).to receive(:activerecord_operator).and_return(nil)
-          @instance.to_activerecord_query(MockUser.all)
-        }.to raise_error(Scimitar::FilterError)
-      end
-    end
-
     context 'with complex cases' do
       context 'using AND' do
         it 'generates expected SQL' do
           @instance.parse('name.givenName pr AND name.familyName ne "Doe"')
           query = @instance.to_activerecord_query(MockUser.all)
 
-          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE NOT (("mock_users"."first_name" = '' OR "mock_users"."first_name" IS NULL)) AND "mock_users"."last_name" NOT ILIKE 'Doe'})
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE ("mock_users"."first_name" != '' AND "mock_users"."first_name" IS NOT NULL) AND "mock_users"."last_name" NOT ILIKE 'Doe'})
         end
 
         it 'finds expected items' do
@@ -550,7 +550,7 @@ RSpec.describe Scimitar::Lists::QueryParser do
           @instance.parse('name.givenName pr OR name.familyName eq "Doe"')
           query = @instance.to_activerecord_query(MockUser.all)
 
-          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE (NOT (("mock_users"."first_name" = '' OR "mock_users"."first_name" IS NULL)) OR "mock_users"."last_name" ILIKE 'Doe')})
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE (("mock_users"."first_name" != '' AND "mock_users"."first_name" IS NOT NULL) OR "mock_users"."last_name" ILIKE 'Doe')})
         end
 
         it 'finds expected items' do
@@ -645,54 +645,6 @@ RSpec.describe Scimitar::Lists::QueryParser do
         expect { local_instance.send(:activerecord_columns, 'name.givenName' ) }.to raise_error(RuntimeError)
       end
     end # "context '#activerecord_columns' do"
-
-    # =========================================================================
-    # Operators
-    # =========================================================================
-
-    context '#activerecord_operator' do
-      it 'complains if there is no operator present' do
-        expect { @instance.send(:activerecord_operator, nil) }.to raise_error(Scimitar::FilterError)
-        expect { @instance.send(:activerecord_operator, '' ) }.to raise_error(Scimitar::FilterError)
-      end
-
-      it 'complains if the operator is unrecognised' do
-        @instance = described_class.new(MockUser.new.scim_queryable_attributes())
-
-        expect { @instance.send(:activerecord_operator, 'zz') }.to raise_error(Scimitar::FilterError)
-      end
-
-      it 'returns expected operators' do
-
-        # Hand-written instead of using a constant, so we check one set of hand
-        # drawn mappings against another and hopefully increase the chances of
-        # spotting an error.
-        #
-        expected_mapping = {
-          'eq' => 'LIKE',
-          'ne' => 'NOT LIKE',
-          'gt' => '>',
-          'ge' => '>=',
-          'lt' => '<',
-          'le' => '<=',
-          'co' => 'LIKE',
-          'sw' => 'LIKE',
-          'ew' => 'LIKE'
-        }
-
-        # Self-check: Is test coverage up to date?
-        #
-        expect(expected_mapping.keys).to match_array(Scimitar::Lists::QueryParser::SQL_COMPARISON_OPERATORS.keys)
-
-        expected_mapping.each do | input, expected_output |
-          expect(@instance.send(:activerecord_operator, input)).to eql(expected_output)
-        end
-      end
-
-      it 'is case insensitive' do
-        expect(@instance.send(:activerecord_operator, 'eQ')).to eql('LIKE')
-      end
-    end # "context '#activerecord_operator' do"
 
     # =========================================================================
     # Parameters
