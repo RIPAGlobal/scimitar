@@ -17,12 +17,10 @@ Scimitar.service_provider_configuration = Scimitar::ServiceProviderConfiguration
   # See https://tools.ietf.org/html/rfc7643#section-8.5 for properties.
   #
   # See Gem source file 'app/models/scimitar/service_provider_configuration.rb'
-  # for defaults.
+  # for defaults. Define Hash keys here that override defaults; e.g. to declare
+  # that filters are not supported so that calling clients shouldn't use them:
   #
-  # Define Hash keys here that override defaults; e.g. if you wanted to disable
-  # "bulk" support you'd add:
-  #
-  #   bulk: Scimitar::Supported.unsupported
+  #   filter: Scimitar::Supported.unsupported
 
 })
 

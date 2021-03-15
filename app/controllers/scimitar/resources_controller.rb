@@ -77,10 +77,6 @@ module Scimitar
     # Evaluate to the SCIM representation of the arising created record.
     #
     def create(&block)
-      if self.safe_params()[:id].present?
-        raise ErrorResponse.new(status: 400, detail: '"id" is not a valid parameter for POST')
-      end
-
       with_scim_resource() do |resource|
         render(json: yield(resource, :create), status: :created)
       end
@@ -158,7 +154,7 @@ module Scimitar
       def scim_pagination_info(total_count = nil)
         ::Scimitar::Lists::Count.new(
           start_index: params[:startIndex],
-          limit:       params[:count],
+          limit:       params[:count] || Scimitar.service_provider_configuration(location: nil).filter.maxResults,
           total:       total_count
         )
       end

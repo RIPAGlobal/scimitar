@@ -12,4 +12,12 @@ Rails.application.routes.draw do
   put    'Users/:id', to: 'mock_users#replace'
   patch  'Users/:id', to: 'mock_users#update'
   delete 'Users/:id', to: 'mock_users#destroy'
+
+  # For testing blocks passed to ActiveRecordBackedResourcesController#destroy
+  #
+  delete 'CustomDestroyUsers/:id', to: 'custom_destroy_mock_users#destroy'
+
+  # For testing environment inside Scimitar::ApplicationController subclasses.
+  #
+  get 'CustomRequestVerifiers', to: 'custom_request_verifiers#index'
 end

@@ -2,7 +2,7 @@ module Scimitar
   class Engine < ::Rails::Engine
     isolate_namespace Scimitar
 
-    Mime::Type.register "application/scim+json",:scim
+    Mime::Type.register 'application/scim+json', :scim
 
     ActionDispatch::Request.parameter_parsers[Mime::Type.lookup('application/scim+json').symbol] = lambda do |body|
       JSON.parse(body)
@@ -31,6 +31,13 @@ module Scimitar
     #
     def self.add_custom_resource(resource)
       custom_resources << resource
+    end
+
+    # Resets the resource list to default. This is really only intended for use
+    # during testing, to avoid one test polluting another.
+    #
+    def self.reset_custom_resources
+      @custom_resources = self.default_resources()
     end
 
     # Returns the list of custom resources, if any.

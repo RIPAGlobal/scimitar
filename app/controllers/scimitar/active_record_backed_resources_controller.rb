@@ -35,6 +35,7 @@ module Scimitar
       end
 
       pagination_info = scim_pagination_info(query.count())
+
       page_of_results = query
         .offset(pagination_info.offset)
         .limit(pagination_info.limit)
@@ -95,10 +96,25 @@ module Scimitar
 
     # DELETE (remove)
     #
-    def destroy
+    # Deletion methods can vary quite a lot with ActiveRecord objects. If you
+    # just let this superclass handle things, it'll call:
+    #
+    #   https://api.rubyonrails.org/classes/ActiveRecord/Persistence.html#method-i-destroy-21
+    #
+    # ...i.e. the standard delete-record-with-callbacks method. If you pass
+    # a block, then this block is invoked and passed the ActiveRecord model
+    # instance to be destroyed. You can then do things like soft-deletions,
+    # updating an "active" flag, perform audit-related operations and so-on.
+    #
+    def destroy(&block)
       super do |record_id|
         record = self.find_record(record_id)
-        record.update_column(:is_active, false)
+
+        if block_given?
+          yield(record)
+        else
+          record.destroy!
+        end
       end
     end
 

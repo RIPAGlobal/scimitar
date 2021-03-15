@@ -16,11 +16,16 @@ module Scimitar
     def initialize(attributes = {})
       defaults = {
         bulk:           Supportable.unsupported,
-        patch:          Supportable.unsupported,
-        filter:         Supportable.unsupported,
         changePassword: Supportable.unsupported,
         sort:           Supportable.unsupported,
         etag:           Supportable.unsupported,
+
+        patch: Supportable.supported,
+
+        filter: Scimitar::Filter.new(
+          supported:  true,
+          maxResults: Scimitar::Filter::MAX_RESULTS_DEFAULT
+        ),
 
         schemas: ["urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"],
 

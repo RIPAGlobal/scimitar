@@ -54,6 +54,11 @@ RSpec.describe Scimitar::Lists::Count do
       expect(@instance.start_index).to eql(1)
     end
 
+    it 'accepts input integers' do
+      @instance.start_index = 12
+      expect(@instance.start_index).to eql(12)
+    end
+
     it 'converts input strings to integers' do
       @instance.start_index = '12'
       expect(@instance.start_index).to eql(12)
@@ -95,7 +100,12 @@ RSpec.describe Scimitar::Lists::Count do
       expect(@instance.offset).to eql(0)
     end
 
-    it 'returns the #start_index minus one' do
+    it 'returns the #start_index minus one (set by integer)' do
+      @instance.start_index = 12
+      expect(@instance.offset).to eql(11)
+    end
+
+    it 'returns the #start_index minus one by (set by string)' do
       @instance.start_index = '12'
       expect(@instance.offset).to eql(11)
     end

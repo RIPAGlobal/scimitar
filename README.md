@@ -393,6 +393,8 @@ Often, you'll find that bearer tokens are in use by SCIM API consumers, but the 
 
 ### Omissions
 
+* Bulk operations are not supported.
+
 * List ("index") endpoint [filters in SCIM](https://tools.ietf.org/html/rfc7644#section-3.4.2.2) are _extremely_ complicated. There is a syntax for specifying equals, not-equals, precedence through parentheses and things like "and"/"or"/"not" along the lines of "attribute operator value", which Scimitar supports to a reasonably comprehensive degree but with some limitations discussed shortly. That aside, it isn't at all clear what some of the [examples in the RFC](https://tools.ietf.org/html/rfc7644#page-23) are even meant to mean. Consider:
 
   - `filter=userType eq "Employee" and (emails co "example.com" or emails.value co "example.org")`

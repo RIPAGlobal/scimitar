@@ -14,7 +14,8 @@ RSpec.describe Scimitar::ServiceProviderConfigurationsController do
       get :show, params: { id: 'fake', format: :scim }
 
       expect(response).to be_ok
-      expect(JSON.parse(response.body)).to include('patch' => {'supported' => false})
+      expect(JSON.parse(response.body)).to include('patch' => {'supported' => true})
+      expect(JSON.parse(response.body)).to include('filter' => {'maxResults' => Scimitar::Filter::MAX_RESULTS_DEFAULT, 'supported' => true})
     end
   end
 

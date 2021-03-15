@@ -445,8 +445,6 @@ module Scimitar
         # wrapping opening paren should not be repeated).
         #
         def apply_attribute_prefix(attribute_prefix, component)
-          return component if attribute_prefix.nil?
-
           if attribute_prefix.nil?
             component
           else
@@ -488,7 +486,7 @@ module Scimitar
         # =====================================================================
 
         def parse_error(msg)
-          raise Scimitar::FilterError("#{sprintf(msg, *@tokens, 'EOS')}.\nInput: '#{@input}'\n")
+          raise Scimitar::FilterError.new("#{sprintf(msg, *@tokens, 'EOS')}.\nInput: '#{@input}'\n")
         end
 
         def assert_op
@@ -609,9 +607,9 @@ module Scimitar
           if safe_value.nil? # Presence ("pr") assumed
             column_names.each.with_index do | column_name, index |
               if index == 0
-                query = base_scope.where.not(column_names.shift() => ['', nil])
+                query = base_scope.where.not(column_name => ['', nil])
               else
-                query = query.or(base_scope.where.not(column_names.shift() => ['', nil]))
+                query = query.or(base_scope.where.not(column_name => ['', nil]))
               end
             end
           else

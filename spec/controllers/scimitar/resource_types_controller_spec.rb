@@ -17,24 +17,32 @@ RSpec.describe Scimitar::ResourceTypesController do
       expect(response_hash).to eql(JSON.parse(expected_response))
     end
 
-    it 'renders custom resource types' do
-      custom_resource = Class.new(Scimitar::Resources::Base) do
-        set_schema Scimitar::Schema::User
-
-        def self.endpoint
-          "/Gaga"
-        end
-
-        def self.resource_type_id
-          'Gaga'
-        end
+    context 'with custom resource types' do
+      around :each do | example |
+        example.run()
+      ensure
+        Scimitar::Engine.reset_custom_resources
       end
 
-      allow(Scimitar::Engine).to receive(:custom_resources) {[ custom_resource ]}
+      it 'renders them' do
+        custom_resource = Class.new(Scimitar::Resources::Base) do
+          set_schema Scimitar::Schema::User
 
-      get :index, params: { format: :scim }
-      response_hash = JSON.parse(response.body)
-      expect(response_hash.size).to eql(3)
+          def self.endpoint
+            "/Gaga"
+          end
+
+          def self.resource_type_id
+            'Gaga'
+          end
+        end
+
+        Scimitar::Engine.add_custom_resource(custom_resource)
+
+        get :index, params: { format: :scim }
+        response_hash = JSON.parse(response.body)
+        expect(response_hash.size).to eql(3)
+      end
     end
   end
 

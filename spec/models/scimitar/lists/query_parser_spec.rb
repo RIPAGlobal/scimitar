@@ -242,6 +242,34 @@ RSpec.describe Scimitar::Lists::QueryParser do
       expect('emails').to eql(sub[2][1])
       expect('"example.org"').to eql(sub[2][2])
     end
+
+    context 'with errors' do
+      it 'unsupported operator' do
+        expect { @instance.parse('userName zz "Foo"') }.to raise_error(Scimitar::FilterError)
+      end
+
+      it 'misplaced operator' do
+        expect(@instance).to receive(:assert_not_op).twice.and_call_original
+        expect(@instance).to receive(:assert_op).once.and_call_original
+        expect { @instance.parse('userName eq pr') }.to raise_error(Scimitar::FilterError)
+      end
+
+      it 'missing logical operator' do
+        expect(@instance).to receive(:assert_op).twice.and_call_original
+        expect(@instance).to receive(:assert_not_op).once.and_call_original
+        expect { @instance.parse('userName pr userType eq "Foo"') }.to raise_error(Scimitar::FilterError)
+      end
+
+      it 'missing closing bracket' do
+        expect(@instance).to receive(:assert_close).once.and_call_original
+        expect { @instance.parse('userName pr and (userType eq "Foo"') }.to raise_error(Scimitar::FilterError)
+      end
+
+      it 'trailing junk' do
+        expect(@instance).to receive(:assert_eos).once.and_call_original
+        expect { @instance.parse('userName eq "Foo" )') }.to raise_error(Scimitar::FilterError)
+      end
+    end # "context 'with errors' do"
   end # "context 'basic parsing' do"
 
   # ===========================================================================
@@ -310,6 +338,20 @@ RSpec.describe Scimitar::Lists::QueryParser do
         expect(result).to eql('emails.type eq "work" and emails.value co "@example.com" or userType eq "Admin" or ims.type eq "xmpp" and ims.value co "@foo.com"')
       end
     end # "context 'when flattening is needed' do"
+
+    context 'with bad filters' do
+      it 'missing operator' do
+        expect { @instance.send(:flatten_filter, 'emails.type "work"') }.to raise_error(RuntimeError, 'Expected operator')
+      end
+
+      it 'unexpected closing "]"' do
+        expect { @instance.send(:flatten_filter, 'emails.type eq "work"]') }.to raise_error(RuntimeError, 'Unexpected closing "]"')
+      end
+
+      it 'logic operator is neither "and" nor "or"' do
+        expect { @instance.send(:flatten_filter, 'userName pr nand userType pr') }.to raise_error(RuntimeError, 'Expected "and" or "or"')
+      end
+    end
   end # "context '#flatten_filter (private)' do"
 
   # ===========================================================================
@@ -423,19 +465,37 @@ RSpec.describe Scimitar::Lists::QueryParser do
     end
 
     context 'when mapped to multiple columns' do
-      it 'reads across all using OR' do
-        @instance.parse('emails eq "any@test.com"')
-        query = @instance.to_activerecord_query(MockUser.all)
+      context 'with binary operators' do
+        it 'reads across all using OR' do
+          @instance.parse('emails eq "any@test.com"')
+          query = @instance.to_activerecord_query(MockUser.all)
 
-        expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE ("work_email_address" = 'any@test.com' OR "home_email_address" = 'any@test.com')})
-      end
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE ("work_email_address" = 'any@test.com' OR "home_email_address" = 'any@test.com')})
+        end
 
-      it 'works with other query elements using correct precedence' do
-        @instance.parse('name.familyName eq "John" and emails eq "any@test.com"')
-        query = @instance.to_activerecord_query(MockUser.all)
+        it 'works with other query elements using correct precedence' do
+          @instance.parse('name.familyName eq "John" and emails eq "any@test.com"')
+          query = @instance.to_activerecord_query(MockUser.all)
 
-        expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" = 'John') AND ("work_email_address" = 'any@test.com' OR "home_email_address" = 'any@test.com')})
-      end
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" = 'John') AND ("work_email_address" = 'any@test.com' OR "home_email_address" = 'any@test.com')})
+        end
+      end # "context 'with binary operators' do"
+
+      context 'with unary operators' do
+        it 'reads across all using OR' do
+          @instance.parse('emails pr')
+          query = @instance.to_activerecord_query(MockUser.all)
+
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE (NOT (("mock_users"."work_email_address" = '' OR "mock_users"."work_email_address" IS NULL)) OR NOT (("mock_users"."home_email_address" = '' OR "mock_users"."home_email_address" IS NULL)))})
+        end
+
+        it 'works with other query elements using correct precedence' do
+          @instance.parse('name.familyName eq "John" and emails pr')
+          query = @instance.to_activerecord_query(MockUser.all)
+
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" = 'John') AND (NOT (("mock_users"."work_email_address" = '' OR "mock_users"."work_email_address" IS NULL)) OR NOT (("mock_users"."home_email_address" = '' OR "mock_users"."home_email_address" IS NULL)))})
+        end
+      end # "context 'with unary operators' do
     end # "context 'when mapped to multiple columns' do"
 
     context 'when instructed to ignore an attribute' do
@@ -446,6 +506,17 @@ RSpec.describe Scimitar::Lists::QueryParser do
         expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users"})
       end
     end # "context 'when instructed to ignore an attribute' do"
+
+    context 'internal self-check filed under "should never happen" - with an unrecognised operator *after* parsing' do
+      it 'raises a filter error' do
+        @instance.parse('emails.type eq "work"')
+
+        expect {
+          expect(@instance).to receive(:activerecord_operator).and_return(nil)
+          @instance.to_activerecord_query(MockUser.all)
+        }.to raise_error(Scimitar::FilterError)
+      end
+    end
 
     context 'with complex cases' do
       context 'using AND' do
@@ -538,15 +609,6 @@ RSpec.describe Scimitar::Lists::QueryParser do
     # =========================================================================
 
     context '#activerecord_columns' do
-      it 'complains if there is no column present' do
-        expect { @instance.send(:activerecord_columns, nil) }.to raise_error(Scimitar::FilterError)
-        expect { @instance.send(:activerecord_columns, '' ) }.to raise_error(Scimitar::FilterError)
-      end
-
-      it 'complains if there is no column mapping available' do
-        expect { @instance.send(:activerecord_columns, 'externalId') }.to raise_error(Scimitar::FilterError)
-      end
-
       it 'returns a column in an array' do
         expect(@instance.send(:activerecord_columns, 'name.familyName')).to eql([:last_name])
       end
@@ -557,6 +619,25 @@ RSpec.describe Scimitar::Lists::QueryParser do
 
       it 'returns empty for "ignore"' do
         expect(@instance.send(:activerecord_columns, 'emails.type')).to be_empty
+      end
+
+      it 'complains if there is no column present' do
+        expect { @instance.send(:activerecord_columns, nil) }.to raise_error(Scimitar::FilterError)
+        expect { @instance.send(:activerecord_columns, '' ) }.to raise_error(Scimitar::FilterError)
+      end
+
+      it 'complains if there is no column mapping available' do
+        expect { @instance.send(:activerecord_columns, 'externalId') }.to raise_error(Scimitar::FilterError)
+      end
+
+      it 'complains about malformed declarations' do
+        local_instance = described_class.new(
+          {
+            'name.givenName' => { wut: true }
+          }
+        )
+
+        expect { local_instance.send(:activerecord_columns, 'name.givenName' ) }.to raise_error(RuntimeError)
       end
     end # "context '#activerecord_columns' do"
 

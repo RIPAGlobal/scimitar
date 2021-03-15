@@ -1,7 +1,6 @@
 require 'spec_helper'
 
 RSpec.describe Scimitar::ApplicationController do
-
   context 'basic authentication' do
     before do
       Scimitar.engine_configuration = Scimitar::EngineConfiguration.new(
@@ -25,6 +24,7 @@ RSpec.describe Scimitar::ApplicationController do
       get :index, params: { format: :scim }
       expect(response).to be_ok
       expect(JSON.parse(response.body)).to eql({ 'message' => 'cool, cool!' })
+      expect(response.headers['WWW_AUTHENTICATE']).to eql('Basic')
     end
 
     it 'renders failure with bad password' do
@@ -84,6 +84,7 @@ RSpec.describe Scimitar::ApplicationController do
       get :index, params: { format: :scim }
       expect(response).to be_ok
       expect(JSON.parse(response.body)).to eql({ 'message' => 'cool, cool!' })
+      expect(response.headers['WWW_AUTHENTICATE']).to eql('Bearer')
     end
 
     it 'renders failure with bad token' do
@@ -127,7 +128,7 @@ RSpec.describe Scimitar::ApplicationController do
       end
 
       it 'renders not authorized response if not authenticated' do
-        allow(controller).to receive(:authenticated?) { false }
+        allow(controller()).to receive(:authenticated?) { false }
         get :index, params: { format: :scim }
         expect(response).to have_http_status(:unauthorized)
         parsed_body = JSON.parse(response.body)
@@ -137,7 +138,7 @@ RSpec.describe Scimitar::ApplicationController do
       end
 
       it 'renders resource not found response when resource cannot be found for the given id' do
-        allow(controller).to receive(:index).and_raise(StandardError)
+        allow(controller()).to receive(:index).and_raise(StandardError)
         get :index, params: { id: 10, format: :scim }
         expect(response).to have_http_status(:not_found)
         parsed_body = JSON.parse(response.body)
@@ -146,14 +147,27 @@ RSpec.describe Scimitar::ApplicationController do
         expect(parsed_body).to include('status' => '404')
       end
     end
+  end
 
-    context 'require_scim' do
-      it 'renders not acceptable if the request does not use scim type' do
-        get :index
-        expect(response).to have_http_status(:not_acceptable)
-
-        expect(JSON.parse(response.body)['detail']).to eql('Only application/scim+json type is accepted.')
+  context 'error handling' do
+    controller do
+      def index
+        raise 'Bang'
       end
+
+      def authenticated?
+        true
+      end
+    end
+
+    it 'handles general exceptions automatically' do
+      get :index, params: { format: :scim }
+
+      expect(response).to have_http_status(:internal_server_error)
+      parsed_body = JSON.parse(response.body)
+      expect(parsed_body).to include('schemas' => ['urn:ietf:params:scim:api:messages:2.0:Error'])
+      expect(parsed_body).to include('status' => '500')
+      expect(parsed_body).to include('detail' => 'Bang')
     end
   end
 end

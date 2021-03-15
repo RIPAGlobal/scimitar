@@ -216,7 +216,7 @@ RSpec.describe Scimitar::Resources::Base do
       end
 
       def self.scim_attributes
-        [ Scimitar::Schema::Attribute.new(name: 'relationship', type: 'string') ]
+        [ Scimitar::Schema::Attribute.new(name: 'relationship', type: 'string', required: true) ]
       end
     end
 
@@ -257,6 +257,17 @@ RSpec.describe Scimitar::Resources::Base do
         expect(resource_type.meta.location).to eql('http://gaga')
         expect(resource_type.schemaExtensions.count).to eql(1)
       end
+
+      context 'validation' do
+        it 'validates into custom schema' do
+          resource = resource_class.new('extension-id' => {})
+          expect(resource.valid?).to eql(false)
+
+          resource = resource_class.new('extension-id' => {relationship: 'GAGA'})
+          expect(resource.relationship).to eql('GAGA')
+          expect(resource.valid?).to eql(true)
+        end
+      end # context 'validation'
     end # "context '.resource_type' do"
 
     context '.find_attribute' do

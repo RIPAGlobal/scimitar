@@ -20,10 +20,11 @@ module Scimitar
       # Raises exceptions if given non-numeric, zero or negative input.
       #
       def limit=(value)
+        value = value&.to_s
         return if value.blank? # NOTE EARLY EXIT
 
         validate_numericality(value)
-        input = value.to_s.to_i
+        input = value.to_i
         raise if input < 1
         @limit = input
       end
@@ -36,10 +37,11 @@ module Scimitar
       # input value of zero to 1.
       #
       def start_index=(value)
+        value = value&.to_s
         return if value.blank? # NOTE EARLY EXIT
 
         validate_numericality(value)
-        input = value.to_s.to_i
+        input = value.to_i
         input = 1 if input < 1
         @start_index = input
       end

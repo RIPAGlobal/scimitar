@@ -48,7 +48,7 @@ module Scimitar
     #       return {
     #         id:         :id,
     #         externalId: :scim_external_id,
-    #         userName:   :user_name,
+    #         userName:   :username,
     #         name:       {
     #           givenName:  :given_name,
     #           familyName: :last_name

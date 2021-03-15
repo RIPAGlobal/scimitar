@@ -14,16 +14,6 @@ module Scimitar
     #
     protected
 
-      # This is a bespoke handler that's used to render a SCIM error for an
-      # invalid resource (POST, PUT, PATCH).
-      #
-      # +error_message+:: An error message string to incorporate - usually used
-      #                   to describe the nature of the validity failure.
-      #
-      def handle_record_invalid(error_message)
-        handle_scim_error(ErrorResponse.new(status: 400, detail: "Operation failed since record has become invalid: #{error_message}"))
-      end
-
       # You can use:
       #
       #    rescue_from SomeException, with: :handle_resource_not_found
@@ -68,8 +58,16 @@ module Scimitar
     #
     private
 
+      # Tries to be permissive in what it receives - ".scim" extensions or a
+      # Content-Type header (or both) lead to both being set up for the inbound
+      # request and subclass processing.
+      #
       def require_scim
-        unless request.format == :scim
+        if request.content_type&.downcase == Mime::Type.lookup_by_extension(:scim).to_s
+          request.format = :scim
+        elsif request.format == :scim
+          request.headers['CONTENT_TYPE'] = Mime::Type.lookup_by_extension(:scim).to_s
+        else
           handle_scim_error(ErrorResponse.new(status: 406, detail: "Only #{Mime::Type.lookup_by_extension(:scim)} type is accepted."))
         end
       end
