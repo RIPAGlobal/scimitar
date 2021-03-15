@@ -45,10 +45,10 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         expect(usernames).to match_array(['1', '2', '3'])
       end
 
-      it 'applies a filter' do
+      it 'applies a filter, with case-insensitive value comparison' do
         get '/Users', params: {
           format: :scim,
-          filter: 'name.givenName eq "Foo" and name.familyName pr and emails ne "home_1@test.com"'
+          filter: 'name.givenName eq "Foo" and name.familyName pr and emails ne "home_1@TEST.COM"'
         }
 
         expect(response.status).to eql(200)
