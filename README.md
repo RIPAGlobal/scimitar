@@ -415,6 +415,8 @@ Often, you'll find that bearer tokens are in use by SCIM API consumers, but the 
 
   ...so adding a mapping for `emails.value` would then allow a database query to be constructed.
 
+* Currently filtering for lists is always matched case _sensitive_ regardless of schema declarations that might indicate otherwise.
+
 * The `PATCH` mechanism is supported, but where filters are included, only a single "attribute eq value" is permitted - no other operators or combinations. For example, a work e-mail address's value could be replaced by a PATCH patch of `emails[type eq "work"].value`. For in-path filters such as this, other operators such as `ne` are not supported; combinations with "and"/"or" are not supported; negation with "not" is not supported.
 
 
