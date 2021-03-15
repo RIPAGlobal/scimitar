@@ -33,33 +33,42 @@ RSpec.describe Scimitar::SchemasController do
       expect(parsed_body['name']).to eql('Group')
     end
 
-    it 'returns only the License schemas when its id is provided' do
-      license_schema = Class.new(Scimitar::Schema::Base) do
-        def initialize(options = {})
-        super(name: 'License',
-              id: self.class.id,
-              description: 'Represents a License')
-        end
-        def self.id
-          'License'
-        end
-        def self.scim_attributes
-          []
-        end
+    context 'with custom resource types' do
+      around :each do | example |
+        example.run()
+      ensure
+        Scimitar::Engine.reset_custom_resources
       end
 
-      license_resource = Class.new(Scimitar::Resources::Base) do
-        set_schema license_schema
-        def self.endopint
-          '/Gaga'
+      it 'returns only the License schemas when its id is provided' do
+        license_schema = Class.new(Scimitar::Schema::Base) do
+          def initialize(options = {})
+          super(name: 'License',
+                id: self.class.id,
+                description: 'Represents a License')
+          end
+          def self.id
+            'License'
+          end
+          def self.scim_attributes
+            []
+          end
         end
-      end
 
-      allow(Scimitar::Engine).to receive(:custom_resources) {[license_resource]}
-      get :index, params: { name: license_schema.id, format: :scim }
-      expect(response).to be_ok
-      parsed_body = JSON.parse(response.body)
-      expect(parsed_body['name']).to eql('License')
+        license_resource = Class.new(Scimitar::Resources::Base) do
+          set_schema license_schema
+          def self.endopint
+            '/Gaga'
+          end
+        end
+
+        Scimitar::Engine.add_custom_resource(license_resource)
+
+        get :index, params: { name: license_schema.id, format: :scim }
+        expect(response).to be_ok
+        parsed_body = JSON.parse(response.body)
+        expect(parsed_body['name']).to eql('License')
+      end
     end
   end
 end

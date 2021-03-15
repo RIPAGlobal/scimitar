@@ -37,7 +37,7 @@ module Scimitar
     # during testing, to avoid one test polluting another.
     #
     def self.reset_custom_resources
-      @custom_resources = self.default_resources()
+      @custom_resources = []
     end
 
     # Returns the list of custom resources, if any.
