@@ -5,7 +5,7 @@ module Scimitar
     #
     # This is currently an extremely limited query parser supporting only a
     # single "name-operator-value" query, no boolean operations or precedence
-    # operators and it assumes "LIKE" and "%" as wildcards in SQL for any
+    # operators and it assumes "(I)LIKE" and "%" as wildcards in SQL for any
     # operators which require partial match (contains / "co", starts with /
     # "sw", ends with / "ew"). Generic operations don't support "pr" either
     # ('presence').
@@ -18,7 +18,7 @@ module Scimitar
     # you MUST take care to process so as to avoid an SQL injection or similar
     # issues - use escaping suitable for your storage system's query language).
     #
-    # * If you don't want to support LIKE just check for it in #parameter's
+    # * If you don't want to support (I)LIKE just check for it in #parameter's
     #   return value; it'll be upper case.
     #
     # Given the likelihood of using ActiveRecord via Rails, there's a higher
@@ -62,8 +62,8 @@ module Scimitar
       # Map SCIM operators to generic(ish) SQL operators.
       #
       SQL_COMPARISON_OPERATORS = {
-        'eq' => '=',
-        'ne' => '!=',
+        'eq' => 'LIKE',
+        'ne' => 'NOT LIKE',
         'gt' => '>',
         'ge' => '>=',
         'lt' => '<',
@@ -585,20 +585,25 @@ module Scimitar
           return query
         end
 
-        # Apply a SCIM filter to a given base scope.
+        # Apply a filter to a given base scope. Mandatory named parameters:
         #
         # +base_scope+::     Base scope (ActiveRecord::Relation, e.g. User.all)
         # +scim_attribute+:: SCIM domain attribute, e.g. 'familyName'
         # +scim_operator+::  SCIM operator, e.g. 'eq', 'co', 'pr'
         # +scim_parameter+:: Parameter to match, or +nil+ for operator 'pr'
         #
-        # The SCIM operator is case-insensitive.
+        # Optional named parameters:
+        #
+        # +case_sensitive+:: Default is +false+, with any LIKE query changed to
+        #                    ILIKE (but ranged / greater-or-less-than style
+        #                    filters are always performed case-exact).
         #
         def apply_scim_filter(
           base_scope:,
           scim_attribute:,
           scim_operator:,
-          scim_parameter:
+          scim_parameter:,
+          case_sensitive: false
         )
           query        = base_scope
           column_names = self.activerecord_columns(scim_attribute)
@@ -617,11 +622,21 @@ module Scimitar
 
             if sql_operator.present?
               column_names.each.with_index do | column_name, index |
-                safe_column_name = ActiveRecord::Base.connection.quote_column_name(column_name)
-                if index == 0
-                  query = base_scope.where("#{safe_column_name} #{sql_operator} ?", safe_value)
+                where_args = if sql_operator.include?('LIKE') && ! case_sensitive
+                  if sql_operator.include?('NOT')
+                    [base_scope.model.arel_table[column_name.to_sym].does_not_match(safe_value)]
+                  else
+                    [base_scope.model.arel_table[column_name.to_sym].matches(safe_value)]
+                  end
                 else
-                  query = query.or(base_scope.where("#{safe_column_name} #{sql_operator} ?", safe_value))
+                  safe_column_name = ActiveRecord::Base.connection.quote_column_name(column_name)
+                  ["#{safe_column_name} #{sql_operator} ?", safe_value]
+                end
+
+                if index == 0
+                  query = base_scope.where(*where_args)
+                else
+                  query = query.or(base_scope.where(*where_args))
                 end
               end
             else
@@ -660,10 +675,12 @@ module Scimitar
 
         # Returns an SQL operator equivalent to that given in a filter string.
         #
-        # Raises Scimitar::FilterError if the filter cannot be handled. The most
+        # Raises Scimitar::FilterError if the filter cannot be handled. A quite
         # likely case is for "pr" (presence), which has no simple generic (ish)
-        # SQL equivalent. Note that "LIKE" is returned for "co", "sw" and "ew"
-        # (contains, starts-with, ends-with).
+        # SQL equivalent. Note that "LIKE" is returned for some comparison
+        # operations and "NOT LIKE" for 'ne'. Note that these will require
+        # transformation for case sensitivity depending on whether the database
+        # engine at hand is case-sensitive or case-insensitive by default.
         #
         # +scim_operator+:: SCIM operator from a filter string.
         #
@@ -726,9 +743,11 @@ module Scimitar
         #             obtaining the value through #parameter.
         #
         def sql_modified_value(element, value)
-          safe_for_LIKE_value = ActiveRecord::Base.sanitize_sql_like(value)
+          safe_for_LIKE_value  = ActiveRecord::Base.sanitize_sql_like(value)
 
           case element&.downcase
+            when 'eq', 'ne'
+              safe_for_LIKE_value
             when 'co'
               "%#{safe_for_LIKE_value}%"
             when 'sw'

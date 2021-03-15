@@ -368,16 +368,21 @@ RSpec.describe Scimitar::Lists::QueryParser do
       # drawn mappings against another and hopefully increase the chances of
       # spotting an error.
       #
+      # Note use of ILIKE - the underlying system is based around "LIKE" and
+      # will use AREL #matches / #does_not_match for query generation when
+      # wanting case-insensitivity, so we expect SQL to have "ILIKE" given that
+      # the underlying database is PostgreSQL.
+      #
       expected_mapping = {
-        'eQ' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" = 'BAZ')},
-        'Ne' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" != 'BAZ')},
+        'eQ' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE 'BAZ'},
+        'Ne' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" NOT ILIKE 'BAZ'},
         'GT' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" > 'BAZ')},
         'ge' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" >= 'BAZ')},
         'LT' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" < 'BAZ')},
         'Le' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" <= 'BAZ')},
-        'cO' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" LIKE '%BAZ%')},
-        'sw' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" LIKE 'BAZ%')},
-        'eW' => %q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" LIKE '%BAZ')},
+        'cO' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE '%BAZ%'},
+        'sw' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE 'BAZ%'},
+        'eW' => %q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE '%BAZ'},
       }
 
       # Self-check: Is test coverage up to date?
@@ -413,11 +418,11 @@ RSpec.describe Scimitar::Lists::QueryParser do
       expect { @instance.parse('name.familyName co B%_AZ') }.to raise_error(Scimitar::FilterError)
     end
 
-    it 'escapes values sent into LIKE statements' do
+    it 'escapes values sent into ILIKE statements' do
       @instance.parse('name.familyName co "B%_AZ"')
       query = @instance.to_activerecord_query(MockUser.all)
 
-      expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" LIKE '%B\%\_AZ%')})
+      expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE '%B\%\_AZ%'})
     end
 
     it 'operates correctly with a few hand-chosen basic queries' do
@@ -470,14 +475,14 @@ RSpec.describe Scimitar::Lists::QueryParser do
           @instance.parse('emails eq "any@test.com"')
           query = @instance.to_activerecord_query(MockUser.all)
 
-          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE ("work_email_address" = 'any@test.com' OR "home_email_address" = 'any@test.com')})
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE ("mock_users"."work_email_address" ILIKE 'any@test.com' OR "mock_users"."home_email_address" ILIKE 'any@test.com')})
         end
 
         it 'works with other query elements using correct precedence' do
           @instance.parse('name.familyName eq "John" and emails eq "any@test.com"')
           query = @instance.to_activerecord_query(MockUser.all)
 
-          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" = 'John') AND ("work_email_address" = 'any@test.com' OR "home_email_address" = 'any@test.com')})
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE 'John' AND ("mock_users"."work_email_address" ILIKE 'any@test.com' OR "mock_users"."home_email_address" ILIKE 'any@test.com')})
         end
       end # "context 'with binary operators' do"
 
@@ -493,7 +498,7 @@ RSpec.describe Scimitar::Lists::QueryParser do
           @instance.parse('name.familyName eq "John" and emails pr')
           query = @instance.to_activerecord_query(MockUser.all)
 
-          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE ("last_name" = 'John') AND (NOT (("mock_users"."work_email_address" = '' OR "mock_users"."work_email_address" IS NULL)) OR NOT (("mock_users"."home_email_address" = '' OR "mock_users"."home_email_address" IS NULL)))})
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."last_name" ILIKE 'John' AND (NOT (("mock_users"."work_email_address" = '' OR "mock_users"."work_email_address" IS NULL)) OR NOT (("mock_users"."home_email_address" = '' OR "mock_users"."home_email_address" IS NULL)))})
         end
       end # "context 'with unary operators' do
     end # "context 'when mapped to multiple columns' do"
@@ -521,10 +526,10 @@ RSpec.describe Scimitar::Lists::QueryParser do
     context 'with complex cases' do
       context 'using AND' do
         it 'generates expected SQL' do
-          @instance.parse('name.givenName pr AND name.familyName eq "Doe"')
+          @instance.parse('name.givenName pr AND name.familyName ne "Doe"')
           query = @instance.to_activerecord_query(MockUser.all)
 
-          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE NOT (("mock_users"."first_name" = '' OR "mock_users"."first_name" IS NULL)) AND ("last_name" = 'Doe')})
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE NOT (("mock_users"."first_name" = '' OR "mock_users"."first_name" IS NULL)) AND "mock_users"."last_name" NOT ILIKE 'Doe'})
         end
 
         it 'finds expected items' do
@@ -545,7 +550,7 @@ RSpec.describe Scimitar::Lists::QueryParser do
           @instance.parse('name.givenName pr OR name.familyName eq "Doe"')
           query = @instance.to_activerecord_query(MockUser.all)
 
-          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE (NOT (("mock_users"."first_name" = '' OR "mock_users"."first_name" IS NULL)) OR "last_name" = 'Doe')})
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE (NOT (("mock_users"."first_name" = '' OR "mock_users"."first_name" IS NULL)) OR "mock_users"."last_name" ILIKE 'Doe')})
         end
 
         it 'finds expected items' do
@@ -566,7 +571,7 @@ RSpec.describe Scimitar::Lists::QueryParser do
           @instance.parse('name.givenName eq "Jane" and (name.familyName co "avi" or name.familyName ew "ith")')
           query = @instance.to_activerecord_query(MockUser.all)
 
-          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE ("first_name" = 'Jane') AND ("last_name" LIKE '%avi%' OR "last_name" LIKE '%ith')})
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."first_name" ILIKE 'Jane' AND ("mock_users"."last_name" ILIKE '%avi%' OR "mock_users"."last_name" ILIKE '%ith')})
         end
 
         it 'finds expected items' do
@@ -592,7 +597,7 @@ RSpec.describe Scimitar::Lists::QueryParser do
           @instance.parse('name[givenName eq "Jane" and (familyName co "avi" or familyName ew "ith")]')
           query = @instance.to_activerecord_query(MockUser.all)
 
-          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE ("first_name" = 'Jane') AND ("last_name" LIKE '%avi%' OR "last_name" LIKE '%ith')})
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."first_name" ILIKE 'Jane' AND ("mock_users"."last_name" ILIKE '%avi%' OR "mock_users"."last_name" ILIKE '%ith')})
         end
       end # "context 'when flattening is needed' do"
     end # "context 'complex cases' do"
@@ -664,8 +669,8 @@ RSpec.describe Scimitar::Lists::QueryParser do
         # spotting an error.
         #
         expected_mapping = {
-          'eq' => '=',
-          'ne' => '!=',
+          'eq' => 'LIKE',
+          'ne' => 'NOT LIKE',
           'gt' => '>',
           'ge' => '>=',
           'lt' => '<',
@@ -685,7 +690,7 @@ RSpec.describe Scimitar::Lists::QueryParser do
       end
 
       it 'is case insensitive' do
-        expect(@instance.send(:activerecord_operator, 'eQ')).to eql('=')
+        expect(@instance.send(:activerecord_operator, 'eQ')).to eql('LIKE')
       end
     end # "context '#activerecord_operator' do"
 

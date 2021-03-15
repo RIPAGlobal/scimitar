@@ -106,6 +106,7 @@ GEM
     nokogiri (1.11.2)
       mini_portile2 (~> 2.5.0)
       racc (~> 1.4)
+    pg (1.2.3)
     racc (1.5.2)
     rack (2.2.3)
     rack-test (1.1.0)
@@ -170,7 +171,6 @@ GEM
       actionpack (>= 4.0)
       activesupport (>= 4.0)
       sprockets (>= 3.0.0)
-    sqlite3 (1.4.2)
     thor (1.1.0)
     tzinfo (2.0.4)
       concurrent-ruby (~> 1.0)
@@ -185,13 +185,13 @@ PLATFORMS
 DEPENDENCIES
   byebug (~> 11.1)
   doggo (~> 1.1)
+  pg (~> 1.2)
   rake (~> 13.0)
   rdoc (~> 6.3)
   rspec-rails (~> 4.0)
   scimitar!
   sdoc!
   simplecov-rcov (~> 0.2)
-  sqlite3 (~> 1.4)
 
 BUNDLED WITH
    2.1.4

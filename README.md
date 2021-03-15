@@ -391,6 +391,8 @@ Often, you'll find that bearer tokens are in use by SCIM API consumers, but the 
 
 * While the gem attempts to support difficult/complex filter strings via incorporating code and ideas in [SCIM Query Filter Parser](https://github.com/ingydotnet/scim-query-filter-parser-rb), it is possible that ActiveRecord / Rails precedence on some query operations in complex cases might not exactly match the SCIM specification. Please do submit a bug report if you encounter this. You may also wish to view [`query_parser_spec.rb`](https://github.com/RIPGlobal/scimitar/blob/main/spec/models/scimitar/lists/query_parser_spec.rb) to get an idea of the tested examples - more interesting test cases are in the "`context 'with complex cases' do`" section.
 
+If you believe choices made in this section may be incorrect, please [create a GitHub issue](https://github.com/RIPGlobal/scimitar/issues/new) describing the problem.
+
 ### Omissions
 
 * Bulk operations are not supported.
@@ -415,15 +417,17 @@ Often, you'll find that bearer tokens are in use by SCIM API consumers, but the 
 
   ...so adding a mapping for `emails.value` would then allow a database query to be constructed.
 
-* Currently filtering for lists is always matched case _sensitive_ regardless of schema declarations that might indicate otherwise.
+* Currently filtering for lists is always matched case-insensitive regardless of schema declarations that might indicate otherwise, for `eq`, `ne`, `co`, `sw` and `ew` operators; for greater/less-thank style filters, case is maintained with simple `>`, `<` etc. database operations in use. The standard Group and User schema have `caseExact` set to `false` for just about anything readily queryable, so this hopefully would only ever potentially be an issue for custom schema.
 
 * The `PATCH` mechanism is supported, but where filters are included, only a single "attribute eq value" is permitted - no other operators or combinations. For example, a work e-mail address's value could be replaced by a PATCH patch of `emails[type eq "work"].value`. For in-path filters such as this, other operators such as `ne` are not supported; combinations with "and"/"or" are not supported; negation with "not" is not supported.
+
+If you would like to see something listed in the session implemented, please [create a GitHub issue](https://github.com/RIPGlobal/scimitar/issues/new) asking for it to be implemented, or if possible, implement the feature and send a Pull Request.
 
 
 
 ## Development
 
-Install dependencies first:
+Install Ruby dependencies first:
 
 ```
 bundle install
@@ -431,7 +435,9 @@ bundle install
 
 ### Tests
 
-The tests use [RSpec](http://rspec.info) and require SQLite to be installed on your system. After `bundle install`, set up the test database with:
+You will need to have PostgreSQL running. This database is chosen for tests to prove case-insensitive behaviour via detection of ILIKE in generated queries. Using SQLite would have resulted in a more conceptually self-contained test suite, but SQLite is case-insensitive by default and uses "LIKE" either way, making it hard to "see" if the query system is doing the right thing.
+
+After `bundle install` and with PostgreSQL up, set up the test database with:
 
 ```shell
 pushd spec/apps/dummy

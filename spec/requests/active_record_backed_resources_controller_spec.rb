@@ -127,7 +127,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
       expect(response.status).to eql(200)
       result = JSON.parse(response.body)
 
-      expect(result['id']).to eql('2') # Note - ID was converted String; not Integer
+      expect(result['id']).to eql(@u2.id.to_s) # Note - ID was converted String; not Integer
       expect(result['userName']).to eql('2')
       expect(result['name']['familyName']).to eql('Bar')
       expect(result['meta']['resourceType']).to eql('User')
