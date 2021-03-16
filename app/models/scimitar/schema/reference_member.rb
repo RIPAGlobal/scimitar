@@ -11,8 +11,9 @@ module Scimitar
     class ReferenceMember < Base
       def self.scim_attributes
         @scim_attributes ||= [
-          Attribute.new(name: 'value', type: 'string', mutability: 'immutable', required: true),
-          Attribute.new(name: 'type',  type: 'string', mutability: 'immutable'),
+          Attribute.new(name: 'value',    type: 'string', mutability: 'immutable', required: true),
+          Attribute.new(name: 'type',     type: 'string', mutability: 'immutable'),
+          Attribute.new(name: 'display',  type: 'string', mutability: 'immutable'),
         ]
       end
     end
