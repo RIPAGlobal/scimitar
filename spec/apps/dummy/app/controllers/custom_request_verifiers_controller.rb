@@ -13,6 +13,10 @@ class CustomRequestVerifiersController < Scimitar::ActiveRecordBackedResourcesCo
     }
   end
 
+  def create
+    # Used for invalid JSON input tests
+  end
+
   protected
 
     def storage_class

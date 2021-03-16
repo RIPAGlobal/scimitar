@@ -18,6 +18,14 @@ RSpec.describe Scimitar::ApplicationController do
       expect(JSON.parse(response.body)['detail']).to eql('Only application/scim+json type is accepted.')
     end
 
+    it 'renders 400 if given bad JSON' do
+      post '/CustomRequestVerifiers', params: 'not-json-12345', headers: { 'CONTENT_TYPE' => 'application/scim+json' }
+
+      expect(response).to have_http_status(:bad_request)
+      expect(JSON.parse(response.body)['detail']).to start_with('Invalid JSON - ')
+      expect(JSON.parse(response.body)['detail']).to include("'not-json-12345'")
+    end
+
     it 'translates Content-Type to Rails request format' do
       get '/CustomRequestVerifiers', headers: { 'CONTENT_TYPE' => 'application/scim+json' }
 

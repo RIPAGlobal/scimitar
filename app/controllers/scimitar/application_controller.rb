@@ -1,8 +1,9 @@
 module Scimitar
   class ApplicationController < ActionController::Base
 
-    rescue_from StandardError,           with: :handle_unexpected_error
-    rescue_from Scimitar::ErrorResponse, with: :handle_scim_error
+    rescue_from StandardError,                                with: :handle_unexpected_error
+    rescue_from ActionDispatch::Http::Parameters::ParseError, with: :handle_bad_json_error # Via "ActionDispatch::Request.parameter_parsers" block in lib/scimitar/engine.rb
+    rescue_from Scimitar::ErrorResponse,                      with: :handle_scim_error
 
     before_action :require_scim
     before_action :add_mandatory_response_headers
@@ -41,11 +42,25 @@ module Scimitar
 
       # This base controller uses:
       #
+      #     rescue_from ActionDispatch::Http::Parameters::ParseError, with: :handle_bad_json_error
+      #
+      # ...to "globally" handle JSON errors implied by parse errors raised via
+      # the "ActionDispatch::Request.parameter_parsers" block in
+      # lib/scimitar/engine.rb.
+      #
+      # +exception+:: Exception instance.
+      #
+      def handle_bad_json_error(exception)
+        handle_scim_error(ErrorResponse.new(status: 400, detail: "Invalid JSON - #{exception.message}"))
+      end
+
+      # This base controller uses:
+      #
       #     rescue_from StandardError, with: :handle_unexpected_error
       #
       # ...to "globally" handle 500-style cases with a SCIM response.
       #
-      # +exception+:: Exception instance (currently unused).
+      # +exception+:: Exception instance.
       #
       def handle_unexpected_error(exception)
         Rails.logger.error("#{exception.message}\n#{exception.backtrace}")

@@ -19,5 +19,6 @@ Rails.application.routes.draw do
 
   # For testing environment inside Scimitar::ApplicationController subclasses.
   #
-  get 'CustomRequestVerifiers', to: 'custom_request_verifiers#index'
+  get  'CustomRequestVerifiers', to: 'custom_request_verifiers#index'
+  post 'CustomRequestVerifiers', to: 'custom_request_verifiers#create'
 end
