@@ -43,6 +43,16 @@ RSpec.describe Scimitar::Schema::Group do
             "returned": "default",
             "name": "type",
             "type": "string"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "immutable",
+            "uniqueness": "none",
+            "returned": "default",
+            "name": "display",
+            "type": "string"
           }
         ]
       }
