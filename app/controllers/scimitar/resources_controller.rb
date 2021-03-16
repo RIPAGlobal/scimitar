@@ -192,7 +192,7 @@ module Scimitar
       #
       rescue NoMethodError => exception
         Rails.logger.error("#{exception.message}\n#{exception.backtrace}")
-        raise Scimitar::ErrorResponse.new(status: 400, detail: 'invalid request')
+        raise Scimitar::ErrorResponse.new(status: 400, detail: 'Invalid request')
       end
 
       def safe_params

@@ -140,13 +140,13 @@ RSpec.describe Scimitar::ResourcesController do
       expect(parsed_response()[:externalId]).to eql('some-id')
     end
 
-    it 'maps internal NoMethodError failures to "invalid request"' do
+    it 'maps internal NoMethodError failures to "Invalid request"' do
       expect(controller()).to receive(:validate_request) { raise NoMethodError.new }
 
       post :create, params: { externalId: 'some-id', displayName: 'sauron', format: :scim }
 
       expect(response.status).to eql(400)
-      expect(parsed_response()[:detail]).to eql('invalid request')
+      expect(parsed_response()[:detail]).to eql('Invalid request')
     end
   end
 
