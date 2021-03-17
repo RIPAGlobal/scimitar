@@ -653,7 +653,7 @@ module Scimitar
                       find_with_proc = mapped_array_entry[:find_with]
 
                       unless find_with_proc.nil?
-                        mapped_list = scim_hash_or_leaf_value.map do | source_list_entry |
+                        mapped_list = (scim_hash_or_leaf_value || []).map do | source_list_entry |
                           find_with_proc.call(source_list_entry)
                         end
 

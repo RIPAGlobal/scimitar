@@ -421,6 +421,19 @@ RSpec.describe Scimitar::Resources::Mixin do
           instance.save!
           expect(g1.reload.parent_id).to eql(instance.id)
         end
+
+        it 'handles missing inbound lists' do
+          hash = {
+            'displayName' => 'Foo Group'
+          }
+
+          instance = MockGroup.new
+          instance.from_scim!(scim_hash: hash)
+
+          expect(instance.display_name     ).to eql('Foo Group')
+          expect(instance.mock_users       ).to be_empty
+          expect(instance.child_mock_groups).to be_empty
+        end
       end # "context 'writes instance attribute values from a SCIM representation' do"
 
       it 'clears things not present in input' do
