@@ -56,7 +56,7 @@ class MockGroup < ActiveRecord::Base
           id   = scim_list_entry['value']
           type = scim_list_entry['type' ] || 'User'
 
-          type == 'User' ? MockUser.find_by_id(id) : MockGroup.find_by_id(id)
+          type&.downcase == 'user' ? MockUser.find_by_id(id) : MockGroup.find_by_id(id)
         }
       ]
     }
