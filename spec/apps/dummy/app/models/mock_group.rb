@@ -54,7 +54,7 @@ class MockGroup < ActiveRecord::Base
         },
         find_with: -> (scim_list_entry) {
           id   = scim_list_entry['value']
-          type = scim_list_entry['type' ]
+          type = scim_list_entry['type' ] || 'User'
 
           type == 'User' ? MockUser.find_by_id(id) : MockGroup.find_by_id(id)
         }
