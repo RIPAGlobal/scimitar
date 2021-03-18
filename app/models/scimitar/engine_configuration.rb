@@ -8,7 +8,8 @@ module Scimitar
     include ActiveModel::Model
 
     attr_accessor :basic_authenticator,
-                  :token_authenticator
+                  :token_authenticator,
+                  :application_controller_mixin
 
     def initialize(attributes = {})
 

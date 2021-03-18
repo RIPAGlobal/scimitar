@@ -28,15 +28,37 @@ Scimitar.service_provider_configuration = Scimitar::ServiceProviderConfiguration
 # ENGINE CONFIGURATION
 # =============================================================================
 #
-# This is where you provide callbacks for things like authorisation.
+# This is where you provide callbacks for things like authorisation or mixins
+# that get included into all Scimitar-derived controllers (for things like
+# before-actions that apply to all Scimitar controller-based routes).
 #
 Scimitar.engine_configuration = Scimitar::EngineConfiguration.new({
+
+  # If you have filters you want to run for any Scimitar action/route, you can
+  # define them here. For example, you might use a before-action to set up some
+  # multi-tenancy related state, or skip Rails CSRF token verification/
+  #
+  # For example:
+  #
+  #     application_controller_mixin: Module.new do
+  #       def self.included(base)
+  #         base.class_eval do
+  #
+  #           # Anything here is written just as you'd write it at the top of
+  #           # one of your controller classes, but it gets included in all
+  #           # Scimitar classes too.
+  #
+  #           skip_before_action    :verify_authenticity_token
+  #           prepend_before_action :setup_some_kind_of_multi_tenancy_data
+  #         end
+  #       end
+  #     end, # ...other configuration entries might follow...
 
   # If you want to support username/password authentication:
   #
   #     basic_authenticator: Proc.new do | username, password |
   #       # Check username/password and return 'true' if valid, else 'false'.
-  #     end
+  #     end, # ...other configuration entries might follow...
   #
   # The 'username' and 'password' parameters come from Rails:
   #
@@ -47,7 +69,7 @@ Scimitar.engine_configuration = Scimitar::EngineConfiguration.new({
   #
   #     token_authenticator: Proc.new do | token, options |
   #       # Check token and return 'true' if valid, else 'false'.
-  #     end
+  #     end, # ...other configuration entries might follow...
   #
   # The 'token' and 'options' parameters come from Rails:
   #

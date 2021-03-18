@@ -9,6 +9,10 @@ module Scimitar
     before_action :add_mandatory_response_headers
     before_action :authenticate
 
+    if Scimitar.engine_configuration.application_controller_mixin
+      include Scimitar.engine_configuration.application_controller_mixin
+    end
+
     # =========================================================================
     # PROTECTED INSTANCE METHODS
     # =========================================================================
