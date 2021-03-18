@@ -867,6 +867,29 @@ module Scimitar
                 when 'add'
                   if current_data_at_path.is_a?(Array)
                     altering_hash[path_component] += value
+                  elsif current_data_at_path.is_a?(Hash)
+
+                    # Need to dive down inside a Hash value for additions; a
+                    # deep merge isn't enough. Take this Group example where
+                    # nature is "add" and value is:
+                    #
+                    #     "members":[
+                    #       {
+                    #         "value":"<user-id>"
+                    #       }
+                    #     ]
+                    #
+                    # ...in that case, a deep merge would *replace* the array
+                    # at key 'members' with the above, rather than adding.
+                    #
+                    value.keys.each do | key |
+                      from_patch_backend!(
+                        nature:        nature,
+                        path:          path + [key],
+                        value:         value[key],
+                        altering_hash: altering_hash
+                      )
+                    end
                   else
                     altering_hash[path_component] = value
                   end

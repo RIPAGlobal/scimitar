@@ -743,6 +743,53 @@ RSpec.describe Scimitar::Resources::Mixin do
                 expect(scim_hash['emails'][1]['type' ]).to eql('work')
                 expect(scim_hash['emails'][1]['value']).to eql('work@test.com')
               end
+
+              context 'with complex value addition' do
+                it 'adds to arrays' do
+                  scim_hash = {
+                    'root' => {
+                      'members' => [
+                        {'value' => '1'},
+                        {'value' => '2'}
+                      ]
+                    }
+                  }
+
+                  # Example seen at:
+                  #
+                  #   https://docs.databricks.com/dev-tools/api/latest/scim/scim-groups.html
+                  #
+                  # The core of it is:
+                  #
+                  #     "Operations":[
+                  #       {
+                  #       "op":"add",
+                  #       "value":{
+                  #           "members":[
+                  #              {
+                  #                 "value":"<user-id>"
+                  #              }
+                  #           ]
+                  #         }
+                  #       }
+                  #     ]
+                  #
+                  # ...so the path is missing ("root"), but the value is
+                  # complex and includes implied paths within. We expect to
+                  # have the given value Hash added to the members Array,
+                  # rather than having e.g. members replaced by this.
+                  #
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'add',
+                    path:          ['root'],
+                    value:         {'members' => [{'value' => '3'}]},
+                    altering_hash: scim_hash
+                  )
+
+                  expect(scim_hash['root']['members']).to match_array([{'value' => '1'}, {'value' => '2'}, {'value' => '3'}])
+                end
+              end # "context 'with complex value addition' do"
             end # context 'when prior value already exists' do
 
             context 'when value is not present' do
