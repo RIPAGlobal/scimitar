@@ -16,7 +16,13 @@ module Scimitar
         hash
       end
 
-      render json: resource_types[params[:name]]
+      resource_type = resource_types[params[:name]]
+
+      if resource_type.nil?
+        raise Scimitar::NotFoundError.new(params[:name])
+      else
+        render json: resource_type
+      end
     end
   end
 end

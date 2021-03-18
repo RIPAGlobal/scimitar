@@ -76,11 +76,19 @@ RSpec.describe Scimitar::ResourceTypesController do
 
       allow(Scimitar::Engine).to receive(:custom_resources) {[ custom_resource ]}
 
-
       get :show, params: { name: 'Gaga', format: :scim }
       response_hash = JSON.parse(response.body)
       expected_response = custom_resource.resource_type(scim_resource_type_url(name: 'Gaga')).to_json
       expect(response_hash).to eql(JSON.parse(expected_response))
+    end
+
+    it 'renders 404 if not recognised' do
+      get :show, params: { name: 'Foo', format: :scim }
+      expect(response).to have_http_status(:not_found)
+      response_hash = JSON.parse(response.body)
+      expect(response_hash['schemas']).to eql(['urn:ietf:params:scim:api:messages:2.0:Error'])
+      expect(response_hash['status' ]).to eql('404')
+      expect(response_hash['detail' ]).to eql('Resource "Foo" not found')
     end
   end
 end
