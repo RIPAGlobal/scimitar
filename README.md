@@ -393,6 +393,8 @@ Often, you'll find that bearer tokens are in use by SCIM API consumers, but the 
 
 * Group resource examples show the `members` array including field `display`, but this is not in the [formal schema](https://tools.ietf.org/html/rfc7643#page-69); Scimitar includes it in the Group definition.
 
+* `POST` actions with only a subset of attributes specified treat missing attributes "to be cleared" for anything that's mapped for the target model. If you have defaults established at instantiation rather than (say) before-validation, you'll need to override `Scimitar::ActiveRecordBackedResourcesController#create` (if using that controller as a base class) as normally the controller just instantiates a model, applies _all_ attributes (with any mapped attribute values without an inbound value set to `nil`), then saves the record. This might cause default values to be overwritten. For consistency, `PUT` operations apply the same behaviour. The decision on this optional specification aspect is in part constrained by the difficulties of implementing `PATCH`.
+
 If you believe choices made in this section may be incorrect, please [create a GitHub issue](https://github.com/RIPGlobal/scimitar/issues/new) describing the problem.
 
 ### Omissions

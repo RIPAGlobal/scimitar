@@ -581,11 +581,13 @@ module Scimitar
           #                             being a leaf node which may have a
           #                             Symbol method name, used to look for a
           #                             write accessor; or a read-only literal,
-          #                             which is ignored.
+          #                             which is ignored (right hand side of
+          #                             the ASCII art diagram).
           #
           # +scim_hash_or_leaf_value+:: Similar to +attrs_map_or_leaf_value+
           #                             but tracks the SCIM schema data being
-          #                             read as input source material.
+          #                             read as input source material (left
+          #                             hand side of the ASCII art diagram).
           #
           # +path+::                    Array of SCIM attribute names giving a
           #                             path into the SCIM schema where
@@ -775,7 +777,7 @@ module Scimitar
             found_data_for_recursion = if filter
               matched_hashes = []
 
-              all_matching_filter(filter: filter, within_array: inner_data) do | matched_hash |
+              all_matching_filter(filter: filter, within_array: inner_data) do | matched_hash, _matched_index |
                 matched_hashes << matched_hash
               end
 
@@ -835,12 +837,12 @@ module Scimitar
               compact_after = false
               found_matches = false
 
-              all_matching_filter(filter: filter, within_array: current_data_at_path) do | matched_hash, index |
+              all_matching_filter(filter: filter, within_array: current_data_at_path) do | matched_hash, matched_index |
                 found_matches = true
 
                 case nature
                   when 'remove'
-                    current_data_at_path[index] = nil
+                    current_data_at_path[matched_index] = nil
                     compact_after = true
                   when 'replace'
                     matched_hash.reject! { true }

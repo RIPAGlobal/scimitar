@@ -376,6 +376,99 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
       expect(@u2.work_email_address).to eql('work_4@test.com')
     end
 
+    context 'clears attributes' do
+      before :each do
+        @u2.update!(work_email_address: 'work_2@test.com')
+      end
+
+      it 'with simple paths' do
+        expect_any_instance_of(MockUsersController).to receive(:update).once.and_call_original
+        expect {
+          patch "/Users/#{@u2.id}", params: {
+            format: :scim,
+            Operations: [
+              {
+                op: 'remove',
+                path: 'name.givenName'
+              }
+            ]
+          }
+        }.to_not change { MockUser.count }
+
+        expect(response.status).to eql(200)
+        result = JSON.parse(response.body)
+
+        expect(result['id']).to eql(@u2.id.to_s)
+        expect(result['meta']['resourceType']).to eql('User')
+
+        @u2.reload
+
+        expect(@u2.username).to eql('2')
+        expect(@u2.first_name).to be_nil
+        expect(@u2.last_name).to eql('Bar')
+        expect(@u2.home_email_address).to eql('home_2@test.com')
+        expect(@u2.work_email_address).to eql('work_2@test.com')
+      end
+
+      it 'by array entry filter match' do
+        expect_any_instance_of(MockUsersController).to receive(:update).once.and_call_original
+        expect {
+          patch "/Users/#{@u2.id}", params: {
+            format: :scim,
+            Operations: [
+              {
+                op: 'remove',
+                path: 'emails[type eq "work"]'
+              }
+            ]
+          }
+        }.to_not change { MockUser.count }
+
+        expect(response.status).to eql(200)
+        result = JSON.parse(response.body)
+
+        expect(result['id']).to eql(@u2.id.to_s)
+        expect(result['meta']['resourceType']).to eql('User')
+
+        @u2.reload
+
+        expect(@u2.username).to eql('2')
+        expect(@u2.first_name).to eql('Foo')
+        expect(@u2.last_name).to eql('Bar')
+        expect(@u2.home_email_address).to eql('home_2@test.com')
+        expect(@u2.work_email_address).to be_nil
+      end
+
+      it 'by whole collection' do
+        expect_any_instance_of(MockUsersController).to receive(:update).once.and_call_original
+        expect {
+          patch "/Users/#{@u2.id}", params: {
+            format: :scim,
+            Operations: [
+              {
+                op: 'remove',
+                path: 'emails'
+              }
+            ]
+          }
+        }.to_not change { MockUser.count }
+
+        expect(response.status).to eql(200)
+        result = JSON.parse(response.body)
+
+        expect(result['id']).to eql(@u2.id.to_s)
+        expect(result['meta']['resourceType']).to eql('User')
+
+        @u2.reload
+
+        expect(@u2.username).to eql('2')
+        expect(@u2.first_name).to eql('Foo')
+        expect(@u2.last_name).to eql('Bar')
+        expect(@u2.home_email_address).to be_nil
+        expect(@u2.work_email_address).to be_nil
+      end
+    end # "context 'clears attributes' do"
+
     it 'notes Rails validation failures' do
       expect {
         patch "/Users/#{@u2.id}", params: {
