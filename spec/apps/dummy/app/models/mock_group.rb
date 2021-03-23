@@ -61,8 +61,8 @@ class MockGroup < ActiveRecord::Base
               MockUser.find_by_id(id)
             when 'group'
               MockGroup.find_by_id(id)
-          else
-            raise Scimitar::InvalidSyntaxError.new("Unrecognised type #{type.inspect}")
+            else
+              raise Scimitar::InvalidSyntaxError.new("Unrecognised type #{type.inspect}")
           end
         }
       ]
