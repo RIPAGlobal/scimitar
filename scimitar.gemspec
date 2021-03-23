@@ -8,17 +8,16 @@ Gem::Specification.new do |s|
   s.summary     = 'SCIM v2 for Rails'
   s.description = 'SCIM v2 support for Users and Groups in Ruby On Rails'
   s.authors     = ['RIP Global', 'Andrew David Hodgkinson']
-  s.email       = ['andrew@ripglobal.com']
+  s.email       = ['dev@ripglobal.com']
   s.license     = 'MIT'
 
   s.files       = Dir['{app,config,db,lib}/**/*', 'MIT-LICENSE', 'Rakefile', 'README.rdoc']
   s.test_files  = Dir.glob('spec/**/*.rb')
   s.homepage    = 'https://ripglobal.com/'
 
-  s.required_ruby_version = '>= 2.7.2'
+  s.required_ruby_version = '>= 2.7.0'
 
-  s.add_dependency 'rails',    '>= 6.0'
-  s.add_dependency 'nokogiri', '~> 1.11'
+  s.add_dependency 'rails', '~> 6.0'
 
   s.add_development_dependency 'rake',           '~> 13.0'
   s.add_development_dependency 'pg',             '~>  1.2'
