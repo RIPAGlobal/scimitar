@@ -1,3 +1,3 @@
-# 1.0.0 (2020-03-18)
+# 1.0.0 (2020-03-24)
 
-* Initial RIP private release.
+* Initial public release.
