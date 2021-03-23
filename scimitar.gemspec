@@ -14,7 +14,6 @@ Gem::Specification.new do |s|
   s.files       = Dir['{app,config,db,lib}/**/*', 'MIT-LICENSE', 'Rakefile', 'README.rdoc']
   s.test_files  = Dir.glob('spec/**/*.rb')
   s.homepage    = 'https://ripglobal.com/'
-  s.metadata    = { "source_code_uri" => "https://github.com/RIPGlobal/scimitar" }
 
   s.required_ruby_version = '>= 2.7.2'
 
