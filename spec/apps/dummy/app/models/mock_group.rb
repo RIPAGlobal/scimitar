@@ -56,7 +56,14 @@ class MockGroup < ActiveRecord::Base
           id   = scim_list_entry['value']
           type = scim_list_entry['type' ] || 'User'
 
-          type&.downcase == 'user' ? MockUser.find_by_id(id) : MockGroup.find_by_id(id)
+          case type.downcase
+            when 'user'
+              MockUser.find_by_id(id)
+            when 'group'
+              MockGroup.find_by_id(id)
+          else
+            raise Scimitar::InvalidSyntaxError.new("Unrecognised type #{type.inspect}")
+          end
         }
       ]
     }
