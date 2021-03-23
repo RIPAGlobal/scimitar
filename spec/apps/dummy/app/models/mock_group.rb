@@ -54,7 +54,7 @@ class MockGroup < ActiveRecord::Base
         },
         find_with: -> (scim_list_entry) {
           id   = scim_list_entry['value']
-          type = scim_list_entry['type' ] || 'User'
+          type = scim_list_entry['type' ] || 'User' # Some online examples omit 'type' and believe 'User' will be assumed
 
           case type.downcase
             when 'user'
