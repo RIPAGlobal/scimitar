@@ -3,7 +3,7 @@ module Scimitar
   # Gem version. If this changes, be sure to re-run "bundle install" or
   # "bundle update".
   #
-  VERSION = '1.0.2'
+  VERSION = '1.0.3'
 
   # Date for VERSION. If this changes, be sure to re-run "bundle install"
   # or "bundle update".

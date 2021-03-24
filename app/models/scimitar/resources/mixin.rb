@@ -945,12 +945,27 @@ module Scimitar
           # Happily throws exceptions if data is not as expected / required.
           #
           def all_matching_filter(filter:, within_array:, &block)
-            filter_components = filter.split(' ')
-            raise "Unsupported matcher #{filter.inspect}" unless filter_components.size == 3 && filter_components[1].downcase == 'eq'
+            filter_components = filter.split(' ', 3)
 
             attribute = filter_components[0]
+            operator  = filter_components[1]
             value     = filter_components[2]
-            value     = value[1..-2] if value.start_with?('"') && value.end_with?('"')
+
+            # Quoted value includes closing quote but has data afterwards?
+            # Bad; implies extra conditions, e.g. '...eq "one two" and..." or
+            # just junk data.
+            #
+            # Value is *not* quoted but contains a space? Means there must be
+            # again either extra conditions or trailing junk data.
+            #
+            raise "Unsupported matcher #{filter.inspect}" if (
+              filter_components.size != 3         ||
+              operator.downcase != 'eq'           ||
+              value.strip.match?(/\".+[^\\]\".+/) || # Literal '"', any data, no-backslash-then-literal (unescaped) '"', more data
+              (!value.start_with?('"') && value.strip.include?(' '))
+            )
+
+            value = value[1..-2] if value.start_with?('"') && value.end_with?('"')
 
             within_array.each.with_index do | hash, index |
               matched = hash.key?(attribute) && hash[attribute]&.to_s == value&.to_s

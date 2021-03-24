@@ -1,3 +1,7 @@
+# 1.0.3 (2020-03-24)
+
+* More robust path filter parsing for `PATCH` operations; previously, a path filter such as `value eq "Something With Spaces"` would have been rejected.
+
 # 1.0.2 (2020-03-24)
 
 * Add Travis support for CI.

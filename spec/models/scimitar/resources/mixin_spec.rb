@@ -522,6 +522,22 @@ RSpec.describe Scimitar::Resources::Mixin do
             end.to raise_error(RuntimeError)
           end
 
+          it 'complaints about unsupported multiple operators, handling value spaces' do
+            expect do
+              @instance.send(:all_matching_filter, filter: 'type eq "work with spaces" and primary pr', within_array: []) do
+                fail # Block should never be called!
+              end
+            end.to raise_error(RuntimeError)
+          end
+
+          it 'complaints about unquoted values with spaces' do
+            expect do
+              @instance.send(:all_matching_filter, filter: 'type eq work with spaces', within_array: []) do
+                fail # Block should never be called!
+              end
+            end.to raise_error(RuntimeError)
+          end
+
           it 'calls block with matches' do
             array = [
               {
@@ -565,6 +581,10 @@ RSpec.describe Scimitar::Resources::Mixin do
               {
                 'type'  => 'work"',
                 'value' => 'work_trailing_dquote@test.com'
+              },
+              {
+                'type'  => 'spaced',
+                'value' => 'value with spaces'
               }
             ]
 
@@ -585,7 +605,12 @@ RSpec.describe Scimitar::Resources::Mixin do
               expect(matched_hash['value']).to eql('boolean@test.com')
             end
 
-            expect(call_count).to eql(3)
+            @instance.send(:all_matching_filter, filter: 'value eq "value with spaces"', within_array: array) do |matched_hash, index|
+              call_count += 1
+              expect(matched_hash['type']).to eql('spaced')
+            end
+
+            expect(call_count).to eql(4)
           end
         end # "context '#all_matching_filter' do"
 
