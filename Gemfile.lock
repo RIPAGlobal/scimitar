@@ -10,9 +10,8 @@ GIT
 PATH
   remote: .
   specs:
-    scimitar (1.0.0)
-      nokogiri (~> 1.11)
-      rails (>= 6.0)
+    scimitar (1.0.2)
+      rails (~> 6.0)
 
 GEM
   remote: https://rubygems.org/

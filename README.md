@@ -1,5 +1,7 @@
 # Scimitar
 
+[![Gem Version](https://badge.fury.io/rb/scimitar.svg)](https://badge.fury.io/rb/scimitar)
+[![Build Status](https://travis-ci.com/RIPGlobal/scimitar.svg)](https://travis-ci.com/github/RIPGlobal/scimitar)
 [![License](https://img.shields.io/badge/license-mit-blue.svg)](https://opensource.org/licenses/MIT)
 
 A SCIM v2 API endpoint implementation for Ruby On Rails.
