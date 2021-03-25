@@ -98,9 +98,9 @@ All routes then will be available at `https://.../scim_v2/...` via controllers y
 
 ### Data models
 
-Scimitar assumes that each SCIM resource maps to a single corresponding class in your system. This might be an abstraction over more complex underpinings, but either way, a 1:1 relationship is expected. For example, a SCIM User might map to a User ActiveRecord model in your Rails application, while a SCIM Group might map to an ActiveRecord model called 'Teams' which actually operates on some more complex set of data "under the hood".
+Scimitar assumes that each SCIM resource maps to a single corresponding class in your system. This might be an abstraction over more complex underpinings, but either way, a 1:1 relationship is expected. For example, a SCIM User might map to a User ActiveRecord model in your Rails application, while a SCIM Group might map to some custom class called Team which operates on a more complex set of data "under the hood".
 
-Before writing any controllers, it's a good idea to examine the SCIM specification and figure out how you intend to map SCIM attributes in any resources of interest, to your local data. A [mixin is provided](https://github.com/RIPGlobal/scimitar/blob/main/app/models/scimitar/resources/mixin.rb) which you can include in any plain old Ruby class (including, but not limited to ActiveRecord model classes).
+Before writing any controllers, it's a good idea to examine the SCIM specification and figure out how you intend to map SCIM attributes in any resources of interest, to your local data. A [mixin is provided](https://github.com/RIPGlobal/scimitar/blob/main/app/models/scimitar/resources/mixin.rb) which you can include in any plain old Ruby class (including, but not limited to ActiveRecord model classes) - a more readable form of the comments in this file are [in the RDoc output](https://www.rubydoc.info/gems/scimitar/Scimitar/Resources/Mixin).
 
 The functionality exposed by the mixin is relatively complicated because the range of operations that the SCIM API supports is quite extensive. Rather than duplicate all the information here, please see the extensive comments in the mixin linked above for more information. There are examples in the [test suite's Rails models](https://github.com/RIPGlobal/scimitar/tree/main/spec/apps/dummy/app/models), or for another example:
 
@@ -211,7 +211,7 @@ end
 
 ### Controllers
 
-If you use ActiveRecord, your controllers can potentially be extremely simple - at a minimum:
+If you use ActiveRecord, your controllers can potentially be extremely simple by subclassing [`Scimitar::ActiveRecordBackedResourcesController`](https://www.rubydoc.info/gems/scimitar/Scimitar/ActiveRecordBackedResourcesController) - at a minimum:
 
 ```ruby
 module Scim
@@ -235,10 +235,10 @@ end
 
 All data-layer actions are taken via `#find` or `#save!`, with exceptions such as `ActiveRecord::RecordNotFound`, `ActiveRecord::RecordInvalid` or generalised SCIM exceptions handled by various superclasses. For a real Rails example of this, see the [test suite's controllers](https://github.com/RIPGlobal/scimitar/tree/main/spec/apps/dummy/app/controllers) which are invoked via its [routing declarations](https://github.com/RIPGlobal/scimitar/blob/main/spec/apps/dummy/config/routes.rb).
 
-If you do _not_ use ActiveRecord to store data, or if you have very esoteric read-write requirements, you can subclass `ScimEngine::ResourcesController` in a manner similar to this:
+If you do _not_ use ActiveRecord to store data, or if you have very esoteric read-write requirements, you can subclass [`Scimigar::ResourcesController`](https://www.rubydoc.info/gems/scimitar/Scimitar/ResourcesController) in a manner similar to this:
 
 ```ruby
-class UsersController < ScimEngine::ResourcesController
+class UsersController < Scimitar::ResourcesController
 
   # SCIM clients don't use Rails CSRF tokens.
   #
@@ -361,7 +361,7 @@ end
 
 ```
 
-Note that the `Scimitar::ApplicationController` parent class of `Scimitar::ResourcesController` has a few methods to help with handling exceptions and rendering them as SCIM responses; for example, if a resource were not found by ID, you might wish to use `Scimitar::ApplicationController#handle_resource_not_found`.
+Note that the [`Scimitar::ApplicationController` parent class](https://www.rubydoc.info/gems/scimitar/Scimitar/ApplicationController) of `Scimitar::ResourcesController` has a few methods to help with handling exceptions and rendering them as SCIM responses; for example, if a resource were not found by ID, you might wish to use [`Scimitar::ApplicationController#handle_resource_not_found`](https://github.com/RIPGlobal/scimitar/blob/v1.0.3/app/controllers/scimitar/application_controller.rb#L22).
 
 
 
@@ -461,10 +461,10 @@ You can get an idea of arising test coverage by opening `coverage/index.html` in
 
 ### Internal documentation
 
-Regenerate the internal [`rdoc` documentation](https://ruby-doc.org/stdlib-2.4.1/libdoc/rdoc/rdoc/RDoc/Markup.html#label-Supported+Formats) with:
+Locally generated RDoc HTML seems to contain a more comprehensive and inter-linked set of pages than those available from `rubydoc.info`. You can (re)generate the internal [`rdoc` documentation](https://ruby-doc.org/stdlib-2.4.1/libdoc/rdoc/rdoc/RDoc/Markup.html#label-Supported+Formats) with:
 
 ```shell
 bundle exec rake rerdoc
 ```
 
-...yes, that's `rerdoc` - Re-R-Doc.
+...yes, that's `rerdoc` - Re-R-Doc - then open `docs/rdoc/index.html`.
