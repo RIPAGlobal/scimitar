@@ -683,12 +683,12 @@ RSpec.describe Scimitar::Resources::Mixin do
                     :from_patch_backend!,
                     nature:        'add',
                     path:          path,
-                    value:         'added_over_origina@test.com',
+                    value:         'added_over_original@test.com',
                     altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_original@test.com')
                 end
 
                 it 'by boolean match: overwrites' do
@@ -709,12 +709,12 @@ RSpec.describe Scimitar::Resources::Mixin do
                     :from_patch_backend!,
                     nature:        'add',
                     path:          path,
-                    value:         'added_over_origina@test.com',
+                    value:         'added_over_original@test.com',
                     altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_original@test.com')
                 end
 
                 it 'multiple matches: overwrites all' do
@@ -736,12 +736,12 @@ RSpec.describe Scimitar::Resources::Mixin do
                     :from_patch_backend!,
                     nature:        'add',
                     path:          path,
-                    value:         'added_over_origina@test.com',
+                    value:         'added_over_original@test.com',
                     altering_hash: scim_hash
                   )
 
-                  expect(scim_hash['emails'][0]['value']).to eql('added_over_origina@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
+                  expect(scim_hash['emails'][0]['value']).to eql('added_over_original@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_original@test.com')
                 end
               end # "context 'with filter mid-path' do"
 
@@ -1407,12 +1407,12 @@ RSpec.describe Scimitar::Resources::Mixin do
                     :from_patch_backend!,
                     nature:        'replace',
                     path:          path,
-                    value:         'added_over_origina@test.com',
+                    value:         'added_over_original@test.com',
                     altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_original@test.com')
                 end
 
                 it 'by boolean match: overwrites' do
@@ -1433,12 +1433,12 @@ RSpec.describe Scimitar::Resources::Mixin do
                     :from_patch_backend!,
                     nature:        'replace',
                     path:          path,
-                    value:         'added_over_origina@test.com',
+                    value:         'added_over_original@test.com',
                     altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_original@test.com')
                 end
 
                 it 'multiple matches: overwrites all' do
@@ -1460,12 +1460,12 @@ RSpec.describe Scimitar::Resources::Mixin do
                     :from_patch_backend!,
                     nature:        'replace',
                     path:          path,
-                    value:         'added_over_origina@test.com',
+                    value:         'added_over_original@test.com',
                     altering_hash: scim_hash
                   )
 
-                  expect(scim_hash['emails'][0]['value']).to eql('added_over_origina@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
+                  expect(scim_hash['emails'][0]['value']).to eql('added_over_original@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_original@test.com')
                 end
               end # "context 'with filter mid-path' do"
 

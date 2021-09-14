@@ -16,5 +16,12 @@ RSpec.describe Scimitar::Engine do
       expect(response.status).to eql(201)
       expect(JSON.parse(response.body)['userName']).to eql('foo')
     end
+
+    it 'is case insensitive', type: :model do
+      post '/Users.scim', params: '{"UserName": "foo"}', headers: { 'CONTENT_TYPE' => 'application/scim+json' }
+
+      expect(response.status).to eql(201)
+      expect(JSON.parse(response.body)['userName']).to eql('foo')
+    end
   end # "context 'parameter parser' do"
 end

@@ -24,7 +24,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'pg',             '~>  1.2'
   s.add_development_dependency 'simplecov-rcov', '~>  0.2'
   s.add_development_dependency 'rdoc',           '~>  6.3'
-  s.add_development_dependency 'rspec-rails',    '~>  4.0'
+  s.add_development_dependency 'rspec-rails',    '~>  5.0'
   s.add_development_dependency 'byebug',         '~> 11.1'
   s.add_development_dependency 'doggo',          '~>  1.1'
 end

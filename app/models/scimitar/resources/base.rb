@@ -11,10 +11,27 @@ module Scimitar
       validate :validate_resource
 
       def initialize(options = {})
-        flattended_attributes = flatten_extension_attributes(options)
-        attributes = flattended_attributes.with_indifferent_access.slice(*self.class.all_attributes)
-        super(attributes)
-        constantize_complex_types(attributes)
+        flattened_attributes = flatten_extension_attributes(options)
+        ci_all_attributes    = Scimitar::Support::HashWithIndifferentCaseInsensitiveAccess.new
+        camel_attributes     = {}
+
+        # Create a map where values are the schema-correct-case attribute names
+        # and the values are set the same, but since the ci_all_attributes data
+        # type is HashWithIndifferentCaseInsensitiveAccess, lookups in this are
+        # case insensitive. Thus, arbitrary case input data can be mapped to
+        # the case correctness required for ActiveModel's attribute accessors.
+        #
+        self.class.all_attributes.each { |attr| ci_all_attributes[attr] = attr }
+
+        flattened_attributes.each do | key, value |
+          if ci_all_attributes.key?(key)
+            camel_attributes[ci_all_attributes[key]] = value
+          end
+        end
+
+        super(camel_attributes)
+        constantize_complex_types(camel_attributes)
+
         @errors = ActiveModel::Errors.new(self)
       end
 

@@ -1,4 +1,5 @@
 require 'scimitar/version'
+require 'scimitar/support/hash_with_indifferent_case_insensitive_access'
 require 'scimitar/engine'
 
 module Scimitar
