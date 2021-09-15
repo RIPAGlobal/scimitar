@@ -1,4 +1,4 @@
-# 1.1.0 (2021-09-14)
+# 1.1.0 (2021-09-15)
 
 * Implement case insensitivity for attributes (fixes [issue #7](https://github.com/RIPGlobal/scimitar/issues/7)).
 
