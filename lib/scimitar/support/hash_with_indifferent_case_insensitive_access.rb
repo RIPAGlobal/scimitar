@@ -1,8 +1,43 @@
 require 'active_support/hash_with_indifferent_access'
 
 class Hash
+
+  # Converts this Hash to an instance of
+  # Scimitar::Support::HashWithIndifferentCaseInsensitiveAccess, which is
+  # a subclass of ActiveSupport::HashWithIndifferentAccess with the addition of
+  # case-insensitive lookup.
+  #
+  # Note that this is more thorough than the ActiveSupport counterpart. It
+  # converts recursively, so that all Hashes to arbitrary depth, including any
+  # hashes inside Arrays, are converted. This is an expensive operation.
+  #
   def with_indifferent_case_insensitive_access
-    Scimitar::Support::HashWithIndifferentCaseInsensitiveAccess.new(self)
+    self.class.deep_indifferent_case_insensitive_access(self)
+  end
+
+  # Supports #with_indifferent_case_insensitive_access. Converts the given item
+  # to indifferent, case-insensitive access as a Hash; or converts Array items
+  # if given an Array; or returns the given object.
+  #
+  # Hashes and Arrays at all depths are duplicated as a result.
+  #
+  def self.deep_indifferent_case_insensitive_access(object)
+    if object.is_a?(Hash)
+      new_hash = Scimitar::Support::HashWithIndifferentCaseInsensitiveAccess.new(object)
+      new_hash.each do | key, value |
+        new_hash[key] = deep_indifferent_case_insensitive_access(value)
+      end
+      new_hash
+
+    elsif object.is_a?(Array)
+      object.map do | array_entry |
+        deep_indifferent_case_insensitive_access(array_entry)
+      end
+
+    else
+      object
+
+    end
   end
 end
 

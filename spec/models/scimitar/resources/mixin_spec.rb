@@ -631,7 +631,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             context 'when prior value already exists' do
               it 'simple value: overwrites' do
                 path      = [ 'userName' ]
-                scim_hash = { 'userName' => 'bar' }
+                scim_hash = { 'userName' => 'bar' }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -646,7 +646,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'nested simple value: overwrites' do
                 path      = [ 'name', 'givenName' ]
-                scim_hash = { 'name' => { 'givenName' => 'Foo', 'familyName' => 'Bar' } }
+                scim_hash = { 'name' => { 'givenName' => 'Foo', 'familyName' => 'Bar' } }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -677,7 +677,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'work@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -703,7 +703,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'primary' => true
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -730,7 +730,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'work_2@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -754,7 +754,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                       'value' => 'home@test.com'
                     }
                   ]
-                }
+                }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -778,7 +778,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         {'value' => '2'}
                       ]
                     }
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   # Example seen at:
                   #
@@ -820,7 +820,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             context 'when value is not present' do
               it 'simple value: adds' do
                 path      = [ 'userName' ]
-                scim_hash = {}
+                scim_hash = {}.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -835,7 +835,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'nested simple value: adds' do
                 path      = [ 'name', 'givenName' ]
-                scim_hash = {}
+                scim_hash = {}.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -861,7 +861,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'type' => 'work'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -886,7 +886,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'primary' => true
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -902,7 +902,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
                 it 'with no match: still adds' do
                   path      = [ 'emails[type eq "work"]', 'value' ]
-                  scim_hash = {}
+                  scim_hash = {}.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -926,7 +926,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'type' => 'work'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -943,7 +943,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'with arrays: appends' do
                 path      = [ 'emails' ]
-                scim_hash = {}
+                scim_hash = {}.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -968,7 +968,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             context 'when prior value already exists' do
               it 'simple value: removes' do
                 path      = [ 'userName' ]
-                scim_hash = { 'userName' => 'bar' }
+                scim_hash = { 'userName' => 'bar' }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -983,7 +983,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'nested simple value: removes' do
                 path      = [ 'name', 'givenName' ]
-                scim_hash = { 'name' => { 'givenName' => 'Foo', 'familyName' => 'Bar' } }
+                scim_hash = { 'name' => { 'givenName' => 'Foo', 'familyName' => 'Bar' } }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1011,7 +1011,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'work@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1037,7 +1037,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'primary' => true
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1064,7 +1064,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'work_2@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1093,7 +1093,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'work@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1119,7 +1119,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'primary' => true
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1150,7 +1150,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'home@test.com'
                       },
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1174,7 +1174,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                       'value' => 'home@test.com'
                     }
                   ]
-                }
+                }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1191,7 +1191,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             context 'when value is not present' do
               it 'simple value: does nothing' do
                 path      = [ 'userName' ]
-                scim_hash = {}
+                scim_hash = {}.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1206,7 +1206,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'nested simple value: does nothing' do
                 path      = [ 'name', 'givenName' ]
-                scim_hash = { 'name' => {'familyName' => 'Bar' } }
+                scim_hash = { 'name' => {'familyName' => 'Bar' } }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1230,7 +1230,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'home@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1252,7 +1252,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'home@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1275,7 +1275,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'home@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1293,7 +1293,7 @@ RSpec.describe Scimitar::Resources::Mixin do
               context 'with filter at end of path' do
                 it 'by string match: does nothing' do
                   path      = [ 'emails[type eq "work"]' ]
-                  scim_hash = {}
+                  scim_hash = {}.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1315,7 +1315,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'primary' => false
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1332,7 +1332,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'remove whole array: does nothing' do
                 path      = [ 'emails' ]
-                scim_hash = {}
+                scim_hash = {}.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1358,7 +1358,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             context 'when prior value already exists' do
               it 'simple value: overwrites' do
                 path      = [ 'userName' ]
-                scim_hash = { 'userName' => 'bar' }
+                scim_hash = { 'userName' => 'bar' }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1373,7 +1373,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'nested simple value: overwrites' do
                 path      = [ 'name', 'givenName' ]
-                scim_hash = { 'name' => { 'givenName' => 'Foo', 'familyName' => 'Bar' } }
+                scim_hash = { 'name' => { 'givenName' => 'Foo', 'familyName' => 'Bar' } }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1401,7 +1401,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'work@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1427,7 +1427,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'primary' => true
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1454,7 +1454,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'work_2@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1483,7 +1483,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'work@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1517,7 +1517,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'home@test.com'
                       },
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1546,7 +1546,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                       'value' => 'home@test.com'
                     }
                   ]
-                }
+                }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1565,7 +1565,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             context 'when value is not present' do
               it 'simple value: adds' do
                 path      = [ 'userName' ]
-                scim_hash = {}
+                scim_hash = {}.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1580,7 +1580,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'nested simple value: adds' do
                 path      = [ 'name', 'givenName' ]
-                scim_hash = {}
+                scim_hash = {}.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1606,7 +1606,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'type' => 'work'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1631,7 +1631,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'primary' => true
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1656,7 +1656,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'type' => 'work'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1674,7 +1674,7 @@ RSpec.describe Scimitar::Resources::Mixin do
               context 'with filter at end of path' do
                 it 'by string match: adds item' do
                   path      = [ 'emails[type eq "work"]' ]
-                  scim_hash = {}
+                  scim_hash = {}.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1698,7 +1698,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'primary' => false
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1717,7 +1717,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'with arrays: replaces' do
                 path      = [ 'emails' ]
-                scim_hash = {}
+                scim_hash = {}.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1838,7 +1838,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             end
 
             it 'adds across multiple deep matching points' do
-              scim_hash          = @original_hash.deep_dup()
+              scim_hash          = @original_hash.deep_dup().with_indifferent_case_insensitive_access()
               contrived_instance = @contrived_class.new
               contrived_instance.send(
                 :from_patch_backend!,
@@ -1861,7 +1861,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             end
 
             it 'replaces across multiple deep matching points' do
-              scim_hash          = @original_hash.deep_dup()
+              scim_hash          = @original_hash.deep_dup().with_indifferent_case_insensitive_access()
               contrived_instance = @contrived_class.new
               contrived_instance.send(
                 :from_patch_backend!,
@@ -1886,7 +1886,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             end
 
             it 'removes across multiple deep matching points' do
-              scim_hash          = @original_hash.deep_dup()
+              scim_hash          = @original_hash.deep_dup().with_indifferent_case_insensitive_access()
               contrived_instance = @contrived_class.new
               contrived_instance.send(
                 :from_patch_backend!,
@@ -1928,7 +1928,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     'value' => 'work_2@test.com'
                   }
                 ]
-              }
+              }.with_indifferent_case_insensitive_access()
 
               expect do
                 @instance.send(
@@ -1945,7 +1945,7 @@ RSpec.describe Scimitar::Resources::Mixin do
               path      = [ 'userName[type eq "work"]', 'value' ]
               scim_hash = {
                 'userName' => '1234'
-              }
+              }.with_indifferent_case_insensitive_access()
 
               expect do
                 @instance.send(
@@ -1965,7 +1965,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   'work_1@test.com',
                   'work_2@test.com',
                 ]
-              }
+              }.with_indifferent_case_insensitive_access()
 
               expect do
                 @instance.send(
