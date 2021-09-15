@@ -146,36 +146,35 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
   context '#create' do
     context 'creates an item' do
-      it 'with minimal parameters' do
-        mock_before = MockUser.all.to_a
+      shared_examples 'a creator' do | force_upper_case: |
+        it 'with minimal parameters' do
+          mock_before = MockUser.all.to_a
 
-        expect_any_instance_of(MockUsersController).to receive(:create).once.and_call_original
-        expect {
-          post "/Users", params: {
-            format: :scim,
-            userName: '4' # Minimum required by schema
-          }
-        }.to change { MockUser.count }.by(1)
+          attributes = { userName: '4' }  # Minimum required by schema
+          attributes = spec_helper_hupcase(attributes) if force_upper_case
 
-        mock_after = MockUser.all.to_a
-        new_mock = (mock_after - mock_before).first
+          expect_any_instance_of(MockUsersController).to receive(:create).once.and_call_original
+          expect {
+            post "/Users", params: attributes.merge(format: :scim)
+          }.to change { MockUser.count }.by(1)
 
-        expect(response.status).to eql(201)
-        result = JSON.parse(response.body)
+          mock_after = MockUser.all.to_a
+          new_mock = (mock_after - mock_before).first
 
-        expect(result['id']).to eql(new_mock.id.to_s)
-        expect(result['meta']['resourceType']).to eql('User')
-        expect(new_mock.username).to eql('4')
-      end
+          expect(response.status).to eql(201)
+          result = JSON.parse(response.body)
 
-      # A bit of extra coverage just for general confidence.
-      #
-      it 'with more comprehensive parameters' do
-        mock_before = MockUser.all.to_a
+          expect(result['id']).to eql(new_mock.id.to_s)
+          expect(result['meta']['resourceType']).to eql('User')
+          expect(new_mock.username).to eql('4')
+        end
 
-        expect {
-          post "/Users", params: {
-            format: :scim,
+        # A bit of extra coverage just for general confidence.
+        #
+        it 'with more comprehensive parameters' do
+          mock_before = MockUser.all.to_a
+
+          attributes = {
             userName: '4',
             name: {
               givenName: 'Given',
@@ -192,22 +191,36 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
               }
             ]
           }
-        }.to change { MockUser.count }.by(1)
 
-        mock_after = MockUser.all.to_a
-        new_mock = (mock_after - mock_before).first
+          attributes = spec_helper_hupcase(attributes) if force_upper_case
 
-        expect(response.status).to eql(201)
-        result = JSON.parse(response.body)
+          expect {
+            post "/Users", params: attributes.merge(format: :scim)
+          }.to change { MockUser.count }.by(1)
 
-        expect(result['id']).to eql(new_mock.id.to_s)
-        expect(result['meta']['resourceType']).to eql('User')
-        expect(new_mock.username).to eql('4')
-        expect(new_mock.first_name).to eql('Given')
-        expect(new_mock.last_name).to eql('Family')
-        expect(new_mock.home_email_address).to eql('home_4@test.com')
-        expect(new_mock.work_email_address).to eql('work_4@test.com')
-      end
+          mock_after = MockUser.all.to_a
+          new_mock = (mock_after - mock_before).first
+
+          expect(response.status).to eql(201)
+          result = JSON.parse(response.body)
+
+          expect(result['id']).to eql(new_mock.id.to_s)
+          expect(result['meta']['resourceType']).to eql('User')
+          expect(new_mock.username).to eql('4')
+          expect(new_mock.first_name).to eql('Given')
+          expect(new_mock.last_name).to eql('Family')
+          expect(new_mock.home_email_address).to eql('home_4@test.com')
+          expect(new_mock.work_email_address).to eql('work_4@test.com')
+        end
+      end # "shared_examples 'a creator' do | force_upper_case: |"
+
+      context 'using schema-matched case' do
+        it_behaves_like 'a creator', force_upper_case: false
+      end # "context 'using schema-matched case' do"
+
+      context 'using upper case' do
+        it_behaves_like 'a creator', force_upper_case: true
+      end # "context 'using upper case' do"
     end
 
     it 'returns 409 for duplicates (by Rails validation)' do
@@ -258,28 +271,38 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
   # ===========================================================================
 
   context '#replace' do
-    it 'replaces all attributes in an instance' do
-      expect_any_instance_of(MockUsersController).to receive(:replace).once.and_call_original
-      expect {
-        put "/Users/#{@u2.id}", params: {
-          format: :scim,
-          userName: '4' # Minimum required by schema
-        }
-      }.to_not change { MockUser.count }
+    shared_examples 'a replacer' do | force_upper_case: |
+      it 'which replaces all attributes in an instance' do
+        attributes = { userName: '4' }  # Minimum required by schema
+        attributes = spec_helper_hupcase(attributes) if force_upper_case
 
-      expect(response.status).to eql(200)
-      result = JSON.parse(response.body)
+        expect_any_instance_of(MockUsersController).to receive(:replace).once.and_call_original
+        expect {
+          put "/Users/#{@u2.id}", params: attributes.merge(format: :scim)
+        }.to_not change { MockUser.count }
 
-      expect(result['id']).to eql(@u2.id.to_s)
-      expect(result['meta']['resourceType']).to eql('User')
+        expect(response.status).to eql(200)
+        result = JSON.parse(response.body)
 
-      @u2.reload
+        expect(result['id']).to eql(@u2.id.to_s)
+        expect(result['meta']['resourceType']).to eql('User')
 
-      expect(@u2.username).to eql('4')
-      expect(@u2.first_name).to be_nil
-      expect(@u2.last_name).to be_nil
-      expect(@u2.home_email_address).to be_nil
-    end
+        @u2.reload
+
+        expect(@u2.username).to eql('4')
+        expect(@u2.first_name).to be_nil
+        expect(@u2.last_name).to be_nil
+        expect(@u2.home_email_address).to be_nil
+      end
+    end # "shared_examples 'a replacer' do | force_upper_case: |"
+
+    context 'using schema-matched case' do
+      it_behaves_like 'a replacer', force_upper_case: false
+    end # "context 'using schema-matched case' do"
+
+    context 'using upper case' do
+      it_behaves_like 'a replacer', force_upper_case: true
+    end # "context 'using upper case' do"
 
     it 'notes schema validation failures' do
       expect {
@@ -341,11 +364,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
   # ===========================================================================
 
   context '#update' do
-    it 'patches specific attributes' do
-      expect_any_instance_of(MockUsersController).to receive(:update).once.and_call_original
-      expect {
-        patch "/Users/#{@u2.id}", params: {
-          format: :scim,
+    shared_examples 'an updater' do | force_upper_case: |
+      it 'which patches specific attributes' do
+        payload = {
           Operations: [
             {
               op: 'add',
@@ -359,33 +380,36 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
             }
           ]
         }
-      }.to_not change { MockUser.count }
 
-      expect(response.status).to eql(200)
-      result = JSON.parse(response.body)
+        payload = spec_helper_hupcase(payload) if force_upper_case
 
-      expect(result['id']).to eql(@u2.id.to_s)
-      expect(result['meta']['resourceType']).to eql('User')
-
-      @u2.reload
-
-      expect(@u2.username).to eql('4')
-      expect(@u2.first_name).to eql('Foo')
-      expect(@u2.last_name).to eql('Bar')
-      expect(@u2.home_email_address).to eql('home_2@test.com')
-      expect(@u2.work_email_address).to eql('work_4@test.com')
-    end
-
-    context 'clears attributes' do
-      before :each do
-        @u2.update!(work_email_address: 'work_2@test.com')
-      end
-
-      it 'with simple paths' do
         expect_any_instance_of(MockUsersController).to receive(:update).once.and_call_original
         expect {
-          patch "/Users/#{@u2.id}", params: {
-            format: :scim,
+          patch "/Users/#{@u2.id}", params: payload.merge(format: :scim)
+        }.to_not change { MockUser.count }
+
+        expect(response.status).to eql(200)
+        result = JSON.parse(response.body)
+
+        expect(result['id']).to eql(@u2.id.to_s)
+        expect(result['meta']['resourceType']).to eql('User')
+
+        @u2.reload
+
+        expect(@u2.username).to eql('4')
+        expect(@u2.first_name).to eql('Foo')
+        expect(@u2.last_name).to eql('Bar')
+        expect(@u2.home_email_address).to eql('home_2@test.com')
+        expect(@u2.work_email_address).to eql('work_4@test.com')
+      end
+
+      context 'which clears attributes' do
+        before :each do
+          @u2.update!(work_email_address: 'work_2@test.com')
+        end
+
+        it 'with simple paths' do
+          payload = {
             Operations: [
               {
                 op: 'remove',
@@ -393,28 +417,31 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
               }
             ]
           }
-        }.to_not change { MockUser.count }
 
-        expect(response.status).to eql(200)
-        result = JSON.parse(response.body)
+          payload = spec_helper_hupcase(payload) if force_upper_case
 
-        expect(result['id']).to eql(@u2.id.to_s)
-        expect(result['meta']['resourceType']).to eql('User')
+          expect_any_instance_of(MockUsersController).to receive(:update).once.and_call_original
+          expect {
+            patch "/Users/#{@u2.id}", params: payload.merge(format: :scim)
+          }.to_not change { MockUser.count }
 
-        @u2.reload
+          expect(response.status).to eql(200)
+          result = JSON.parse(response.body)
 
-        expect(@u2.username).to eql('2')
-        expect(@u2.first_name).to be_nil
-        expect(@u2.last_name).to eql('Bar')
-        expect(@u2.home_email_address).to eql('home_2@test.com')
-        expect(@u2.work_email_address).to eql('work_2@test.com')
-      end
+          expect(result['id']).to eql(@u2.id.to_s)
+          expect(result['meta']['resourceType']).to eql('User')
 
-      it 'by array entry filter match' do
-        expect_any_instance_of(MockUsersController).to receive(:update).once.and_call_original
-        expect {
-          patch "/Users/#{@u2.id}", params: {
-            format: :scim,
+          @u2.reload
+
+          expect(@u2.username).to eql('2')
+          expect(@u2.first_name).to be_nil
+          expect(@u2.last_name).to eql('Bar')
+          expect(@u2.home_email_address).to eql('home_2@test.com')
+          expect(@u2.work_email_address).to eql('work_2@test.com')
+        end
+
+        it 'by array entry filter match' do
+          payload = {
             Operations: [
               {
                 op: 'remove',
@@ -422,28 +449,31 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
               }
             ]
           }
-        }.to_not change { MockUser.count }
 
-        expect(response.status).to eql(200)
-        result = JSON.parse(response.body)
+          payload = spec_helper_hupcase(payload) if force_upper_case
 
-        expect(result['id']).to eql(@u2.id.to_s)
-        expect(result['meta']['resourceType']).to eql('User')
+          expect_any_instance_of(MockUsersController).to receive(:update).once.and_call_original
+          expect {
+            patch "/Users/#{@u2.id}", params: payload.merge(format: :scim)
+          }.to_not change { MockUser.count }
 
-        @u2.reload
+          expect(response.status).to eql(200)
+          result = JSON.parse(response.body)
 
-        expect(@u2.username).to eql('2')
-        expect(@u2.first_name).to eql('Foo')
-        expect(@u2.last_name).to eql('Bar')
-        expect(@u2.home_email_address).to eql('home_2@test.com')
-        expect(@u2.work_email_address).to be_nil
-      end
+          expect(result['id']).to eql(@u2.id.to_s)
+          expect(result['meta']['resourceType']).to eql('User')
 
-      it 'by whole collection' do
-        expect_any_instance_of(MockUsersController).to receive(:update).once.and_call_original
-        expect {
-          patch "/Users/#{@u2.id}", params: {
-            format: :scim,
+          @u2.reload
+
+          expect(@u2.username).to eql('2')
+          expect(@u2.first_name).to eql('Foo')
+          expect(@u2.last_name).to eql('Bar')
+          expect(@u2.home_email_address).to eql('home_2@test.com')
+          expect(@u2.work_email_address).to be_nil
+        end
+
+        it 'by whole collection' do
+          payload = {
             Operations: [
               {
                 op: 'remove',
@@ -451,23 +481,38 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
               }
             ]
           }
-        }.to_not change { MockUser.count }
 
-        expect(response.status).to eql(200)
-        result = JSON.parse(response.body)
+          payload = spec_helper_hupcase(payload) if force_upper_case
 
-        expect(result['id']).to eql(@u2.id.to_s)
-        expect(result['meta']['resourceType']).to eql('User')
+          expect_any_instance_of(MockUsersController).to receive(:update).once.and_call_original
+          expect {
+            patch "/Users/#{@u2.id}", params: payload.merge(format: :scim)
+          }.to_not change { MockUser.count }
 
-        @u2.reload
+          expect(response.status).to eql(200)
+          result = JSON.parse(response.body)
 
-        expect(@u2.username).to eql('2')
-        expect(@u2.first_name).to eql('Foo')
-        expect(@u2.last_name).to eql('Bar')
-        expect(@u2.home_email_address).to be_nil
-        expect(@u2.work_email_address).to be_nil
-      end
-    end # "context 'clears attributes' do"
+          expect(result['id']).to eql(@u2.id.to_s)
+          expect(result['meta']['resourceType']).to eql('User')
+
+          @u2.reload
+
+          expect(@u2.username).to eql('2')
+          expect(@u2.first_name).to eql('Foo')
+          expect(@u2.last_name).to eql('Bar')
+          expect(@u2.home_email_address).to be_nil
+          expect(@u2.work_email_address).to be_nil
+        end
+      end # "context 'which clears attributes' do"
+    end # "shared_examples 'an updater' do | force_upper_case: |"
+
+    context 'using schema-matched case' do
+      it_behaves_like 'an updater', force_upper_case: false
+    end # "context 'using schema-matched case' do"
+
+    context 'using upper case' do
+      it_behaves_like 'an updater', force_upper_case: true
+    end # "context 'using upper case' do"
 
     it 'notes Rails validation failures' do
       expect {

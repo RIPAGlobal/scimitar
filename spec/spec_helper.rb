@@ -64,3 +64,30 @@ def spec_helper_capture_stdout( &block )
 
   return result
 end
+
+# Recursively transform the keys of any given Hash or any Hashes in a given
+# Array into uppercase form, retaining Symbol or String keys. Returns the
+# transformed duplicate structure.
+#
+# Only Hashes or Hash entries within an Array are converted. Other data is left
+# alone. The original input item is not modified.
+#
+# IMPORTANT: HashWithIndifferentAccess or similar subclasses are not supported.
+#
+# +item+:: Hash or Array that might contain some Hashes.
+#
+def spec_helper_hupcase(item)
+  if item.is_a?(Hash)
+    rehash = item.transform_keys(&:upcase)
+    rehash.each do | key, value |
+      rehash[key] = spec_helper_hupcase(value)
+    end
+    rehash
+  elsif item.is_a?(Array)
+    item.map do | array_entry |
+      spec_helper_hupcase(array_entry)
+    end
+  else
+    item
+  end
+end
