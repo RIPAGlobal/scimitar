@@ -417,7 +417,7 @@ If you believe choices made in this section may be incorrect, please [create a G
 
   - `filter=userType eq "Employee" and (emails.type eq "work")`
 
-  ...which is just a match on `emails.type`, so if you have a querable attribute mapping defined for `emails.type`, that would become queryable. Likewise, you could rewrite the more complex prior example thus:
+  ...which is just a match on `emails.type`, so if you have a queryable attribute mapping defined for `emails.type`, that would become queryable. Likewise, you could rewrite the more complex prior example thus:
 
   - `filter=userType eq "Employee" and emails.type eq "work" and emails.value co "@example.com"`
 

@@ -1,3 +1,7 @@
+# 1.1.0 (2021-09-15)
+
+* Implement case insensitivity for attributes (fixes [issue #7](https://github.com/RIPGlobal/scimitar/issues/7)).
+
 # 1.0.3 (2020-03-24)
 
 * More robust path filter parsing for `PATCH` operations; previously, a path filter such as `value eq "Something With Spaces"` would have been rejected.

@@ -15,6 +15,19 @@ RSpec.describe Scimitar::Resources::User do
       expect(user.as_json['name']['errors']).to be_nil
     end
 
+    it 'treats attributes as case-insensitive' do
+      user = described_class.new(name: Scimitar::ComplexTypes::Name.new(
+        FAMILYNAME: 'Smith',
+        GIVENNAME: 'John',
+        FORMATTED: 'John Smith'
+      ))
+
+      expect(user.name.familyName).to eql('Smith')
+      expect(user.name.givenName).to eql('John')
+      expect(user.name.formatted).to eql('John Smith')
+      expect(user.as_json['name']['errors']).to be_nil
+    end
+
     it 'validates that the provided name matches the name schema' do
       user = described_class.new(name: Scimitar::ComplexTypes::Email.new(
         value: 'john@smoth.com',

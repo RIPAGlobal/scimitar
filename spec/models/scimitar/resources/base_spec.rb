@@ -24,53 +24,78 @@ RSpec.describe Scimitar::Resources::Base do
     end
 
     context '#initialize' do
-      it 'builds the nested type' do
-        resource = CustomResourse.new(name: {
-          givenName: 'John',
-          familyName: 'Smith'
-        })
-
-        expect(resource.name.is_a?(Scimitar::ComplexTypes::Name)).to be(true)
-        expect(resource.name.givenName).to eql('John')
-        expect(resource.name.familyName).to eql('Smith')
-      end
-
-      it 'builds an array of nested resources' do
-        resource = CustomResourse.new(names: [
-          {
-            givenName: 'John',
-            familyName: 'Smith'
-          },
-          {
-            givenName: 'Jane',
-            familyName: 'Snow'
+      shared_examples 'an initializer' do | force_upper_case: |
+        it 'which builds the nested type' do
+          attributes = {
+            name: {
+              givenName:  'John',
+              familyName: 'Smith'
+            }
           }
-        ])
 
-        expect(resource.names.is_a?(Array)).to be(true)
-        expect(resource.names.first.is_a?(Scimitar::ComplexTypes::Name)).to be(true)
-        expect(resource.names.first.givenName).to eql('John')
-        expect(resource.names.first.familyName).to eql('Smith')
-        expect(resource.names.second.is_a?(Scimitar::ComplexTypes::Name)).to be(true)
-        expect(resource.names.second.givenName).to eql('Jane')
-        expect(resource.names.second.familyName).to eql('Snow')
-        expect(resource.valid?).to be(true)
-      end
+          attributes = spec_helper_hupcase(attributes) if force_upper_case
+          resource   = CustomResourse.new(attributes)
 
-      it 'builds an array of nested resources which is invalid if the hash does not follow the schema of the complex type' do
-        resource = CustomResourse.new(names: [
-          {
-            givenName: 'John',
-            familyName: 123
+          expect(resource.name.is_a?(Scimitar::ComplexTypes::Name)).to be(true)
+          expect(resource.name.givenName).to eql('John')
+          expect(resource.name.familyName).to eql('Smith')
+        end
+
+        it 'which builds an array of nested resources' do
+          attributes = {
+            names:[
+              {
+                givenName:  'John',
+                familyName: 'Smith'
+              },
+              {
+                givenName:  'Jane',
+                familyName: 'Snow'
+              }
+            ]
           }
-        ])
 
-        expect(resource.names.is_a?(Array)).to be(true)
-        expect(resource.names.first.is_a?(Scimitar::ComplexTypes::Name)).to be(true)
-        expect(resource.names.first.givenName).to eql('John')
-        expect(resource.names.first.familyName).to eql(123)
-        expect(resource.valid?).to be(false)
-      end
+          attributes = spec_helper_hupcase(attributes) if force_upper_case
+          resource   = CustomResourse.new(attributes)
+
+          expect(resource.names.is_a?(Array)).to be(true)
+          expect(resource.names.first.is_a?(Scimitar::ComplexTypes::Name)).to be(true)
+          expect(resource.names.first.givenName).to eql('John')
+          expect(resource.names.first.familyName).to eql('Smith')
+          expect(resource.names.second.is_a?(Scimitar::ComplexTypes::Name)).to be(true)
+          expect(resource.names.second.givenName).to eql('Jane')
+          expect(resource.names.second.familyName).to eql('Snow')
+          expect(resource.valid?).to be(true)
+        end
+
+        it 'which builds an array of nested resources which is invalid if the hash does not follow the schema of the complex type' do
+          attributes = {
+            names: [
+              {
+                givenName:  'John',
+                familyName: 123
+              }
+            ]
+          }
+
+          attributes = spec_helper_hupcase(attributes) if force_upper_case
+          resource   = CustomResourse.new(attributes)
+
+          expect(resource.names.is_a?(Array)).to be(true)
+          expect(resource.names.first.is_a?(Scimitar::ComplexTypes::Name)).to be(true)
+          expect(resource.names.first.givenName).to eql('John')
+          expect(resource.names.first.familyName).to eql(123)
+          expect(resource.valid?).to be(false)
+        end
+      end # "shared_examples 'an initializer' do | force_upper_case: |"
+
+      context 'using schema-matched case' do
+        it_behaves_like 'an initializer', force_upper_case: false
+      end # "context 'using schema-matched case' do"
+
+      context 'using upper case' do
+        it_behaves_like 'an initializer', force_upper_case: true
+      end # "context 'using upper case' do"
     end # "context '#initialize' do"
 
     context '#as_json' do
@@ -88,26 +113,51 @@ RSpec.describe Scimitar::Resources::Base do
     end # "context '#as_json' do"
 
     context '.find_attribute' do
-      it 'finds in complex type' do
-        found = CustomResourse.find_attribute('name', 'givenName')
-        expect(found).to be_present
-        expect(found.name).to eql('givenName')
-        expect(found.type).to eql('string')
+      shared_examples 'a finder' do | force_upper_case: |
+        it 'which finds in complex type' do
+          args = ['name', 'givenName']
+          args.map!(&:upcase) if force_upper_case
+
+          found = CustomResourse.find_attribute(*args)
+
+          expect(found).to be_present
+          expect(found.name).to eql('givenName')
+          expect(found.type).to eql('string')
+        end
+
+        it 'which finds in multi-value type, without index' do
+          args = ['names', 'givenName']
+          args.map!(&:upcase) if force_upper_case
+
+          found = CustomResourse.find_attribute(*args)
+
+          expect(found).to be_present
+          expect(found.name).to eql('givenName')
+          expect(found.type).to eql('string')
+        end
+
+        it 'which finds in multi-value type, ignoring index' do
+          args = if force_upper_case
+            ['NAMES', 42, 'GIVENNAME']
+          else
+            ['names', 42, 'givenName']
+          end
+
+          found = CustomResourse.find_attribute(*args)
+
+          expect(found).to be_present
+          expect(found.name).to eql('givenName')
+          expect(found.type).to eql('string')
+        end # "shared_examples 'a finder' do | force_upper_case: |"
       end
 
-      it 'finds in multi-value type, without index' do
-        found = CustomResourse.find_attribute('names', 'givenName')
-        expect(found).to be_present
-        expect(found.name).to eql('givenName')
-        expect(found.type).to eql('string')
-      end
+      context 'using schema-matched case' do
+        it_behaves_like 'a finder', force_upper_case: false
+      end # "context 'using schema-matched case' do"
 
-      it 'finds in multi-value type, ignoring index' do
-        found = CustomResourse.find_attribute('names', 42, 'givenName')
-        expect(found).to be_present
-        expect(found.name).to eql('givenName')
-        expect(found.type).to eql('string')
-      end
+      context 'using upper case' do
+        it_behaves_like 'a finder', force_upper_case: true
+      end # "context 'using upper case' do"
     end # "context '.find_attribute' do"
   end # "context 'basic operation' do"
 

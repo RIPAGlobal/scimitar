@@ -404,10 +404,10 @@ module Scimitar
         # Call ONLY for PATCH. For POST and PUT, see #from_scim!.
         #
         def from_scim_patch!(patch_hash:)
-          patch_hash.freeze()
-          scim_hash = self.to_scim(location: '(unused)').as_json()
+          frozen_ci_patch_hash = patch_hash.with_indifferent_case_insensitive_access().freeze()
+          ci_scim_hash         = self.to_scim(location: '(unused)').as_json().with_indifferent_case_insensitive_access()
 
-          patch_hash['Operations'].each do |operation|
+          frozen_ci_patch_hash['operations'].each do |operation|
             nature   = operation['op'   ]&.downcase
             path_str = operation['path' ]
             value    = operation['value']
@@ -440,22 +440,22 @@ module Scimitar
             if path_str.blank?
               extract_root = true
               path_str     = 'root'
-              scim_hash    = { 'root' => scim_hash }
+              ci_scim_hash = { 'root' => ci_scim_hash }.with_indifferent_case_insensitive_access()
             end
 
             self.from_patch_backend!(
               nature:        nature,
               path:          (path_str || '').split('.'),
               value:         value,
-              altering_hash: scim_hash
+              altering_hash: ci_scim_hash
             )
 
             if extract_root
-              scim_hash = scim_hash['root']
+              ci_scim_hash = ci_scim_hash['root']
             end
           end
 
-          self.from_scim!(scim_hash: scim_hash)
+          self.from_scim!(scim_hash: ci_scim_hash)
           return self
         end
 
@@ -542,20 +542,20 @@ module Scimitar
           #   ::scim_attributes_map.
           #
           #     {                                                     | {
-          #       "userName": "foo",                                  |   "id": "id",
-          #       "name": {                                           |   "externalId": :scim_uid",
-          #         "givenName": "Foo",                               |   "userName": :username",
-          #         "familyName": "Bar"                               |   "name": {
-          #       },                                                  |     "givenName": :first_name",
-          #       "active": true,                                     |     "familyName": :last_name"
+          #       "userName": "foo",                                  |   'id': :id,
+          #       "name": {                                           |   'externalId': :scim_uid,
+          #         "givenName": "Foo",                               |   'userName': :username,
+          #         "familyName": "Bar"                               |   'name': {
+          #       },                                                  |     'givenName': :first_name,
+          #       "active": true,                                     |     'familyName': :last_name
           #       "emails": [                                         |   },
-          #         {                                                 |   "emails": [
+          #         {                                                 |   'emails': [
           #           "type": "work",                  <------\       |     {
-          #           "primary": true,                         \------+---    "match": "type",
-          #           "value": "foo.bar@test.com"                     |       "with": "work",
-          #         }                                                 |       "using": {
-          #       ],                                                  |         "value": :work_email_address",
-          #       "phoneNumbers": [                                   |         "primary": true
+          #           "primary": true,                         \------+---    'match': 'type',
+          #           "value": "foo.bar@test.com"                     |       'with': 'work',
+          #         }                                                 |       'using': {
+          #       ],                                                  |         'value': :work_email_address,
+          #       "phoneNumbers": [                                   |         'primary': true
           #         {                                                 |       }
           #           "type": "work",                                 |     }
           #           "primary": false,                               |   ],
@@ -568,7 +568,7 @@ module Scimitar
           #         "location": "https://test.com/mock_users/42",     |       }
           #         "resourceType": "User"                            |     }
           #       },                                                  |   ],
-          #       "schemas": [                                        |   "active": :is_active"
+          #       "schemas": [                                        |   'active': :is_active
           #         "urn:ietf:params:scim:schemas:core:2.0:User"      | }
           #       ]                                                   |
           #     }                                                     |
@@ -600,7 +600,7 @@ module Scimitar
             scim_hash_or_leaf_value:,
             path: []
           )
-            attrs_map_or_leaf_value = attrs_map_or_leaf_value.with_indifferent_access() if attrs_map_or_leaf_value.instance_of?(Hash)
+            scim_hash_or_leaf_value = scim_hash_or_leaf_value.with_indifferent_case_insensitive_access() if scim_hash_or_leaf_value.is_a?(Hash)
 
             # We get the schema via this instance's class's resource type, even
             # if we end up in collections of other types - because it's *this*
@@ -668,7 +668,7 @@ module Scimitar
                 end # "map_entry&.each do | mapped_array_entry |"
 
               when Symbol # Setter/getter method at leaf position in attribute map
-                if path == ['externalId'] # Special case held only in schema base class
+                if path.length == 1 && path.first&.to_s&.downcase == 'externalid' # Special case held only in schema base class
                   mutable = true
                 else
                   attribute = resource_class.find_attribute(*path)
@@ -706,7 +706,8 @@ module Scimitar
           #
           # +altering_hash+:: The Hash to operate on at the current +path+. For
           #                   recursive calls, this will be some way down into
-          #                   the SCIM representation of 'self'.
+          #                   the SCIM representation of 'self'. MUST be a
+          #                   HashWithIndifferentCaseInsensitiveAccess.
           #
           # Note that SCIM PATCH operations permit *no* path for 'replace' and
           # 'add' operations, meaning "apply to whole object". To avoid special
@@ -715,6 +716,7 @@ module Scimitar
           # interest and supply this key as the sole array entry in +path+.
           #
           def from_patch_backend!(nature:, path:, value:, altering_hash:)
+            raise 'Case sensitivity violation' unless altering_hash.is_a?(Scimitar::Support::HashWithIndifferentCaseInsensitiveAccess)
 
             # These all throw exceptions if data is not as expected / required,
             # any of which are rescued below.
@@ -752,6 +754,8 @@ module Scimitar
           # Happily throws exceptions if data is not as expected / required.
           #
           def from_patch_backend_traverse!(nature:, path:, value:, altering_hash:)
+            raise 'Case sensitivity violation' unless altering_hash.is_a?(Scimitar::Support::HashWithIndifferentCaseInsensitiveAccess)
+
             path_component, filter = extract_filter_from(path_component: path.first)
 
             # https://tools.ietf.org/html/rfc7644#section-3.5.2.1
@@ -766,7 +770,7 @@ module Scimitar
             #
             # Harmless in this context for 'remove'.
             #
-            altering_hash[path_component] ||= {}
+            altering_hash[path_component] ||= Scimitar::Support::HashWithIndifferentCaseInsensitiveAccess.new
 
             # Unless the PATCH is bad, inner data is an Array or Hash always as
             # by definition this method is only called at path positions above
@@ -784,7 +788,7 @@ module Scimitar
               # Same reason as section 3.5.2.1 / 3.5.2.3 RFC quotes above.
               #
               if nature != 'remove' && matched_hashes.empty?
-                new_hash = {}
+                new_hash = Scimitar::Support::HashWithIndifferentCaseInsensitiveAccess.new
                 altering_hash[path_component] = [new_hash]
                 matched_hashes                = [new_hash]
               end
@@ -815,6 +819,8 @@ module Scimitar
           # Happily throws exceptions if data is not as expected / required.
           #
           def from_patch_backend_apply!(nature:, path:, value:, altering_hash:)
+            raise 'Case sensitivity violation' unless altering_hash.is_a?(Scimitar::Support::HashWithIndifferentCaseInsensitiveAccess)
+
             path_component, filter = extract_filter_from(path_component: path.first)
             current_data_at_path   = altering_hash[path_component]
 
@@ -968,7 +974,9 @@ module Scimitar
             value = value[1..-2] if value.start_with?('"') && value.end_with?('"')
 
             within_array.each.with_index do | hash, index |
-              matched = hash.key?(attribute) && hash[attribute]&.to_s == value&.to_s
+              ci_hash = hash.with_indifferent_case_insensitive_access()
+              matched = ci_hash.key?(attribute) && ci_hash[attribute]&.to_s == value&.to_s
+
               yield(hash, index) if matched
             end
           end

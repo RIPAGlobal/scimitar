@@ -363,78 +363,94 @@ RSpec.describe Scimitar::Resources::Mixin do
     # =========================================================================
 
     context '#from_scim!' do
-      context 'writes instance attribute values from a SCIM representation' do
-        it 'ignoring read-only lists' do
-          hash = {
-            'userName'    => 'foo',
-            'name'        => {'givenName'=>'Foo', 'familyName'=>'Bar'},
-            'active'      => true,
-            'emails'      => [{'type'=>'work', 'primary'=>true,  'value'=>'foo.bar@test.com'}],
-            'phoneNumbers'=> [{'type'=>'work', 'primary'=>false, 'value'=>'+642201234567'   }],
-            'groups'      => [{'type'=>'Group', 'value'=>'1'}, {'type'=>'Group', 'value'=>'2'}],
-            'id'          => '42', # Note, String
-            'externalId'  => 'AA02984',
-            'meta'        => {'location'=>'https://test.com/mock_users/42', 'resourceType'=>'User'},
-            'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User']
-          }
+      shared_examples 'a creator' do | force_upper_case: |
+        context 'which writes instance attribute values from a SCIM representation while' do
+          it 'ignoring read-only lists' do
+            hash = {
+              'userName'     => 'foo',
+              'name'         => {'givenName' => 'Foo', 'familyName' => 'Bar'},
+              'active'       => true,
+              'emails'       => [{'type' => 'work',  'primary' => true,  'value' => 'foo.bar@test.com'}],
+              'phoneNumbers' => [{'type' => 'work',  'primary' => false, 'value' => '+642201234567'   }],
+              'groups'       => [{'type' => 'Group', 'value' => '1'}, {'type' => 'Group', 'value' => '2'}],
+              'id'           => '42', # Note, String
+              'externalId'   => 'AA02984',
+              'meta'         => {'location' => 'https://test.com/mock_users/42', 'resourceType' => 'User'},
+              'schemas'      => ['urn:ietf:params:scim:schemas:core:2.0:User']
+            }
 
-          instance = MockUser.new
-          instance.home_email_address = 'home@test.com' # Should be cleared as no home e-mail specified in SCIM hash above
-          instance.from_scim!(scim_hash: hash)
+            hash = spec_helper_hupcase(hash) if force_upper_case
 
-          expect(instance.scim_uid          ).to eql('AA02984')
-          expect(instance.username          ).to eql('foo')
-          expect(instance.first_name        ).to eql('Foo')
-          expect(instance.last_name         ).to eql('Bar')
-          expect(instance.work_email_address).to eql('foo.bar@test.com')
-          expect(instance.home_email_address).to be_nil
-          expect(instance.work_phone_number ).to eql('+642201234567')
-        end
+            instance = MockUser.new
+            instance.home_email_address = 'home@test.com' # Should be cleared as no home e-mail specified in SCIM hash above
+            instance.from_scim!(scim_hash: hash)
 
-        it 'honouring read-write lists' do
-          g1 = MockGroup.create!(display_name: 'Nested group')
+            expect(instance.scim_uid          ).to eql('AA02984')
+            expect(instance.username          ).to eql('foo')
+            expect(instance.first_name        ).to eql('Foo')
+            expect(instance.last_name         ).to eql('Bar')
+            expect(instance.work_email_address).to eql('foo.bar@test.com')
+            expect(instance.home_email_address).to be_nil
+            expect(instance.work_phone_number ).to eql('+642201234567')
+          end
 
-          u1 = MockUser.create!(username: '1', first_name: 'Member 1')
-          u2 = MockUser.create!(username: '2', first_name: 'Member 2')
-          u3 = MockUser.create!(username: '3', first_name: 'Member 3')
+          it 'honouring read-write lists' do
+            g1 = MockGroup.create!(display_name: 'Nested group')
 
-          hash = {
-            'displayName' => 'Foo Group',
-            'members'     => [
-              {'type'=>'Group', 'value'=>g1.id.to_s},
-              {'type'=>'User',  'value'=>u1.id.to_s},
-              {'type'=>'User',  'value'=>u3.id.to_s}
-            ],
-            'externalId'  => 'GG01536',
-            'meta'        => {'location'=>'https://test.com/mock_groups/1', 'resourceType'=>'Group'},
-            'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:Group']
-          }
+            u1 = MockUser.create!(username: '1', first_name: 'Member 1')
+            u2 = MockUser.create!(username: '2', first_name: 'Member 2')
+            u3 = MockUser.create!(username: '3', first_name: 'Member 3')
 
-          instance = MockGroup.new
-          instance.from_scim!(scim_hash: hash)
+            hash = {
+              'displayName' => 'Foo Group',
+              'members'     => [
+                {'type' => 'Group', 'value' => g1.id.to_s},
+                {'type' => 'User',  'value' => u1.id.to_s},
+                {'type' => 'User',  'value' => u3.id.to_s}
+              ],
+              'externalId'  => 'GG01536',
+              'meta'        => {'location'=>'https://test.com/mock_groups/1', 'resourceType'=>'Group'},
+              'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:Group']
+            }
 
-          expect(instance.scim_uid         ).to eql('GG01536')
-          expect(instance.display_name     ).to eql('Foo Group')
-          expect(instance.mock_users       ).to match_array([u1, u3])
-          expect(instance.child_mock_groups).to match_array([g1])
+            hash = spec_helper_hupcase(hash) if force_upper_case
 
-          instance.save!
-          expect(g1.reload.parent_id).to eql(instance.id)
-        end
+            instance = MockGroup.new
+            instance.from_scim!(scim_hash: hash)
 
-        it 'handles missing inbound lists' do
-          hash = {
-            'displayName' => 'Foo Group'
-          }
+            expect(instance.scim_uid         ).to eql('GG01536')
+            expect(instance.display_name     ).to eql('Foo Group')
+            expect(instance.mock_users       ).to match_array([u1, u3])
+            expect(instance.child_mock_groups).to match_array([g1])
 
-          instance = MockGroup.new
-          instance.from_scim!(scim_hash: hash)
+            instance.save!
+            expect(g1.reload.parent_id).to eql(instance.id)
+          end
 
-          expect(instance.display_name     ).to eql('Foo Group')
-          expect(instance.mock_users       ).to be_empty
-          expect(instance.child_mock_groups).to be_empty
-        end
-      end # "context 'writes instance attribute values from a SCIM representation' do"
+          it 'handling missing inbound lists' do
+            hash = {
+              'displayName' => 'Foo Group'
+            }
+
+            hash = spec_helper_hupcase(hash) if force_upper_case
+
+            instance = MockGroup.new
+            instance.from_scim!(scim_hash: hash)
+
+            expect(instance.display_name     ).to eql('Foo Group')
+            expect(instance.mock_users       ).to be_empty
+            expect(instance.child_mock_groups).to be_empty
+          end
+        end # "context 'which writes instance attribute values from a SCIM representation while' do"
+      end # "shared_examples 'a creator' do | force_upper_case: |"
+
+      context 'using schema-matched case' do
+        it_behaves_like 'a creator', force_upper_case: false
+      end # "context 'using schema-matched case' do"
+
+      context 'using upper case' do
+        it_behaves_like 'a creator', force_upper_case: true
+      end # "context 'using upper case' do"
 
       it 'clears things not present in input' do
         instance                    = MockUser.new
@@ -631,7 +647,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             context 'when prior value already exists' do
               it 'simple value: overwrites' do
                 path      = [ 'userName' ]
-                scim_hash = { 'userName' => 'bar' }
+                scim_hash = { 'userName' => 'bar' }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -646,7 +662,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'nested simple value: overwrites' do
                 path      = [ 'name', 'givenName' ]
-                scim_hash = { 'name' => { 'givenName' => 'Foo', 'familyName' => 'Bar' } }
+                scim_hash = { 'name' => { 'givenName' => 'Foo', 'familyName' => 'Bar' } }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -677,18 +693,18 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'work@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
                     nature:        'add',
                     path:          path,
-                    value:         'added_over_origina@test.com',
+                    value:         'added_over_original@test.com',
                     altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_original@test.com')
                 end
 
                 it 'by boolean match: overwrites' do
@@ -703,18 +719,18 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'primary' => true
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
                     nature:        'add',
                     path:          path,
-                    value:         'added_over_origina@test.com',
+                    value:         'added_over_original@test.com',
                     altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_original@test.com')
                 end
 
                 it 'multiple matches: overwrites all' do
@@ -730,18 +746,18 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'work_2@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
                     nature:        'add',
                     path:          path,
-                    value:         'added_over_origina@test.com',
+                    value:         'added_over_original@test.com',
                     altering_hash: scim_hash
                   )
 
-                  expect(scim_hash['emails'][0]['value']).to eql('added_over_origina@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
+                  expect(scim_hash['emails'][0]['value']).to eql('added_over_original@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_original@test.com')
                 end
               end # "context 'with filter mid-path' do"
 
@@ -754,7 +770,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                       'value' => 'home@test.com'
                     }
                   ]
-                }
+                }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -778,7 +794,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         {'value' => '2'}
                       ]
                     }
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   # Example seen at:
                   #
@@ -820,7 +836,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             context 'when value is not present' do
               it 'simple value: adds' do
                 path      = [ 'userName' ]
-                scim_hash = {}
+                scim_hash = {}.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -835,7 +851,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'nested simple value: adds' do
                 path      = [ 'name', 'givenName' ]
-                scim_hash = {}
+                scim_hash = {}.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -861,7 +877,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'type' => 'work'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -886,7 +902,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'primary' => true
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -902,7 +918,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
                 it 'with no match: still adds' do
                   path      = [ 'emails[type eq "work"]', 'value' ]
-                  scim_hash = {}
+                  scim_hash = {}.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -926,7 +942,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'type' => 'work'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -943,7 +959,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'with arrays: appends' do
                 path      = [ 'emails' ]
-                scim_hash = {}
+                scim_hash = {}.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -968,7 +984,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             context 'when prior value already exists' do
               it 'simple value: removes' do
                 path      = [ 'userName' ]
-                scim_hash = { 'userName' => 'bar' }
+                scim_hash = { 'userName' => 'bar' }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -983,7 +999,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'nested simple value: removes' do
                 path      = [ 'name', 'givenName' ]
-                scim_hash = { 'name' => { 'givenName' => 'Foo', 'familyName' => 'Bar' } }
+                scim_hash = { 'name' => { 'givenName' => 'Foo', 'familyName' => 'Bar' } }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1011,7 +1027,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'work@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1037,7 +1053,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'primary' => true
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1064,7 +1080,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'work_2@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1093,7 +1109,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'work@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1119,7 +1135,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'primary' => true
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1150,7 +1166,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'home@test.com'
                       },
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1174,7 +1190,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                       'value' => 'home@test.com'
                     }
                   ]
-                }
+                }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1191,7 +1207,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             context 'when value is not present' do
               it 'simple value: does nothing' do
                 path      = [ 'userName' ]
-                scim_hash = {}
+                scim_hash = {}.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1206,7 +1222,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'nested simple value: does nothing' do
                 path      = [ 'name', 'givenName' ]
-                scim_hash = { 'name' => {'familyName' => 'Bar' } }
+                scim_hash = { 'name' => {'familyName' => 'Bar' } }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1230,7 +1246,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'home@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1252,7 +1268,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'home@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1275,7 +1291,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'home@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1293,7 +1309,7 @@ RSpec.describe Scimitar::Resources::Mixin do
               context 'with filter at end of path' do
                 it 'by string match: does nothing' do
                   path      = [ 'emails[type eq "work"]' ]
-                  scim_hash = {}
+                  scim_hash = {}.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1315,7 +1331,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'primary' => false
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1332,7 +1348,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'remove whole array: does nothing' do
                 path      = [ 'emails' ]
-                scim_hash = {}
+                scim_hash = {}.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1358,7 +1374,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             context 'when prior value already exists' do
               it 'simple value: overwrites' do
                 path      = [ 'userName' ]
-                scim_hash = { 'userName' => 'bar' }
+                scim_hash = { 'userName' => 'bar' }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1373,7 +1389,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'nested simple value: overwrites' do
                 path      = [ 'name', 'givenName' ]
-                scim_hash = { 'name' => { 'givenName' => 'Foo', 'familyName' => 'Bar' } }
+                scim_hash = { 'name' => { 'givenName' => 'Foo', 'familyName' => 'Bar' } }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1401,18 +1417,18 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'work@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
                     nature:        'replace',
                     path:          path,
-                    value:         'added_over_origina@test.com',
+                    value:         'added_over_original@test.com',
                     altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_original@test.com')
                 end
 
                 it 'by boolean match: overwrites' do
@@ -1427,18 +1443,18 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'primary' => true
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
                     nature:        'replace',
                     path:          path,
-                    value:         'added_over_origina@test.com',
+                    value:         'added_over_original@test.com',
                     altering_hash: scim_hash
                   )
 
                   expect(scim_hash['emails'][0]['value']).to eql('home@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_original@test.com')
                 end
 
                 it 'multiple matches: overwrites all' do
@@ -1454,18 +1470,18 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'work_2@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
                     nature:        'replace',
                     path:          path,
-                    value:         'added_over_origina@test.com',
+                    value:         'added_over_original@test.com',
                     altering_hash: scim_hash
                   )
 
-                  expect(scim_hash['emails'][0]['value']).to eql('added_over_origina@test.com')
-                  expect(scim_hash['emails'][1]['value']).to eql('added_over_origina@test.com')
+                  expect(scim_hash['emails'][0]['value']).to eql('added_over_original@test.com')
+                  expect(scim_hash['emails'][1]['value']).to eql('added_over_original@test.com')
                 end
               end # "context 'with filter mid-path' do"
 
@@ -1483,7 +1499,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'work@test.com'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1517,7 +1533,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'value' => 'home@test.com'
                       },
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1546,7 +1562,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                       'value' => 'home@test.com'
                     }
                   ]
-                }
+                }.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1565,7 +1581,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             context 'when value is not present' do
               it 'simple value: adds' do
                 path      = [ 'userName' ]
-                scim_hash = {}
+                scim_hash = {}.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1580,7 +1596,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'nested simple value: adds' do
                 path      = [ 'name', 'givenName' ]
-                scim_hash = {}
+                scim_hash = {}.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1606,7 +1622,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'type' => 'work'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1631,7 +1647,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'primary' => true
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1656,7 +1672,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'type' => 'work'
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1674,7 +1690,7 @@ RSpec.describe Scimitar::Resources::Mixin do
               context 'with filter at end of path' do
                 it 'by string match: adds item' do
                   path      = [ 'emails[type eq "work"]' ]
-                  scim_hash = {}
+                  scim_hash = {}.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1698,7 +1714,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                         'primary' => false
                       }
                     ]
-                  }
+                  }.with_indifferent_case_insensitive_access()
 
                   @instance.send(
                     :from_patch_backend!,
@@ -1717,7 +1733,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               it 'with arrays: replaces' do
                 path      = [ 'emails' ]
-                scim_hash = {}
+                scim_hash = {}.with_indifferent_case_insensitive_access()
 
                 @instance.send(
                   :from_patch_backend!,
@@ -1838,7 +1854,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             end
 
             it 'adds across multiple deep matching points' do
-              scim_hash          = @original_hash.deep_dup()
+              scim_hash          = @original_hash.deep_dup().with_indifferent_case_insensitive_access()
               contrived_instance = @contrived_class.new
               contrived_instance.send(
                 :from_patch_backend!,
@@ -1861,7 +1877,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             end
 
             it 'replaces across multiple deep matching points' do
-              scim_hash          = @original_hash.deep_dup()
+              scim_hash          = @original_hash.deep_dup().with_indifferent_case_insensitive_access()
               contrived_instance = @contrived_class.new
               contrived_instance.send(
                 :from_patch_backend!,
@@ -1886,7 +1902,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             end
 
             it 'removes across multiple deep matching points' do
-              scim_hash          = @original_hash.deep_dup()
+              scim_hash          = @original_hash.deep_dup().with_indifferent_case_insensitive_access()
               contrived_instance = @contrived_class.new
               contrived_instance.send(
                 :from_patch_backend!,
@@ -1928,7 +1944,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                     'value' => 'work_2@test.com'
                   }
                 ]
-              }
+              }.with_indifferent_case_insensitive_access()
 
               expect do
                 @instance.send(
@@ -1945,7 +1961,7 @@ RSpec.describe Scimitar::Resources::Mixin do
               path      = [ 'userName[type eq "work"]', 'value' ]
               scim_hash = {
                 'userName' => '1234'
-              }
+              }.with_indifferent_case_insensitive_access()
 
               expect do
                 @instance.send(
@@ -1965,7 +1981,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                   'work_1@test.com',
                   'work_2@test.com',
                 ]
-              }
+              }.with_indifferent_case_insensitive_access()
 
               expect do
                 @instance.send(
@@ -1986,166 +2002,202 @@ RSpec.describe Scimitar::Resources::Mixin do
       # -------------------------------------------------------------------
       #
       context 'public interface' do
-        it 'updates simple values' do
-          @instance.update!(username: 'foo')
+        shared_examples 'a patcher' do | force_upper_case: |
+          it 'which updates simple values' do
+            @instance.update!(username: 'foo')
 
-          patch = {
-            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
-            'Operations' => [
-              {
-                'op'    => 'replace',
-                'path'  => 'userName',
-                'value' => '1234'
-              }
-            ]
-          }
+            path = 'userName'
+            path = path.upcase if force_upper_case
 
-          @instance.from_scim_patch!(patch_hash: patch)
-          expect(@instance.username).to eql('1234')
-        end
+            patch = {
+              'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+              'Operations' => [
+                {
+                  'op'    => 'replace',
+                  'path'  => path,
+                  'value' => '1234'
+                }
+              ]
+            }
 
-        it 'updates nested values' do
-          @instance.update!(first_name: 'Foo', last_name: 'Bar')
-
-          patch = {
-            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
-            'Operations' => [
-              {
-                'op'    => 'replace',
-                'path'  => 'name.givenName',
-                'value' => 'Baz'
-              }
-            ]
-          }
-
-          @instance.from_scim_patch!(patch_hash: patch)
-          expect(@instance.first_name).to eql('Baz')
-        end
-
-        it 'updates with filter match' do
-          @instance.update!(work_email_address: 'work@test.com', home_email_address: 'home@test.com')
-
-          patch = {
-            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
-            'Operations' => [
-              {
-                'op'    => 'replace',
-                'path'  => 'emails[type eq "work"].value',
-                'value' => 'replaced@test.com'
-              }
-            ]
-          }
-
-          @instance.from_scim_patch!(patch_hash: patch)
-          expect(@instance.work_email_address).to eql('replaced@test.com')
-          expect(@instance.home_email_address).to eql('home@test.com')
-        end
-
-        it 'appends e-mails' do
-          @instance.update!(work_email_address: 'work@test.com')
-
-          patch = {
-            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
-            'Operations' => [
-              {
-                'op'    => 'add',
-                'path'  => 'emails[type eq "home"].value',
-                'value' => 'home@test.com'
-              }
-            ]
-          }
-
-          @instance.from_scim_patch!(patch_hash: patch)
-          expect(@instance.work_email_address).to eql('work@test.com')
-          expect(@instance.home_email_address).to eql('home@test.com')
-        end
-
-        it 'removes e-mails' do
-          @instance.update!(work_email_address: 'work@test.com', home_email_address: 'home@test.com')
-
-          patch = {
-            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
-            'Operations' => [
-              {
-                'op'   => 'remove',
-                'path' => 'emails[type eq "home"]'
-              }
-            ]
-          }
-
-          @instance.from_scim_patch!(patch_hash: patch)
-          expect(@instance.work_email_address).to eql('work@test.com')
-          expect(@instance.home_email_address).to be_nil
-        end
-
-        it 'can patch the whole object' do
-          @instance.update!(username: 'foo')
-
-          patch = {
-            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
-            'Operations' => [
-              {
-                'op'    => 'replace',
-                'value' => {'userName' => '1234', 'name' => {'givenName' => 'Bar'}}
-              }
-            ]
-          }
-
-          @instance.from_scim_patch!(patch_hash: patch)
-          expect(@instance.username).to eql('1234')
-          expect(@instance.first_name).to eql('Bar')
-        end
-
-        it 'treats operation types as case-insensitive' do
-          @instance.update!(username: 'foo')
-
-          patch = {
-            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
-            'Operations' => [
-              {
-                'op'    => 'REPLACE', # Note upper case
-                'path'  => 'userName',
-                'value' => '1234'
-              }
-            ]
-          }
-
-          @instance.from_scim_patch!(patch_hash: patch)
-          expect(@instance.username).to eql('1234')
-        end
-
-        it 'complains about bad operation types' do
-          patch = {
-            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
-            'Operations' => [
-              {
-                'op'    => 'invalidop',
-                'path'  => 'userName',
-                'value' => '1234'
-              }
-            ]
-          }
-
-          expect { @instance.from_scim_patch!(patch_hash: patch) }.to raise_error(Scimitar::ErrorResponse) do |e|
-            expect(e.as_json['scimType']).to eql('invalidSyntax')
-            expect(e.as_json[:detail   ]).to include('invalidop')
+            @instance.from_scim_patch!(patch_hash: patch)
+            expect(@instance.username).to eql('1234')
           end
-        end
 
-        it 'complains about a missing target for "remove" operations' do
-          patch = {
-            'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
-            'Operations' => [
-              {
-                'op' => 'remove'
-              }
-            ]
-          }
+          it 'which updates nested values' do
+            @instance.update!(first_name: 'Foo', last_name: 'Bar')
 
-          expect { @instance.from_scim_patch!(patch_hash: patch) }.to raise_error(Scimitar::ErrorResponse) do |e|
-            expect(e.as_json['scimType']).to eql('noTarget')
+            path = 'name.givenName'
+            path = path.upcase if force_upper_case
+
+            patch = {
+              'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+              'Operations' => [
+                {
+                  'op'    => 'replace',
+                  'path'  => path,
+                  'value' => 'Baz'
+                }
+              ]
+            }
+
+            @instance.from_scim_patch!(patch_hash: patch)
+            expect(@instance.first_name).to eql('Baz')
           end
-        end
+
+          it 'which updates with filter match' do
+            @instance.update!(work_email_address: 'work@test.com', home_email_address: 'home@test.com')
+
+            filter_prefix = 'emails[type'
+            filter_prefix = filter_prefix.upcase if force_upper_case
+
+            patch = {
+              'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+              'Operations' => [
+                {
+                  'op'    => 'replace',
+                  'path'  => filter_prefix + ' eq "work"].value',
+                  'value' => 'replaced@test.com'
+                }
+              ]
+            }
+
+            @instance.from_scim_patch!(patch_hash: patch)
+            expect(@instance.work_email_address).to eql('replaced@test.com')
+            expect(@instance.home_email_address).to eql('home@test.com')
+          end
+
+          it 'which appends e-mails' do
+            @instance.update!(work_email_address: 'work@test.com')
+
+            filter_prefix = 'emails[type'
+            filter_prefix = filter_prefix.upcase if force_upper_case
+
+            patch = {
+              'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+              'Operations' => [
+                {
+                  'op'    => 'add',
+                  'path'  => filter_prefix + ' eq "home"].value',
+                  'value' => 'home@test.com'
+                }
+              ]
+            }
+
+            @instance.from_scim_patch!(patch_hash: patch)
+            expect(@instance.work_email_address).to eql('work@test.com')
+            expect(@instance.home_email_address).to eql('home@test.com')
+          end
+
+          it 'which removes e-mails' do
+            @instance.update!(work_email_address: 'work@test.com', home_email_address: 'home@test.com')
+
+            filter_prefix = 'emails[type'
+            filter_prefix = filter_prefix.upcase if force_upper_case
+
+            patch = {
+              'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+              'Operations' => [
+                {
+                  'op'   => 'remove',
+                  'path' => filter_prefix + ' eq "home"].value',
+                }
+              ]
+            }
+
+            @instance.from_scim_patch!(patch_hash: patch)
+            expect(@instance.work_email_address).to eql('work@test.com')
+            expect(@instance.home_email_address).to be_nil
+          end
+
+          it 'which can patch the whole object' do
+            @instance.update!(username: 'foo')
+
+            hash = {
+              'userName' => '1234',
+              'name' => {
+                'givenName' => 'Bar'
+              }
+            }
+
+            hash = spec_helper_hupcase(hash) if force_upper_case
+
+            patch = {
+              'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+              'Operations' => [
+                {
+                  'op'    => 'replace',
+                  'value' => hash
+                }
+              ]
+            }
+
+            @instance.from_scim_patch!(patch_hash: patch)
+            expect(@instance.username).to eql('1234')
+            expect(@instance.first_name).to eql('Bar')
+          end
+        end # "shared_examples 'a patcher' do | force_upper_case: |"
+
+        context 'using schema-matched case' do
+          it_behaves_like 'a patcher', force_upper_case: false
+        end # "context 'using schema-matched case' do"
+
+        context 'using upper case' do
+          it_behaves_like 'a patcher', force_upper_case: true
+
+          it 'treats operation types as case-insensitive' do
+            @instance.update!(username: 'foo')
+
+            patch = {
+              'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+              'Operations' => [
+                {
+                  'op'    => 'REPLACE', # Note upper case
+                  'path'  => 'userName',
+                  'value' => '1234'
+                }
+              ]
+            }
+
+            @instance.from_scim_patch!(patch_hash: patch)
+            expect(@instance.username).to eql('1234')
+          end
+        end # "context 'using upper case' do"
+
+        context 'with errors' do
+          it 'complains about bad operation types' do
+            patch = {
+              'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+              'Operations' => [
+                {
+                  'op'    => 'invalidop',
+                  'path'  => 'userName',
+                  'value' => '1234'
+                }
+              ]
+            }
+
+            expect { @instance.from_scim_patch!(patch_hash: patch) }.to raise_error(Scimitar::ErrorResponse) do |e|
+              expect(e.as_json['scimType']).to eql('invalidSyntax')
+              expect(e.as_json[:detail   ]).to include('invalidop')
+            end
+          end
+
+          it 'complains about a missing target for "remove" operations' do
+            patch = {
+              'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+              'Operations' => [
+                {
+                  'op' => 'remove'
+                }
+              ]
+            }
+
+            expect { @instance.from_scim_patch!(patch_hash: patch) }.to raise_error(Scimitar::ErrorResponse) do |e|
+              expect(e.as_json['scimType']).to eql('noTarget')
+            end
+          end
+        end # "context 'with errors' do"
       end # "context 'public interface' do"
     end # "context '#from_scim_patch!' do"
   end # "context 'with good class definitons' do"

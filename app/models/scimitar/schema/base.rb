@@ -62,8 +62,10 @@ module Scimitar
           current_path_entry = path.shift()
           next if current_path_entry.is_a?(Integer) # Skip array indicies arising from multi-value attributes
 
+          current_path_entry = current_path_entry.to_s.downcase
+
           found_attribute = current_attributes.find do | attribute_to_check |
-            attribute_to_check.name == current_path_entry
+            attribute_to_check.name.to_s.downcase == current_path_entry
           end
 
           if found_attribute && path.present? # Any sub-attributes to check?...
