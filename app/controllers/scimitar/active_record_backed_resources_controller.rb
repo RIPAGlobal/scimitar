@@ -131,8 +131,8 @@ module Scimitar
         raise NotImplementedError
       end
 
-      # Find a RIP user record. Subclasses can override this if they need
-      # special lookup behaviour.
+      # Find a record by ID. Subclasses can override this if they need special
+      # lookup behaviour.
       #
       # +record_id+:: Record ID (SCIM schema 'id' value - "our" ID).
       #
