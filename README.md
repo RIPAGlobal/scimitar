@@ -1,8 +1,7 @@
 # Scimitar
 
 [![Gem Version](https://badge.fury.io/rb/scimitar.svg)](https://badge.fury.io/rb/scimitar)
-[![Build Status](https://app.travis-ci.com/RIPGlobal/scimitar.svg?branch=main)](https://travis-ci.com/github/RIPGlobal/scimitar)
-[![License](https://img.shields.io/badge/license-mit-blue.svg)](https://opensource.org/licenses/MIT)
+[![Build Status](https://app.travis-ci.com/RIPAGlobal/scimitar.svg?branch=main)](https://app.travis-ci.com/RIPAGlobal/scimitar)[![License](https://img.shields.io/badge/license-mit-blue.svg)](https://opensource.org/licenses/MIT)
 
 A SCIM v2 API endpoint implementation for Ruby On Rails.
 
@@ -58,7 +57,7 @@ Scimitar is best used with Rails and ActiveRecord, but it can be used with other
 
 ### Authentication
 
-Noting the _Security_ section later - to set up an authentication method, create a `config/initializers/scimitar.rb` in your Rails application and define a token-based authenticator and/or a username-password authenticator in the [engine configuration section documented in the sample file](https://github.com/RIPGlobal/scimitar/blob/main/config/initializers/scimitar.rb). For example:
+Noting the _Security_ section later - to set up an authentication method, create a `config/initializers/scimitar.rb` in your Rails application and define a token-based authenticator and/or a username-password authenticator in the [engine configuration section documented in the sample file](https://github.com/RIPAGlobal/scimitar/blob/main/config/initializers/scimitar.rb). For example:
 
 ```ruby
 Scimitar.engine_configuration = Scimitar::EngineConfiguration.new({
@@ -100,9 +99,9 @@ All routes then will be available at `https://.../scim_v2/...` via controllers y
 
 Scimitar assumes that each SCIM resource maps to a single corresponding class in your system. This might be an abstraction over more complex underpinings, but either way, a 1:1 relationship is expected. For example, a SCIM User might map to a User ActiveRecord model in your Rails application, while a SCIM Group might map to some custom class called Team which operates on a more complex set of data "under the hood".
 
-Before writing any controllers, it's a good idea to examine the SCIM specification and figure out how you intend to map SCIM attributes in any resources of interest, to your local data. A [mixin is provided](https://github.com/RIPGlobal/scimitar/blob/main/app/models/scimitar/resources/mixin.rb) which you can include in any plain old Ruby class (including, but not limited to ActiveRecord model classes) - a more readable form of the comments in this file [is in the RDoc output](https://www.rubydoc.info/gems/scimitar/Scimitar/Resources/Mixin).
+Before writing any controllers, it's a good idea to examine the SCIM specification and figure out how you intend to map SCIM attributes in any resources of interest, to your local data. A [mixin is provided](https://github.com/RIPAGlobal/scimitar/blob/main/app/models/scimitar/resources/mixin.rb) which you can include in any plain old Ruby class (including, but not limited to ActiveRecord model classes) - a more readable form of the comments in this file [is in the RDoc output](https://www.rubydoc.info/gems/scimitar/Scimitar/Resources/Mixin).
 
-The functionality exposed by the mixin is relatively complicated because the range of operations that the SCIM API supports is quite extensive. Rather than duplicate all the information here, please see the extensive comments in the mixin linked above for more information. There are examples in the [test suite's Rails models](https://github.com/RIPGlobal/scimitar/tree/main/spec/apps/dummy/app/models), or for another example:
+The functionality exposed by the mixin is relatively complicated because the range of operations that the SCIM API supports is quite extensive. Rather than duplicate all the information here, please see the extensive comments in the mixin linked above for more information. There are examples in the [test suite's Rails models](https://github.com/RIPAGlobal/scimitar/tree/main/spec/apps/dummy/app/models), or for another example:
 
 ```ruby
 class User < ActiveRecord::Base
@@ -233,7 +232,7 @@ module Scim
 end
 ```
 
-All data-layer actions are taken via `#find` or `#save!`, with exceptions such as `ActiveRecord::RecordNotFound`, `ActiveRecord::RecordInvalid` or generalised SCIM exceptions handled by various superclasses. For a real Rails example of this, see the [test suite's controllers](https://github.com/RIPGlobal/scimitar/tree/main/spec/apps/dummy/app/controllers) which are invoked via its [routing declarations](https://github.com/RIPGlobal/scimitar/blob/main/spec/apps/dummy/config/routes.rb).
+All data-layer actions are taken via `#find` or `#save!`, with exceptions such as `ActiveRecord::RecordNotFound`, `ActiveRecord::RecordInvalid` or generalised SCIM exceptions handled by various superclasses. For a real Rails example of this, see the [test suite's controllers](https://github.com/RIPAGlobal/scimitar/tree/main/spec/apps/dummy/app/controllers) which are invoked via its [routing declarations](https://github.com/RIPAGlobal/scimitar/blob/main/spec/apps/dummy/config/routes.rb).
 
 If you do _not_ use ActiveRecord to store data, or if you have very esoteric read-write requirements, you can subclass [`Scimigar::ResourcesController`](https://www.rubydoc.info/gems/scimitar/Scimitar/ResourcesController) in a manner similar to this:
 
@@ -361,7 +360,7 @@ end
 
 ```
 
-Note that the [`Scimitar::ApplicationController` parent class](https://www.rubydoc.info/gems/scimitar/Scimitar/ApplicationController) of `Scimitar::ResourcesController` has a few methods to help with handling exceptions and rendering them as SCIM responses; for example, if a resource were not found by ID, you might wish to use [`Scimitar::ApplicationController#handle_resource_not_found`](https://github.com/RIPGlobal/scimitar/blob/v1.0.3/app/controllers/scimitar/application_controller.rb#L22).
+Note that the [`Scimitar::ApplicationController` parent class](https://www.rubydoc.info/gems/scimitar/Scimitar/ApplicationController) of `Scimitar::ResourcesController` has a few methods to help with handling exceptions and rendering them as SCIM responses; for example, if a resource were not found by ID, you might wish to use [`Scimitar::ApplicationController#handle_resource_not_found`](https://github.com/RIPAGlobal/scimitar/blob/v1.0.3/app/controllers/scimitar/application_controller.rb#L22).
 
 
 
@@ -391,13 +390,13 @@ Often, you'll find that bearer tokens are in use by SCIM API consumers, but the 
 
 * In the `members` section of a [`Group` in the RFC 7643 core schema](https://tools.ietf.org/html/rfc7643#page-69), any member's `value` is noted as _not_ required but [the RFC also says](https://tools.ietf.org/html/rfc7643#section-4.2) "Service providers MAY require clients to provide a non-empty value by setting the "required" attribute characteristic of a sub-attribute of the "members" attribute in the "Group" resource schema". Scimitar does this. The `value` field would contain the `id` of a SCIM resource, which is the primary key on "our side" as a service provider. Just as we must store `externalId` values to maintain a mapping on "our side", we in turn _do_ require clients to provide our ID in group member lists via the `value` field.
 
-* While the gem attempts to support difficult/complex filter strings via incorporating code and ideas in [SCIM Query Filter Parser](https://github.com/ingydotnet/scim-query-filter-parser-rb), it is possible that ActiveRecord / Rails precedence on some query operations in complex cases might not exactly match the SCIM specification. Please do submit a bug report if you encounter this. You may also wish to view [`query_parser_spec.rb`](https://github.com/RIPGlobal/scimitar/blob/main/spec/models/scimitar/lists/query_parser_spec.rb) to get an idea of the tested examples - more interesting test cases are in the "`context 'with complex cases' do`" section.
+* While the gem attempts to support difficult/complex filter strings via incorporating code and ideas in [SCIM Query Filter Parser](https://github.com/ingydotnet/scim-query-filter-parser-rb), it is possible that ActiveRecord / Rails precedence on some query operations in complex cases might not exactly match the SCIM specification. Please do submit a bug report if you encounter this. You may also wish to view [`query_parser_spec.rb`](https://github.com/RIPAGlobal/scimitar/blob/main/spec/models/scimitar/lists/query_parser_spec.rb) to get an idea of the tested examples - more interesting test cases are in the "`context 'with complex cases' do`" section.
 
 * Group resource examples show the `members` array including field `display`, but this is not in the [formal schema](https://tools.ietf.org/html/rfc7643#page-69); Scimitar includes it in the Group definition.
 
 * `POST` actions with only a subset of attributes specified treat missing attributes "to be cleared" for anything that's mapped for the target model. If you have defaults established at instantiation rather than (say) before-validation, you'll need to override `Scimitar::ActiveRecordBackedResourcesController#create` (if using that controller as a base class) as normally the controller just instantiates a model, applies _all_ attributes (with any mapped attribute values without an inbound value set to `nil`), then saves the record. This might cause default values to be overwritten. For consistency, `PUT` operations apply the same behaviour. The decision on this optional specification aspect is in part constrained by the difficulties of implementing `PATCH`.
 
-If you believe choices made in this section may be incorrect, please [create a GitHub issue](https://github.com/RIPGlobal/scimitar/issues/new) describing the problem.
+If you believe choices made in this section may be incorrect, please [create a GitHub issue](https://github.com/RIPAGlobal/scimitar/issues/new) describing the problem.
 
 ### Omissions
 
@@ -427,7 +426,7 @@ If you believe choices made in this section may be incorrect, please [create a G
 
 * The `PATCH` mechanism is supported, but where filters are included, only a single "attribute eq value" is permitted - no other operators or combinations. For example, a work e-mail address's value could be replaced by a PATCH patch of `emails[type eq "work"].value`. For in-path filters such as this, other operators such as `ne` are not supported; combinations with "and"/"or" are not supported; negation with "not" is not supported.
 
-If you would like to see something listed in the session implemented, please [create a GitHub issue](https://github.com/RIPGlobal/scimitar/issues/new) asking for it to be implemented, or if possible, implement the feature and send a Pull Request.
+If you would like to see something listed in the session implemented, please [create a GitHub issue](https://github.com/RIPAGlobal/scimitar/issues/new) asking for it to be implemented, or if possible, implement the feature and send a Pull Request.
 
 
 

@@ -1,6 +1,11 @@
+# 1.2.0 (2021-09-27)
+
+* Updated for RIPA branding.
+* Ruby and gem version maintenance updates.
+
 # 1.1.0 (2021-09-15)
 
-* Implement case insensitivity for attributes (fixes [issue #7](https://github.com/RIPGlobal/scimitar/issues/7)).
+* Implement case insensitivity for attributes (fixes [issue #7](https://github.com/RIPAGlobal/scimitar/issues/7)).
 
 # 1.0.3 (2020-03-24)
 
