@@ -5,6 +5,15 @@ module Scimitar
     #
     # See also Scimitar::ComplexTypes::PhoneNumber
     #
-    class PhoneNumber < Vdtp; end
+    class PhoneNumber < Base
+      def self.scim_attributes
+        @scim_attributes ||= [
+          Attribute.new(name: 'value',   type: 'string'),
+          Attribute.new(name: 'display', type: 'string', mutability: 'readOnly'),
+          Attribute.new(name: 'type',    type: 'string'),
+          Attribute.new(name: 'primary', type: 'boolean'),
+        ]
+      end
+    end
   end
 end
