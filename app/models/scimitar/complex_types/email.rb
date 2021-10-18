@@ -5,7 +5,7 @@ module Scimitar
     #
     # See also Scimitar::Schema::Email
     #
-    class Email < Base
+    class Email < Scimitar::ComplexTypes::Base
       set_schema Scimitar::Schema::Email
     end
   end

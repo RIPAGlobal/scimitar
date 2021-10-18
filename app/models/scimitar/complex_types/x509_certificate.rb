@@ -5,7 +5,7 @@ module Scimitar
     #
     # See also Scimitar::Schema::X509Certificate
     #
-    class X509Certificate < Base
+    class X509Certificate < Scimitar::ComplexTypes::Base
       set_schema Scimitar::Schema::X509Certificate
     end
   end

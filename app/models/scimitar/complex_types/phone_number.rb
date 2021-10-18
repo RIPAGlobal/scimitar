@@ -5,7 +5,7 @@ module Scimitar
     #
     # See also Scimitar::Schema::PhoneNumber
     #
-    class PhoneNumber < Base
+    class PhoneNumber < Scimitar::ComplexTypes::Base
       set_schema Scimitar::Schema::PhoneNumber
     end
   end

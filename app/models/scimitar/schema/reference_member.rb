@@ -8,7 +8,7 @@ module Scimitar
     #
     # See also Scimitar::ComplexTypes::ReferenceMember
     #
-    class ReferenceMember < Base
+    class ReferenceMember < Scimitar::Resources::Base
       def self.scim_attributes
         @scim_attributes ||= [
           Attribute.new(name: 'value',    type: 'string', mutability: 'immutable', required: true),

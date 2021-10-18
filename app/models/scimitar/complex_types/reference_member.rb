@@ -5,7 +5,7 @@ module Scimitar
     #
     # See also Scimitar::Schema::ReferenceMember
     #
-    class ReferenceMember < Base
+    class ReferenceMember < Scimitar::ComplexTypes::Base
       set_schema Scimitar::Schema::ReferenceMember
     end
   end

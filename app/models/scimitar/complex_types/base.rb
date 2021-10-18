@@ -9,7 +9,7 @@ module Scimitar
     #
     #     module Scimitar
     #       module ComplexTypes
-    #         class Email < Base
+    #         class Email < Scimitar::ComplexTypes::Base
     #           set_schema Scimitar::Schema::Email
     #
     #           def as_json(options = {})

@@ -5,7 +5,7 @@ module Scimitar
     #
     # See also Scimitar::Schema::Address
     #
-    class Address < Base
+    class Address < Scimitar::ComplexTypes::Base
       set_schema Scimitar::Schema::Address
 
       # Returns the JSON representation of an Address.

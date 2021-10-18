@@ -5,7 +5,7 @@ module Scimitar
     #
     # See also Scimitar::Schema::Name
     #
-    class Name < Base
+    class Name < Scimitar::ComplexTypes::Base
       set_schema Scimitar::Schema::Name
     end
   end

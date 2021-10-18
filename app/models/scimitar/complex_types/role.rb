@@ -5,7 +5,7 @@ module Scimitar
     #
     # See also Scimitar::Schema::Role
     #
-    class Role < Base
+    class Role < Scimitar::ComplexTypes::Base
       set_schema Scimitar::Schema::Role
     end
   end

@@ -1,6 +1,6 @@
 module Scimitar
   module Resources
-    class User < Base
+    class User < Scimitar::Resources::Base
 
       set_schema Schema::User
 

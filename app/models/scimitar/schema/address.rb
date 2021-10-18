@@ -5,7 +5,7 @@ module Scimitar
     #
     # See also Scimitar::ComplexTypes::Address
     #
-    class Address < Base
+    class Address < Scimitar::Resources::Base
 
       def self.scim_attributes
         @scim_attributes ||= [

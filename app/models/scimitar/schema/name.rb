@@ -2,7 +2,7 @@ module Scimitar
   module Schema
     # Represents the schema for the Name complex type
     # See also Scimitar::ComplexTypes::Name
-    class Name < Base
+    class Name < Scimitar::Resources::Base
 
       def self.scim_attributes
         @scim_attributes ||= [

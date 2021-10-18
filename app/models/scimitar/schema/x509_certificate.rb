@@ -8,7 +8,7 @@ module Scimitar
     #
     # See also Scimitar::ComplexTypes::X509Certificate
     #
-    class X509Certificate < Base
+    class X509Certificate < Scimitar::Resources::Base
       def self.scim_attributes
         @scim_attributes ||= [
           Attribute.new(name: 'value',   type: 'binary', required: true),

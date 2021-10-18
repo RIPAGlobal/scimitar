@@ -10,7 +10,7 @@ module Scimitar
     #
     # See also Scimitar::ComplexTypes::ReferenceGroup
     #
-    class ReferenceGroup < Base
+    class ReferenceGroup < Scimitar::Resources::Base
       def self.scim_attributes
         @scim_attributes ||= [
           Attribute.new(name: 'value',   type: 'string', mutability: 'readOnly', required: true),

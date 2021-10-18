@@ -5,7 +5,7 @@ module Scimitar
     #
     # See also Scimitar::Schema::Entitlement
     #
-    class Entitlement < Base
+    class Entitlement < Scimitar::ComplexTypes::Base
       set_schema Scimitar::Schema::Entitlement
     end
   end

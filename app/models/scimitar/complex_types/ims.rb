@@ -5,7 +5,7 @@ module Scimitar
     #
     # See also Scimitar::Schema::Ims
     #
-    class Ims < Base
+    class Ims < Scimitar::ComplexTypes::Base
       set_schema Scimitar::Schema::Ims
     end
   end

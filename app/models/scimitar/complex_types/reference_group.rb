@@ -5,7 +5,7 @@ module Scimitar
     #
     # See also Scimitar::Schema::ReferenceGroup
     #
-    class ReferenceGroup < Base
+    class ReferenceGroup < Scimitar::ComplexTypes::Base
       set_schema Scimitar::Schema::ReferenceGroup
     end
   end

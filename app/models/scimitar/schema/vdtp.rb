@@ -4,7 +4,7 @@ module Scimitar
     # Represents a common schema for a few complex types; base class DRYs up
     # code. "Vdtp" - Value, Display, Type, Primary.
     #
-    class Vdtp < Base
+    class Vdtp < Scimitar::Resources::Base
       def self.scim_attributes
         @scim_attributes ||= [
           Attribute.new(name: 'value',   type: 'string', required: true),
