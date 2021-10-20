@@ -5,7 +5,6 @@ module Scimitar
     rescue_from ActionDispatch::Http::Parameters::ParseError, with: :handle_bad_json_error # Via "ActionDispatch::Request.parameter_parsers" block in lib/scimitar/engine.rb
     rescue_from Scimitar::ErrorResponse,                      with: :handle_scim_error
 
-    before_action :require_scim
     before_action :add_mandatory_response_headers
     before_action :authenticate
 
@@ -76,20 +75,6 @@ module Scimitar
     # =========================================================================
     #
     private
-
-      # Tries to be permissive in what it receives - ".scim" extensions or a
-      # Content-Type header (or both) lead to both being set up for the inbound
-      # request and subclass processing.
-      #
-      def require_scim
-        if request.content_type&.downcase == Mime::Type.lookup_by_extension(:scim).to_s
-          request.format = :scim
-        elsif request.format == :scim
-          request.headers['CONTENT_TYPE'] = Mime::Type.lookup_by_extension(:scim).to_s
-        else
-          handle_scim_error(ErrorResponse.new(status: 406, detail: "Only #{Mime::Type.lookup_by_extension(:scim)} type is accepted."))
-        end
-      end
 
       def add_mandatory_response_headers
 
