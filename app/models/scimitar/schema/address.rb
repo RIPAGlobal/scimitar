@@ -9,6 +9,7 @@ module Scimitar
 
       def self.scim_attributes
         @scim_attributes ||= [
+          Attribute.new(name: 'primary',      type: 'boolean'),
           Attribute.new(name: 'type',          type: 'string'),
           Attribute.new(name: 'formatted',     type: 'string'),
           Attribute.new(name: 'streetAddress', type: 'string'),
