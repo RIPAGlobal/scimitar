@@ -459,6 +459,29 @@ module Scimitar
           return self
         end
 
+          # Given a path element from SCIM, splits this into the attribute and
+          # filter parts. Returns a tuple of [attribute, filter] where +filter+
+          # will be +nil+ if no filter string was given.
+          #
+          # Named parameters:
+          #
+          # +path_component+:: Path component to examine (a String), e.g.
+          #                    'userName' or 'emails[type eq "work"]'.
+          #
+          # Happily throws exceptions if data is not as expected / required.
+          #
+          def extract_filter_from(path_component:)
+            filter = nil
+
+            if path_component.include?('[')
+              composition    = path_component.split(/[\[\]]/) # "attribute_name[filter_string]" -> ["attribute_name", "filter_string"]
+              path_component = composition.first
+              filter         = composition.last
+            end
+
+            [path_component, filter]
+          end
+
         private # (...but note that we're inside "included do" within a mixin)
 
           # A recursive method that takes a Hash mapping SCIM attributes to the
@@ -907,29 +930,6 @@ module Scimitar
                   altering_hash.delete(path_component)
               end
             end
-          end
-
-          # Given a path element from SCIM, splits this into the attribute and
-          # filter parts. Returns a tuple of [attribute, filter] where +filter+
-          # will be +nil+ if no filter string was given.
-          #
-          # Named parameters:
-          #
-          # +path_component+:: Path component to examine (a String), e.g.
-          #                    'userName' or 'emails[type eq "work"]'.
-          #
-          # Happily throws exceptions if data is not as expected / required.
-          #
-          def extract_filter_from(path_component:)
-            filter = nil
-
-            if path_component.include?('[')
-              composition    = path_component.split(/[\[\]]/) # "attribute_name[filter_string]" -> ["attribute_name", "filter_string"]
-              path_component = composition.first
-              filter         = composition.last
-            end
-
-            [path_component, filter]
           end
 
           # Given a SCIM filter string and array of Hashes from a SCIM object,
