@@ -22,7 +22,7 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = '>= 2.7.0'
 
-  s.add_dependency 'rails', '~> 6.0'
+  s.add_dependency 'rails', '>= 6.0'
 
   s.add_development_dependency 'rake',           '~> 13.0'
   s.add_development_dependency 'pg',             '~>  1.2'
