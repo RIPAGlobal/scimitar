@@ -203,7 +203,7 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
-  byebug
+  byebug (~> 11.1)
   doggo (~> 1.2)
   pg (~> 1.2)
   rake (~> 13.0)

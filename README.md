@@ -447,7 +447,7 @@ After `bundle install` and with PostgreSQL up, set up the test database with:
 
 ```shell
 pushd spec/apps/dummy
-RAILS_ENV=test bundle exec rails db:drop db:create db:migrate
+RAILS_ENV=test bundle exec rake db:drop db:create db:migrate
 popd
 ```
 
