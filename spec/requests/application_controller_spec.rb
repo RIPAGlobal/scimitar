@@ -23,7 +23,6 @@ RSpec.describe Scimitar::ApplicationController do
 
       expect(response).to have_http_status(:bad_request)
       expect(JSON.parse(response.body)['detail']).to start_with('Invalid JSON - ')
-      expect(JSON.parse(response.body)['detail']).to include("'not-json-12345'")
     end
 
     it 'translates Content-Type to Rails request format' do
