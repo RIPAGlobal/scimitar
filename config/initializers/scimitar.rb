@@ -2,6 +2,8 @@
 #
 # For supporting information and rationale, please see README.md.
 
+Rails.application.config.to_prepare do # (required for >= Rails 7 / Zeitwerk)
+
 # =============================================================================
 # SERVICE PROVIDER CONFIGURATION
 # =============================================================================
@@ -80,3 +82,5 @@ Scimitar.engine_configuration = Scimitar::EngineConfiguration.new({
   # parameters in the inbound HTTP request determining which is invoked.
 
 })
+
+end
