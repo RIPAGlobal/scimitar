@@ -12,6 +12,6 @@ require 'scimitar'
 
 module Dummy
   class Application < Rails::Application
+    config.load_defaults 5.0
   end
 end
-

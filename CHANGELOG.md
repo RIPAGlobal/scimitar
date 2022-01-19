@@ -1,3 +1,7 @@
+# 2.0.0 (2022-01-19)
+
+* Requires Rails 7.
+
 # 1.2.0 (2021-09-27)
 
 * Updated for RIPA branding.

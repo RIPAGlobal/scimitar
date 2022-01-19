@@ -33,7 +33,7 @@ gem install scimitar
 In your Gemfile:
 
 ```ruby
-gem 'scimitar', '~> 1.0'
+gem 'scimitar', '~> 2.0'
 ```
 
 Scimitar uses [semantic versioning](https://semver.org) so you can be confident that patch and minor version updates for features, bug fixes and/or security patches will not break your application.
