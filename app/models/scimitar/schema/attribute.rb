@@ -88,7 +88,7 @@ module Scimitar
         end
         value.class.schema.valid?(value)
         return true if value.errors.empty?
-        add_errors_from_hash(value.errors.to_hash, prefix: self.name)
+        add_errors_from_hash(errors_hash: value.errors.to_hash, prefix: self.name)
         false
       end
 

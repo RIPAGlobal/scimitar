@@ -200,6 +200,7 @@ GEM
 
 PLATFORMS
   x86_64-darwin-20
+  x86_64-darwin-21
   x86_64-linux
 
 DEPENDENCIES
@@ -214,4 +215,4 @@ DEPENDENCIES
   simplecov-rcov (~> 0.2)
 
 BUNDLED WITH
-   2.2.28
+   2.3.4

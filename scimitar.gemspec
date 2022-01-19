@@ -20,7 +20,7 @@ Gem::Specification.new do |s|
   s.metadata['bug_tracker_uri'] = 'https://github.com/RIPAGlobal/scimitar/issues/'
   s.metadata['changelog_uri'  ] = 'https://github.com/RIPAGlobal/scimitar/blob/master/CHANGELOG.md'
 
-  s.required_ruby_version = '>= 2.7.0'
+  s.required_ruby_version = '>= 3.0.0'
 
   s.add_dependency 'rails', '~> 7.0'
 

@@ -6,6 +6,8 @@
 
 A SCIM v2 API endpoint implementation for Ruby On Rails.
 
+For a list of changes and information on major version upgrades, please see `CHANGELOG.md`.
+
 
 
 ## Overview
