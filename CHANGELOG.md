@@ -1,6 +1,6 @@
 # 2.0.0 (2022-01-20)
 
-* Requires Rails 7.
+* Requires Rails 7. Supports Ruby 3, but still works on 2.7.
 
 ## Upgrading from Scimitar 1.x.y
 
