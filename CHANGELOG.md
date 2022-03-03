@@ -1,4 +1,4 @@
-# 2.0.0 (2022-01-20)
+# 2.0.0 (2022-03-04)
 
 * Requires Rails 7. Supports Ruby 3, but still works on 2.7.
 
