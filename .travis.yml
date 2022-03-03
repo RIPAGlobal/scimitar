@@ -4,7 +4,9 @@ cache: bundler
 services:
   - postgresql
 rvm:
-  - 2.7.4
+  - 2.7.5
+  - 3.0.3
+  - 3.1.0
 before_install:
   - gem install bundler -v 2.2.28
 script:

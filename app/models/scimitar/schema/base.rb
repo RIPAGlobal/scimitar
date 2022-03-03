@@ -26,7 +26,9 @@ module Scimitar
       #
       def self.valid?(resource)
         cloned_scim_attributes.each do |scim_attribute|
-          resource.add_errors_from_hash(scim_attribute.errors.to_hash) unless scim_attribute.valid?(resource.send(scim_attribute.name))
+          unless scim_attribute.valid?(resource.send(scim_attribute.name))
+            resource.add_errors_from_hash(errors_hash: scim_attribute.errors.to_hash)
+          end
         end
       end
 

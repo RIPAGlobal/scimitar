@@ -1,3 +1,33 @@
+# 2.0.0 (2022-03-04)
+
+* Requires Rails 7. Supports Ruby 3, but still works on 2.7.
+
+## Upgrading from Scimitar 1.x.y
+
+* Your `config/initializers/scimitar.rb` might need to be enclosed within a `Rails.application.config.to_prepare do...` block to avoid `NameError: uninitialized constant...` exceptions arising due to autoloader problems:
+
+    ```ruby
+    Rails.application.config.to_prepare do
+      Scimitar.engine_configuration = Scimitar::EngineConfiguration.new({
+        # ...
+      end
+    end
+    ```
+
+* If you use `Scimitar::Errors#add_errors_from_hash`, note that the previously-unnamed first parameter is now explicitly named `errors_hash`. This avoids potential ambiguity and confusion/errors with Ruby 3's more strict rules for named parameter and hash mixtures in both method definitions and method calls. For example:
+
+    ```ruby
+    # Old code...
+    user.add_errors_from_hash(key: 'some key')
+    # ...becomes:
+    user.add_errors_from_hash(errors_hash: {key: 'some key'})
+
+    # Old code...
+    user.add_errors_from_hash({key: 'some key'}, prefix: 'some prefix')
+    # ...becomes:
+    user.add_errors_from_hash(errors_hash: {key: 'some key'}, prefix: 'some prefix')
+    ```
+
 # 1.2.0 (2021-09-27)
 
 * Updated for RIPA branding.
