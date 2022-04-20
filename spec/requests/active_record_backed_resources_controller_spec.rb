@@ -180,6 +180,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
               givenName: 'Given',
               familyName: 'Family'
             },
+            meta: { resourceType: 'User' },
             emails: [
               {
                 type: 'work',
