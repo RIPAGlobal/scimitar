@@ -1,3 +1,7 @@
+# 2.0.1 (2022-04-20)
+
+* Merges https://github.com/RIPAGlobal/scimitar/pull/15 from `AbeerKhakwani`, fixing an issue with AD and the Meta object.
+
 # 2.0.0 (2022-03-04)
 
 * Requires Rails 7. Supports Ruby 3, but still works on 2.7.
