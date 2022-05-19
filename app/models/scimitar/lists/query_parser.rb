@@ -633,7 +633,7 @@ module Scimitar
               when 'pr'
                 arel_table.grouping(arel_column.not_eq_all(['', nil]))
               else
-                raise Scimitar::FilterError
+                raise Scimitar::FilterError.new("Unsupported operator: '#{scim_operator}'")
             end
 
             if index == 0
@@ -656,10 +656,10 @@ module Scimitar
         # +scim_attribute+:: SCIM attribute from a filter string.
         #
         def activerecord_columns(scim_attribute)
-          raise Scimitar::FilterError if scim_attribute.blank?
+          raise Scimitar::FilterError.new("No scim_attribute provided") if scim_attribute.blank?
 
           mapped_attribute = self.attribute_map()[scim_attribute]
-          raise Scimitar::FilterError if mapped_attribute.blank?
+          raise Scimitar::FilterError.new("Unable to find domain attribute from SCIM attribute: '#{scim_attribute}'") if mapped_attribute.blank?
 
           if mapped_attribute[:ignore]
             return []
