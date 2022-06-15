@@ -39,6 +39,12 @@
     user.add_errors_from_hash(errors_hash: {key: 'some key'}, prefix: 'some prefix')
     ```
 
+
+
+# 1.2.1 (2022-06-15)
+
+* Back-ports fixes from v2.0.1 and v2.0.2 for Rails 6 users.
+
 # 1.2.0 (2021-09-27)
 
 * Updated for RIPA branding.
