@@ -10,7 +10,7 @@ GIT
 PATH
   remote: .
   specs:
-    scimitar (1.2.0)
+    scimitar (1.2.1)
       rails (~> 6.0)
 
 GEM
@@ -84,7 +84,7 @@ GEM
     doggo (1.2.0)
       rspec-core (~> 3.10)
     erubi (1.10.0)
-    globalid (0.5.2)
+    globalid (1.0.0)
       activesupport (>= 5.0)
     i18n (1.8.10)
       concurrent-ruby (~> 1.0)
@@ -96,9 +96,13 @@ GEM
       mini_mime (>= 0.1.1)
     marcel (1.0.2)
     method_source (1.0.0)
-    mini_mime (1.1.1)
+    mini_mime (1.1.2)
+    mini_portile2 (2.6.1)
     minitest (5.14.4)
     nio4r (2.5.8)
+    nokogiri (1.12.4)
+      mini_portile2 (~> 2.6.1)
+      racc (~> 1.4)
     nokogiri (1.12.4-x86_64-darwin)
       racc (~> 1.4)
     nokogiri (1.12.4-x86_64-linux)
@@ -161,12 +165,12 @@ GEM
     simplecov-rcov (0.2.3)
       simplecov (>= 0.4.1)
     simplecov_json_formatter (0.1.3)
-    sprockets (4.0.2)
+    sprockets (4.0.3)
       concurrent-ruby (~> 1.0)
       rack (> 1, < 3)
-    sprockets-rails (3.2.2)
-      actionpack (>= 4.0)
-      activesupport (>= 4.0)
+    sprockets-rails (3.4.2)
+      actionpack (>= 5.2)
+      activesupport (>= 5.2)
       sprockets (>= 3.0.0)
     thor (1.1.0)
     tzinfo (2.0.4)
@@ -177,6 +181,7 @@ GEM
     zeitwerk (2.4.2)
 
 PLATFORMS
+  ruby
   x86_64-darwin-20
   x86_64-linux
 
