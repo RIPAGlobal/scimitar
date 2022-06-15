@@ -138,7 +138,7 @@ module Scimitar
       end
 
       def as_json(options = {})
-        self.meta = Meta.new unless self.meta
+        self.meta = Meta.new unless self.meta && self.meta.is_a?(Meta)
         meta.resourceType = self.class.resource_type_id
         original_hash = super(options).except('errors')
         original_hash.merge!('schemas' => self.class.schemas.map(&:id))

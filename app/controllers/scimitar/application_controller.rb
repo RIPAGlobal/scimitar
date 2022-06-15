@@ -82,12 +82,17 @@ module Scimitar
       # request and subclass processing.
       #
       def require_scim
-        if request.content_type&.downcase == Mime::Type.lookup_by_extension(:scim).to_s
+        scim_mime_type = Mime::Type.lookup_by_extension(:scim).to_s
+
+        if request.content_type.nil?
+          request.format = :scim
+          request.headers['CONTENT_TYPE'] = scim_mime_type
+        elsif request.content_type&.downcase == scim_mime_type
           request.format = :scim
         elsif request.format == :scim
-          request.headers['CONTENT_TYPE'] = Mime::Type.lookup_by_extension(:scim).to_s
+          request.headers['CONTENT_TYPE'] = scim_mime_type
         else
-          handle_scim_error(ErrorResponse.new(status: 406, detail: "Only #{Mime::Type.lookup_by_extension(:scim)} type is accepted."))
+          handle_scim_error(ErrorResponse.new(status: 406, detail: "Only #{scim_mime_type} type is accepted."))
         end
       end
 
