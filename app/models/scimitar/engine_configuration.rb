@@ -9,13 +9,17 @@ module Scimitar
 
     attr_accessor :basic_authenticator,
                   :token_authenticator,
-                  :application_controller_mixin
+                  :application_controller_mixin,
+                  :optional_value_fields_required
+
 
     def initialize(attributes = {})
 
-      # No defaults yet - reserved for future use.
+      # Set defaults that may be overridden by the initializer.
       #
-      defaults = {}
+      defaults = {
+        optional_value_fields_required: true
+      }
 
       super(defaults.merge(attributes))
     end

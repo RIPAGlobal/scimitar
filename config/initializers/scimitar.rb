@@ -81,6 +81,9 @@ Rails.application.config.to_prepare do # (required for >= Rails 7 / Zeitwerk)
     # Note that both basic and token authentication can be declared, with the
     # parameters in the inbound HTTP request determining which is invoked.
 
+    # If you want the value attributes on "Vdtp" - Value, Display, Type, Primary types to be optional,
+    #
+    #   optional_value_fields_required: false,
   })
 
 end
