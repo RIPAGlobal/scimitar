@@ -28,7 +28,7 @@ module Scimitar
       # +_exception+:: Exception instance (currently unused).
       #
       def handle_resource_not_found(exception)
-        Raven.capture_exception(exception)
+        Sentry.capture_exception(exception)
         handle_scim_error(NotFoundError.new(params[:id]))
       end
 
@@ -42,7 +42,7 @@ module Scimitar
       # +error_response+:: Scimitar::ErrorResponse (or subclass) instance.
       #
       def handle_scim_error(error_response)
-        Raven.capture_exception(error_response)
+        Sentry.capture_exception(error_response)
         render json: error_response, status: error_response.status
       end
 
@@ -57,7 +57,7 @@ module Scimitar
       # +exception+:: Exception instance.
       #
       def handle_bad_json_error(exception)
-        Raven.capture_exception(exception)
+        Sentry.capture_exception(exception)
         handle_scim_error(ErrorResponse.new(status: 400, detail: "Invalid JSON - #{exception.message}"))
       end
 
@@ -70,7 +70,7 @@ module Scimitar
       # +exception+:: Exception instance.
       #
       def handle_unexpected_error(exception)
-        Raven.capture_exception(exception)
+        Sentry.capture_exception(exception)
         Rails.logger.error("#{exception.message}\n#{exception.backtrace}")
         handle_scim_error(ErrorResponse.new(status: 500, detail: exception.message))
       end
