@@ -10,8 +10,8 @@ module Scimitar
     attr_accessor :basic_authenticator,
                   :token_authenticator,
                   :application_controller_mixin,
+                  :exception_reporter,
                   :optional_value_fields_required
-
 
     def initialize(attributes = {})
 

@@ -11,7 +11,7 @@ RSpec.describe Scimitar::Schema::Base do
   end
 
   context '#initialize' do
-    it 'creates a meta' do
+    it 'creates "meta"' do
       schema = described_class.new
       expect(schema.meta.resourceType).to eql('Schema')
     end
