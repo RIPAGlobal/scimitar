@@ -1,3 +1,9 @@
+# 2.1.0 (2022-07-14)
+
+* Merged https://github.com/RIPAGlobal/scimitar/pull/17
+* Merged https://github.com/RIPAGlobal/scimitar/pull/18
+* Noted closed PR https://github.com/RIPAGlobal/scimitar/pull/25 and implemented a configurable exception reporting hook for people who might want that kind of feature. See [engine configuration option `exception_reporter`](https://github.com/RIPAGlobal/scimitar/blob/main/config/initializers/scimitar.rb) for details.
+
 # 2.0.2 (2022-06-15)
 
 * Address https://github.com/RIPAGlobal/scimitar/issues/20 by better handling content type in requests:
