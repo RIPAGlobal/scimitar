@@ -169,5 +169,74 @@ RSpec.describe Scimitar::ApplicationController do
       expect(parsed_body).to include('status' => '500')
       expect(parsed_body).to include('detail' => 'Bang')
     end
-  end
+
+    context 'with an exception reporter' do
+      around :each do | example |
+        original_configuration = Scimitar.engine_configuration.exception_reporter
+        Scimitar.engine_configuration.exception_reporter = Proc.new do | exception |
+          @exception = exception
+        end
+        example.run()
+      ensure
+        Scimitar.engine_configuration.exception_reporter = original_configuration
+      end
+
+      context 'and "internal server error"' do
+        it 'is invoked' do
+          get :index, params: { format: :scim }
+
+          expect(@exception).to be_a(RuntimeError)
+          expect(@exception.message).to eql('Bang')
+        end
+      end
+
+      context 'and "not found"' do
+        controller do
+          def index
+            handle_resource_not_found(ActiveRecord::RecordNotFound.new(42))
+          end
+        end
+
+        it 'is invoked' do
+          get :index, params: { format: :scim }
+
+          expect(@exception).to be_a(ActiveRecord::RecordNotFound)
+          expect(@exception.message).to eql('42')
+        end
+      end
+
+      context 'and bad JSON' do
+        controller do
+          def index
+            begin
+              raise 'Hello'
+            rescue
+              raise ActionDispatch::Http::Parameters::ParseError
+            end
+          end
+        end
+
+        it 'is invoked' do
+          get :index, params: { format: :scim }
+
+          expect(@exception).to be_a(ActionDispatch::Http::Parameters::ParseError)
+          expect(@exception.message).to eql('Hello')
+        end
+      end
+
+      context 'and a bad content type' do
+        controller do
+          def index; end
+        end
+
+        it 'is invoked' do
+          request.headers['Content-Type'] = 'text/plain'
+          get :index
+
+          expect(@exception).to be_a(Scimitar::ErrorResponse)
+          expect(@exception.message).to eql('Only application/scim+json type is accepted.')
+        end
+      end
+    end # "context 'exception reporter' do"
+  end # "context 'error handling' do"
 end

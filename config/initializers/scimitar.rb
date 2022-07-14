@@ -79,4 +79,24 @@ Scimitar.engine_configuration = Scimitar::EngineConfiguration.new({
   # Note that both basic and token authentication can be declared, with the
   # parameters in the inbound HTTP request determining which is invoked.
 
+  # Scimitar rescues certain error cases and exceptions, in order to return a
+  # JSON response to the API caller. If you want exceptions to also be
+  # reported to a third party system such as sentry.io or raygun.com, you can
+  # configure a Proc to do so. It is passed a Ruby exception subclass object.
+  # For example, a minimal sentry.io reporter might do this:
+  #
+  #     exception_reporter: Proc.new do | exception |
+  #       Sentry.capture_exception(exception)
+  #     end
+  #
+  # You will still need to configure your reporting system according to its
+  # documentation (e.g. via a Rails "config/initializers/<foo>.rb" file).
+
+  # Scimilar treats "VDTP" (Value, Display, Type, Primary) attribute values,
+  # used for e.g. e-mail addresses or phone numbers, as required by default.
+  # If you encounter a service which calls these with e.g. "null" value data,
+  # you can configure all values to be optional. You'll need to deal with
+  # whatever that means for you receiving system in your model code.
+  #
+  #     optional_value_fields_required: false
 })
