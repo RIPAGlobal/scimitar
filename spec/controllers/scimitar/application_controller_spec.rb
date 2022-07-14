@@ -208,7 +208,11 @@ RSpec.describe Scimitar::ApplicationController do
       context 'and bad JSON' do
         controller do
           def index
-            raise ActionDispatch::Http::Parameters::ParseError.new("Hello")
+            begin
+              raise 'Hello'
+            rescue
+              raise ActionDispatch::Http::Parameters::ParseError
+            end
           end
         end
 
