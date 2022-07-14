@@ -426,6 +426,16 @@ RSpec.describe Scimitar::Schema::User do
             "mutability": "readWrite",
             "uniqueness": "none",
             "returned": "default",
+            "name": "primary",
+            "type": "boolean"
+          },
+          {
+            "multiValued": false,
+            "required": false,
+            "caseExact": false,
+            "mutability": "readWrite",
+            "uniqueness": "none",
+            "returned": "default",
             "name": "formatted",
             "type": "string"
           },
