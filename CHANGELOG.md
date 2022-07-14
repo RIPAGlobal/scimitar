@@ -1,7 +1,6 @@
 # 2.1.0 (2022-07-14)
 
-* Merged https://github.com/RIPAGlobal/scimitar/pull/17
-* Merged https://github.com/RIPAGlobal/scimitar/pull/18
+* Merged https://github.com/RIPAGlobal/scimitar/pull/17 (more detailed errors), https://github.com/RIPAGlobal/scimitar/pull/18 (`primary` attribute added to Address schema) and https://github.com/RIPAGlobal/scimitar/pull/19 (configurable required-or-optional `value` attributes in VDTP-derived types). Thanks for the contributions, `@pelted`!
 * Noted closed PR https://github.com/RIPAGlobal/scimitar/pull/25 and implemented a configurable exception reporting hook for people who might want that kind of feature. See [engine configuration option `exception_reporter`](https://github.com/RIPAGlobal/scimitar/blob/main/config/initializers/scimitar.rb) for details.
 
 # 2.0.2 (2022-06-15)
