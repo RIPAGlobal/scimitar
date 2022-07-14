@@ -25,10 +25,11 @@ module Scimitar
       #
       # ...to "globally" invoke this handler if you wish.
       #
-      # +_exception+:: Exception instance (currently unused).
+      # +_exception+:: Exception instance, used for a configured error reporter
+      #                via #handle_scim_error (if present).
       #
-      def handle_resource_not_found(_exception)
-        handle_scim_error(NotFoundError.new(params[:id]))
+      def handle_resource_not_found(exception)
+        handle_scim_error(NotFoundError.new(params[:id]), exception)
       end
 
       # This base controller uses:
@@ -38,9 +39,22 @@ module Scimitar
       # ...to "globally" invoke this handler for all Scimitar errors (including
       # subclasses).
       #
+      # Mandatory parameters are:
+      #
       # +error_response+:: Scimitar::ErrorResponse (or subclass) instance.
       #
-      def handle_scim_error(error_response)
+      # Optional parameters are:
+      #
+      # *exception+:: If a Ruby exception was the reason this method is being
+      #               called, pass it here. Any configured exception reporting
+      #               mechanism will be invokved with the given parameter.
+      #               Otherwise, the +error_response+ value is reported.
+      #
+      def handle_scim_error(error_response, exception = error_response)
+        unless Scimitar.engine_configuration.exception_reporter.nil?
+          Scimitar.engine_configuration.exception_reporter.call(exception)
+        end
+
         render json: error_response, status: error_response.status
       end
 
@@ -55,7 +69,7 @@ module Scimitar
       # +exception+:: Exception instance.
       #
       def handle_bad_json_error(exception)
-        handle_scim_error(ErrorResponse.new(status: 400, detail: "Invalid JSON - #{exception.message}"))
+        handle_scim_error(ErrorResponse.new(status: 400, detail: "Invalid JSON - #{exception.message}"), exception)
       end
 
       # This base controller uses:
@@ -68,7 +82,7 @@ module Scimitar
       #
       def handle_unexpected_error(exception)
         Rails.logger.error("#{exception.message}\n#{exception.backtrace}")
-        handle_scim_error(ErrorResponse.new(status: 500, detail: exception.message))
+        handle_scim_error(ErrorResponse.new(status: 500, detail: exception.message), exception)
       end
 
     # =========================================================================
