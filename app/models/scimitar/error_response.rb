@@ -17,7 +17,7 @@ module Scimitar
       data
     end
 
-    # From v1, Scimitar used attribute "detail" for the exception text; it was
+    # Originally Scimitar used attribute "detail" for exception text; it was
     # only for JSON responses at the time, but in hindsight was a bad choice.
     # It should have been "message" given inheritance from StandardError, which
     # then works properly with e.g. error reporting services.

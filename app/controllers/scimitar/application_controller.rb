@@ -25,8 +25,8 @@ module Scimitar
       #
       # ...to "globally" invoke this handler if you wish.
       #
-      # +_exception+:: Exception instance, used for a configured error reporter
-      #                via #handle_scim_error (if present).
+      # +exception+:: Exception instance, used for a configured error reporter
+      #               via #handle_scim_error (if present).
       #
       def handle_resource_not_found(exception)
         handle_scim_error(NotFoundError.new(params[:id]), exception)
