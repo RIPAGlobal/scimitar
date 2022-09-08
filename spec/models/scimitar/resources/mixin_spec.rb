@@ -1747,6 +1747,24 @@ RSpec.describe Scimitar::Resources::Mixin do
                 expect(scim_hash['emails'][0]['type' ]).to eql('work')
                 expect(scim_hash['emails'][0]['value']).to eql('work@test.com')
               end
+
+              context 'when prior value already exists, and no path' do
+                it 'simple value: overwrites' do
+                  path      = [ 'root' ]
+                  scim_hash = { 'root' => { 'userName' => 'bar', 'active' => true } }.with_indifferent_case_insensitive_access()
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'replace',
+                    path:          path,
+                    value:         { 'active' => false }.with_indifferent_case_insensitive_access(),
+                    altering_hash: scim_hash
+                  )
+
+                  expect(scim_hash['root']['userName']).to eql('bar')
+                  expect(scim_hash['root']['active']).to eql(false)
+                end
+              end
             end # context 'when value is not present' do
           end # "context 'replace' do"
 
