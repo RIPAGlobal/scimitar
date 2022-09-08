@@ -902,7 +902,11 @@ module Scimitar
                     altering_hash[path_component] = value
                   end
                 when 'replace'
-                  altering_hash[path_component] = value
+                  if path_component == 'root'
+                    altering_hash[path_component].merge!(value)
+                  else
+                    altering_hash[path_component] = value
+                  end
                 when 'remove'
                   altering_hash.delete(path_component)
               end
