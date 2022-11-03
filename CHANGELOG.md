@@ -1,3 +1,7 @@
+# 2.1.1 (2022-11-04)
+
+* Merged https://github.com/RIPAGlobal/scimitar/pull/29, fixing an issue caused by an unhandled form of payload sent by Okta. Thanks to `@jasonopslevel` for the contribution.
+
 # 2.1.0 (2022-07-14)
 
 * Merged https://github.com/RIPAGlobal/scimitar/pull/17 (more detailed errors), https://github.com/RIPAGlobal/scimitar/pull/18 (`primary` attribute added to Address schema) and https://github.com/RIPAGlobal/scimitar/pull/19 (configurable required-or-optional `value` attributes in VDTP-derived types). Thanks for the contributions, `@pelted`!
