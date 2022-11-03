@@ -50,6 +50,10 @@
 
 
 
+# 1.3.1 (2022-11-04)
+
+* Back-ports features from v2.1.1 for Rails 6 users.
+
 # 1.3.0 (2022-07-14)
 
 * Back-ports features from v2.1.0 for Rails 6 users.
