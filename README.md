@@ -305,7 +305,7 @@ class UsersController < Scimitar::ResourcesController
       record.from_scim!(scim_hash: scim_resource.as_json())
       self.save!(record)
       # Evaluate to the record as a SCIM object (or do that via "self.save!")
-      user.to_scim(location: url_for(action: :show, id: user_id))
+      user.to_scim(location: url_for(action: :show, id: record.id))
     end
   end
 
@@ -318,7 +318,7 @@ class UsersController < Scimitar::ResourcesController
       record.from_scim!(scim_hash: scim_resource.as_json())
       self.save!(record)
       # Evaluate to the record as a SCIM object (or do that via "self.save!")
-      user.to_scim(location: url_for(action: :show, id: user_id))
+      user.to_scim(location: url_for(action: :show, id: record_id))
     end
   end
 
@@ -331,7 +331,7 @@ class UsersController < Scimitar::ResourcesController
       record.from_scim_patch!(patch_hash: patch_hash)
       self.save!(record)
       # Evaluate to the record as a SCIM object (or do that via "self.save!")
-      user.to_scim(location: url_for(action: :show, id: user_id))
+      user.to_scim(location: url_for(action: :show, id: record_id))
     end
   end
 
