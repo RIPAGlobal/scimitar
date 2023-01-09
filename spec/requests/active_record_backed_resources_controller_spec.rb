@@ -64,6 +64,25 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         expect(usernames).to match_array(['2'])
       end
 
+      it 'applies a filter, with case-insensitive attribute matching' do
+        get '/Users', params: {
+          format: :scim,
+          filter: 'name.GIVENNAME eq "Foo" and name.Familyname pr and emails ne "home_1@test.com"'
+        }
+
+        expect(response.status).to eql(200)
+        result = JSON.parse(response.body)
+
+        expect(result['totalResults']).to eql(1)
+        expect(result['Resources'].size).to eql(1)
+
+        ids = result['Resources'].map { |resource| resource['id'] }
+        expect(ids).to match_array([@u2.id.to_s])
+
+        usernames = result['Resources'].map { |resource| resource['userName'] }
+        expect(usernames).to match_array(['2'])
+      end
+
       it 'obeys a page size' do
         get '/Users', params: {
           format: :scim,

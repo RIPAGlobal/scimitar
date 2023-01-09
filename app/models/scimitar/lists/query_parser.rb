@@ -78,7 +78,7 @@ module Scimitar
       #                   method's return value here.
       #
       def initialize(attribute_map)
-        @attribute_map = attribute_map
+        @attribute_map = attribute_map.with_indifferent_case_insensitive_access()
       end
 
       # Parse SCIM filter query into RPN stack
