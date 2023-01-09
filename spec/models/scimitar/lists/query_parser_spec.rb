@@ -590,7 +590,7 @@ RSpec.describe Scimitar::Lists::QueryParser do
       end
 
       it 'complains if there is no column mapping available' do
-        expect { @instance.send(:activerecord_columns, 'externalId') }.to raise_error(Scimitar::FilterError)
+        expect { @instance.send(:activerecord_columns, 'userName') }.to raise_error(Scimitar::FilterError)
       end
 
       it 'complains about malformed declarations' do

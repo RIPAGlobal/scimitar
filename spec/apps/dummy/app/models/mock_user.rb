@@ -92,11 +92,14 @@ class MockUser < ActiveRecord::Base
 
   def self.scim_queryable_attributes
     return {
-      'name.givenName'  => { column: :first_name },
-      'name.familyName' => { column: :last_name  },
-      'emails'          => { columns: [ :work_email_address, :home_email_address ] },
-      'emails.value'    => { columns: [ :work_email_address, :home_email_address ] },
-      'emails.type'     => { ignore: true } # We can't filter on that; it'll just search all e-mails
+      'id'                => { column: :id },
+      'externalId'        => { column: :scim_uid },
+      'meta.lastModified' => { column: :updated_at },
+      'name.givenName'    => { column: :first_name },
+      'name.familyName'   => { column: :last_name  },
+      'emails'            => { columns: [ :work_email_address, :home_email_address ] },
+      'emails.value'      => { columns: [ :work_email_address, :home_email_address ] },
+      'emails.type'       => { ignore: true } # We can't filter on that; it'll just search all e-mails
     }
   end
 

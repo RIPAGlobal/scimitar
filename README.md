@@ -441,6 +441,8 @@ If you believe choices made in this section may be incorrect, please [create a G
 
 * Currently filtering for lists is always matched case-insensitive regardless of schema declarations that might indicate otherwise, for `eq`, `ne`, `co`, `sw` and `ew` operators; for greater/less-thank style filters, case is maintained with simple `>`, `<` etc. database operations in use. The standard Group and User schema have `caseExact` set to `false` for just about anything readily queryable, so this hopefully would only ever potentially be an issue for custom schema.
 
+* As an exception to the above, attributes `id`, `externalId` and `meta.*` are matched case-sensitive. Filters that use `eq` on such attributes will end up a comparison using `=` rather than e.g. `ILIKE` (arising from https://github.com/RIPAGlobal/scimitar/issues/36).
+
 * The `PATCH` mechanism is supported, but where filters are included, only a single "attribute eq value" is permitted - no other operators or combinations. For example, a work e-mail address's value could be replaced by a PATCH patch of `emails[type eq "work"].value`. For in-path filters such as this, other operators such as `ne` are not supported; combinations with "and"/"or" are not supported; negation with "not" is not supported.
 
 If you would like to see something listed in the session implemented, please [create a GitHub issue](https://github.com/RIPAGlobal/scimitar/issues/new) asking for it to be implemented, or if possible, implement the feature and send a Pull Request.
