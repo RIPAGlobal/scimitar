@@ -21,9 +21,7 @@ RSpec.describe Scimitar::Schema::Attribute do
       expect(name.type).to eql('complex')
       expect(name.subAttributes).to eql(Scimitar::Schema::Name.scim_attributes)
     end
-
   end
-
 
   context '#valid?' do
     it 'is invalid if attribute is required but value is blank' do
@@ -76,5 +74,4 @@ RSpec.describe Scimitar::Schema::Attribute do
       expect(described_class.new(name: 'startDate', type: 'dateTime').valid?('gaga')).to be(false)
     end
   end
-
 end

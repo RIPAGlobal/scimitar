@@ -78,7 +78,7 @@ module Scimitar
       #                   method's return value here.
       #
       def initialize(attribute_map)
-        @attribute_map = attribute_map
+        @attribute_map = attribute_map.with_indifferent_case_insensitive_access()
       end
 
       # Parse SCIM filter query into RPN stack
@@ -604,6 +604,16 @@ module Scimitar
           all_supported  = column_names.all? { | column_name | base_scope.model.column_names.include?(column_name.to_s) }
 
           raise Scimitar::FilterError unless all_supported
+
+          unless case_sensitive
+            lc_scim_attribute = scim_attribute.downcase()
+
+            case_sensitive = (
+              lc_scim_attribute == 'id' ||
+              lc_scim_attribute == 'externalid' ||
+              lc_scim_attribute.start_with?('meta.')
+            )
+          end
 
           column_names.each.with_index do | column_name, index |
             arel_column    = arel_table[column_name]

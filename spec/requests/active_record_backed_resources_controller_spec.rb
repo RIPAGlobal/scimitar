@@ -1,12 +1,15 @@
 require 'spec_helper'
+require 'time'
 
 RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
   before :each do
     allow_any_instance_of(Scimitar::ApplicationController).to receive(:authenticated?).and_return(true)
 
-    @u1 = MockUser.create(username: '1', first_name: 'Foo', last_name: 'Ark', home_email_address: 'home_1@test.com')
-    @u2 = MockUser.create(username: '2', first_name: 'Foo', last_name: 'Bar', home_email_address: 'home_2@test.com')
-    @u3 = MockUser.create(username: '3', first_name: 'Foo',                   home_email_address: 'home_3@test.com')
+    lmt = Time.parse("2023-01-09 14:25:00 +1300")
+
+    @u1 = MockUser.create(username: '1', first_name: 'Foo', last_name: 'Ark', home_email_address: 'home_1@test.com', scim_uid: '001', created_at: lmt, updated_at: lmt + 1)
+    @u2 = MockUser.create(username: '2', first_name: 'Foo', last_name: 'Bar', home_email_address: 'home_2@test.com', scim_uid: '002', created_at: lmt, updated_at: lmt + 2)
+    @u3 = MockUser.create(username: '3', first_name: 'Foo',                   home_email_address: 'home_3@test.com', scim_uid: '003', created_at: lmt, updated_at: lmt + 3)
   end
 
   # ===========================================================================
@@ -48,7 +51,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
       it 'applies a filter, with case-insensitive value comparison' do
         get '/Users', params: {
           format: :scim,
-          filter: 'name.givenName eq "Foo" and name.familyName pr and emails ne "home_1@TEST.COM"'
+          filter: 'name.givenName eq "FOO" and name.familyName pr and emails ne "home_1@test.com"'
         }
 
         expect(response.status).to eql(200)
@@ -63,6 +66,87 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         usernames = result['Resources'].map { |resource| resource['userName'] }
         expect(usernames).to match_array(['2'])
       end
+
+      it 'applies a filter, with case-insensitive attribute matching (GitHub issue #37)' do
+        get '/Users', params: {
+          format: :scim,
+          filter: 'name.GIVENNAME eq "Foo" and name.Familyname pr and emails ne "home_1@test.com"'
+        }
+
+        expect(response.status).to eql(200)
+        result = JSON.parse(response.body)
+
+        expect(result['totalResults']).to eql(1)
+        expect(result['Resources'].size).to eql(1)
+
+        ids = result['Resources'].map { |resource| resource['id'] }
+        expect(ids).to match_array([@u2.id.to_s])
+
+        usernames = result['Resources'].map { |resource| resource['userName'] }
+        expect(usernames).to match_array(['2'])
+      end
+
+      # Strange attribute capitalisation in tests here builds on test coverage
+      # for now-fixed GitHub issue #37.
+      #
+      context '"meta" / IDs (GitHub issue #36)' do
+        it 'applies a filter on primary keys, using direct comparison (rather than e.g. case-insensitive operators)' do
+          get '/Users', params: {
+            format: :scim,
+            filter: "id eq \"#{@u3.id}\""
+          }
+
+          expect(response.status).to eql(200)
+          result = JSON.parse(response.body)
+
+          expect(result['totalResults']).to eql(1)
+          expect(result['Resources'].size).to eql(1)
+
+          ids = result['Resources'].map { |resource| resource['id'] }
+          expect(ids).to match_array([@u3.id.to_s])
+
+          usernames = result['Resources'].map { |resource| resource['userName'] }
+          expect(usernames).to match_array(['3'])
+        end
+
+        it 'applies a filter on external IDs, using direct comparison' do
+          get '/Users', params: {
+            format: :scim,
+            filter: "externalID eq \"#{@u2.scim_uid}\""
+          }
+
+          expect(response.status).to eql(200)
+          result = JSON.parse(response.body)
+
+          expect(result['totalResults']).to eql(1)
+          expect(result['Resources'].size).to eql(1)
+
+          ids = result['Resources'].map { |resource| resource['id'] }
+          expect(ids).to match_array([@u2.id.to_s])
+
+          usernames = result['Resources'].map { |resource| resource['userName'] }
+          expect(usernames).to match_array(['2'])
+        end
+
+        it 'applies a filter on "meta" entries, using direct comparison' do
+          get '/Users', params: {
+            format: :scim,
+            filter: "Meta.LastModified eq \"#{@u3.updated_at}\""
+          }
+
+          expect(response.status).to eql(200)
+          result = JSON.parse(response.body)
+
+          expect(result['totalResults']).to eql(1)
+          expect(result['Resources'].size).to eql(1)
+
+          ids = result['Resources'].map { |resource| resource['id'] }
+          expect(ids).to match_array([@u3.id.to_s])
+
+          usernames = result['Resources'].map { |resource| resource['userName'] }
+          expect(usernames).to match_array(['3'])
+        end
+      end # "context '"meta" / IDs (GitHub issue #36)' do"
 
       it 'obeys a page size' do
         get '/Users', params: {
