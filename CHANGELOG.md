@@ -1,3 +1,7 @@
+# 2.1.3 (2023-01-09)
+
+* Fix https://github.com/RIPAGlobal/scimitar/issues/36 - filters are case-sensitive for special cases of `id`, `externalId` and `meta.*` attributes. A model must still declare if and how these are searchable via its `::scim_queryable_attributes` implementation, just as with any other attribute.
+
 # 2.1.2 (2023-01-09)
 
 * Fix https://github.com/RIPAGlobal/scimitar/issues/37 - filters now correctly support case insensitive attribute names.

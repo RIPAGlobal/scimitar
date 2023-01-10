@@ -605,6 +605,16 @@ module Scimitar
 
           raise Scimitar::FilterError unless all_supported
 
+          unless case_sensitive
+            lc_scim_attribute = scim_attribute.downcase()
+
+            case_sensitive = (
+              lc_scim_attribute == 'id' ||
+              lc_scim_attribute == 'externalid' ||
+              lc_scim_attribute.start_with?('meta.')
+            )
+          end
+
           column_names.each.with_index do | column_name, index |
             arel_column    = arel_table[column_name]
             arel_operation = case scim_operator
