@@ -1,3 +1,11 @@
+# 1.3.3 (2023-01-10)
+
+* Back-ports fixes from v2.1.3 for Rails 6 users.
+
+# 1.3.2 (2023-01-10)
+
+* Back-ports fixes from v2.1.2 for Rails 6 users.
+
 # 1.3.1 (2022-11-04)
 
 * Back-ports features from v2.1.1 for Rails 6 users.

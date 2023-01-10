@@ -37,6 +37,7 @@ module Scimitar
       pagination_info = scim_pagination_info(query.count())
 
       page_of_results = query
+        .order(id: :asc)
         .offset(pagination_info.offset)
         .limit(pagination_info.limit)
         .to_a()
