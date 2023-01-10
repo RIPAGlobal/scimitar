@@ -1,3 +1,7 @@
+# 2.1.2 (2023-01-09)
+
+* Fix https://github.com/RIPAGlobal/scimitar/issues/37 - filters now correctly support case insensitive attribute names.
+
 # 2.1.1 (2022-11-04)
 
 * Merged https://github.com/RIPAGlobal/scimitar/pull/29, fixing an issue caused by an unhandled form of payload sent by Okta. Thanks to `@jasonopslevel` for the contribution.
