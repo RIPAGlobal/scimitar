@@ -1,3 +1,7 @@
+# 2.2.0 (2023-01-13)
+
+* Bump local development Ruby to v3.2.0, including it in the test matrix and in effect creating "official" support for that Ruby version.
+
 # 2.1.3 (2023-01-09)
 
 * Fix https://github.com/RIPAGlobal/scimitar/issues/36 - filters are case-sensitive for special cases of `id`, `externalId` and `meta.*` attributes. A model must still declare if and how these are searchable via its `::scim_queryable_attributes` implementation, just as with any other attribute.
