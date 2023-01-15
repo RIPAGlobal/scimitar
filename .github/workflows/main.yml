@@ -54,5 +54,8 @@ jobs:
 
     - name: Run tests
       env:
+        PGHOST: localhost
+        PGUSER: postgres
+        PGPASSWORD: postgres
         RAILS_ENV: test
       run: bundle exec rspec --backtrace
