@@ -159,41 +159,67 @@ RSpec.describe Scimitar::Resources::Mixin do
     # =========================================================================
 
     context '#to_scim' do
-      it 'compiles instance attribute values into a SCIM representation' do
-        instance                    = MockUser.new
-        instance.id                 = 42
-        instance.scim_uid           = 'AA02984'
-        instance.username           = 'foo'
-        instance.first_name         = 'Foo'
-        instance.last_name          = 'Bar'
-        instance.work_email_address = 'foo.bar@test.com'
-        instance.home_email_address = nil
-        instance.work_phone_number  = '+642201234567'
+      context 'with a UUID, renamed primary key column' do
+        it 'compiles instance attribute values into a SCIM representation' do
+          uuid                        = SecureRandom.uuid
 
-        g1 = MockGroup.create!(display_name: 'Group 1')
-        g2 = MockGroup.create!(display_name: 'Group 2')
-        g3 = MockGroup.create!(display_name: 'Group 3')
+          instance                    = MockUser.new
+          instance.primary_key        = uuid
+          instance.scim_uid           = 'AA02984'
+          instance.username           = 'foo'
+          instance.first_name         = 'Foo'
+          instance.last_name          = 'Bar'
+          instance.work_email_address = 'foo.bar@test.com'
+          instance.home_email_address = nil
+          instance.work_phone_number  = '+642201234567'
 
-        g1.mock_users << instance
-        g3.mock_users << instance
+          g1 = MockGroup.create!(display_name: 'Group 1')
+          g2 = MockGroup.create!(display_name: 'Group 2')
+          g3 = MockGroup.create!(display_name: 'Group 3')
 
-        scim = instance.to_scim(location: 'https://test.com/mock_users/42')
-        json = scim.to_json()
-        hash = JSON.parse(json)
+          g1.mock_users << instance
+          g3.mock_users << instance
 
-        expect(hash).to eql({
-          'userName'    => 'foo',
-          'name'        => {'givenName'=>'Foo', 'familyName'=>'Bar'},
-          'active'      => true,
-          'emails'      => [{'type'=>'work', 'primary'=>true, 'value'=>'foo.bar@test.com'}, {"primary"=>false, "type"=>"home", "value"=>nil}],
-          'phoneNumbers'=> [{'type'=>'work', 'primary'=>false, 'value'=>'+642201234567'}],
-          'id'          => '42', # Note, String
-          'externalId'  => 'AA02984',
-          'groups'      => [{'display'=>g1.display_name, 'value'=>g1.id.to_s}, {'display'=>g3.display_name, 'value'=>g3.id.to_s}],
-          'meta'        => {'location'=>'https://test.com/mock_users/42', 'resourceType'=>'User'},
-          'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User']
-        })
-      end
+          scim = instance.to_scim(location: "https://test.com/mock_users/#{uuid}")
+          json = scim.to_json()
+          hash = JSON.parse(json)
+
+          expect(hash).to eql({
+            'userName'    => 'foo',
+            'name'        => {'givenName'=>'Foo', 'familyName'=>'Bar'},
+            'active'      => true,
+            'emails'      => [{'type'=>'work', 'primary'=>true, 'value'=>'foo.bar@test.com'}, {"primary"=>false, "type"=>"home", "value"=>nil}],
+            'phoneNumbers'=> [{'type'=>'work', 'primary'=>false, 'value'=>'+642201234567'}],
+            'id'          => uuid,
+            'externalId'  => 'AA02984',
+            'groups'      => [{'display'=>g1.display_name, 'value'=>g1.id.to_s}, {'display'=>g3.display_name, 'value'=>g3.id.to_s}],
+            'meta'        => {'location'=>"https://test.com/mock_users/#{uuid}", 'resourceType'=>'User'},
+            'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User']
+          })
+        end
+      end # "context 'with a UUID, renamed primary key column' do"
+
+      context 'with an integer, conventionally named primary key column' do
+        it 'compiles instance attribute values into a SCIM representation' do
+          instance              = MockGroup.new
+          instance.id           = 42
+          instance.scim_uid     = 'GG02984'
+          instance.display_name = 'Some group'
+
+          scim = instance.to_scim(location: 'https://test.com/mock_groups/42')
+          json = scim.to_json()
+          hash = JSON.parse(json)
+
+          expect(hash).to eql({
+            'displayName' => 'Some group',
+            'id'          => '42', # Note, String
+            'externalId'  => 'GG02984',
+            'members'     => [],
+            'meta'        => {'location'=>'https://test.com/mock_groups/42', 'resourceType'=>'Group'},
+            'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:Group']
+          })
+        end
+      end # "context 'with an integer, conventionally named primary key column' do"
 
       context 'with optional timestamps' do
         context 'creation only' do
@@ -405,8 +431,8 @@ RSpec.describe Scimitar::Resources::Mixin do
               'displayName' => 'Foo Group',
               'members'     => [
                 {'type' => 'Group', 'value' => g1.id.to_s},
-                {'type' => 'User',  'value' => u1.id.to_s},
-                {'type' => 'User',  'value' => u3.id.to_s}
+                {'type' => 'User',  'value' => u1.primary_key.to_s},
+                {'type' => 'User',  'value' => u3.primary_key.to_s}
               ],
               'externalId'  => 'GG01536',
               'meta'        => {'location'=>'https://test.com/mock_groups/1', 'resourceType'=>'Group'},
@@ -453,8 +479,10 @@ RSpec.describe Scimitar::Resources::Mixin do
       end # "context 'using upper case' do"
 
       it 'clears things not present in input' do
+        uuid                        = SecureRandom.uuid
+
         instance                    = MockUser.new
-        instance.id                 = 42
+        instance.primary_key        = uuid
         instance.scim_uid           = 'AA02984'
         instance.username           = 'foo'
         instance.first_name         = 'Foo'
@@ -465,7 +493,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
         instance.from_scim!(scim_hash: {})
 
-        expect(instance.id                ).to eql(42)
+        expect(instance.primary_key       ).to eql(uuid)
         expect(instance.scim_uid          ).to be_nil
         expect(instance.username          ).to be_nil
         expect(instance.first_name        ).to be_nil

@@ -1,3 +1,7 @@
+# 2.3.0 (2023-01-17)
+
+* Address https://github.com/RIPAGlobal/scimitar/issues/35. Declaring primary key in the ActiveRecord model would solve most of the problems described, but v2.2.0 did introduce a default order clause that would trip up a model with a different primary key name; this is now fixed. In any case, it may be possible to avoid declaring the primary key override in the model entirely if using Scimitar v2.3.0, should that be your wish. This is in effect an edge case new feature, which is why the gem's minor version has been bumped up.
+
 # 2.2.0 (2023-01-13)
 
 * Bump local development Ruby to v3.2.0, including it in the test matrix and in effect creating "official" support for that Ruby version.
