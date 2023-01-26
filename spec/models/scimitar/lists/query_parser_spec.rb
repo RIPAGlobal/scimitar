@@ -405,19 +405,19 @@ RSpec.describe Scimitar::Lists::QueryParser do
       query = @instance.to_activerecord_query(MockUser.all)
 
       expect(query.count).to eql(1)
-      expect(query.pluck(:id)).to eql([user_1.id])
+      expect(query.pluck(:primary_key)).to eql([user_1.id])
 
       @instance.parse('name.givenName sw J') # First name starts with 'J'
       query = @instance.to_activerecord_query(MockUser.all)
 
       expect(query.count).to eql(2)
-      expect(query.pluck(:id)).to match_array([user_1.id, user_2.id])
+      expect(query.pluck(:primary_key)).to match_array([user_1.primary_key, user_2.primary_key])
 
       @instance.parse('name.familyName ew he') # Last name ends with 'he'
       query = @instance.to_activerecord_query(MockUser.all)
 
       expect(query.count).to eql(1)
-      expect(query.pluck(:id)).to eql([user_2.id])
+      expect(query.pluck(:primary_key)).to eql([user_2.primary_key])
 
       # Test presence
 
@@ -425,7 +425,7 @@ RSpec.describe Scimitar::Lists::QueryParser do
       query = @instance.to_activerecord_query(MockUser.all)
 
       expect(query.count).to eql(2)
-      expect(query.pluck(:id)).to match_array([user_1.id, user_2.id])
+      expect(query.pluck(:primary_key)).to match_array([user_1.primary_key, user_2.primary_key])
 
       # Test a simple not-equals, but use a custom starting scope. Note that
       # the query would find "user_3" *except* there is no first name defined
@@ -435,7 +435,7 @@ RSpec.describe Scimitar::Lists::QueryParser do
       query = @instance.to_activerecord_query(MockUser.where.not('first_name' => 'John'))
 
       expect(query.count).to eql(1)
-      expect(query.pluck(:id)).to match_array([user_1.id])
+      expect(query.pluck(:primary_key)).to match_array([user_1.primary_key])
     end
 
     context 'when mapped to multiple columns' do
@@ -499,7 +499,7 @@ RSpec.describe Scimitar::Lists::QueryParser do
           query = @instance.to_activerecord_query(MockUser.all)
 
           expect(query.count).to eql(1)
-          expect(query.pluck(:id)).to match_array([user_2.id])
+          expect(query.pluck(:primary_key)).to match_array([user_2.primary_key])
         end
       end # "context 'simple AND' do"
 
@@ -520,7 +520,7 @@ RSpec.describe Scimitar::Lists::QueryParser do
           query = @instance.to_activerecord_query(MockUser.all)
 
           expect(query.count).to eql(2)
-          expect(query.pluck(:id)).to match_array([user_1.id, user_2.id])
+          expect(query.pluck(:primary_key)).to match_array([user_1.primary_key, user_2.primary_key])
         end
       end # "context 'simple OR' do"
 
@@ -546,7 +546,7 @@ RSpec.describe Scimitar::Lists::QueryParser do
           query = @instance.to_activerecord_query(MockUser.all)
 
           expect(query.count).to eql(3)
-          expect(query.pluck(:id)).to match_array([user_1.id, user_2.id, user_3.id])
+          expect(query.pluck(:primary_key)).to match_array([user_1.primary_key, user_2.primary_key, user_3.primary_key])
         end
       end # "context 'combined AND and OR' do"
 

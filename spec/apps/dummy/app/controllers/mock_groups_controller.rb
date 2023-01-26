@@ -1,4 +1,4 @@
-class MockUsersController < Scimitar::ActiveRecordBackedResourcesController
+class MockGroupsController < Scimitar::ActiveRecordBackedResourcesController
 
   protected
 

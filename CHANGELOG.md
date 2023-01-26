@@ -1,3 +1,7 @@
+# 1.4.0 (2023-01-26)
+
+* Back-ports fixes from v2.2.0 (Ruby v3.2.0 local development support and move to GitHub actions, mostly for this repo's sake) and v2.3.0 (fixes https://github.com/RIPAGlobal/scimitar/issues/35), for Rails 6 users.
+
 # 1.3.3 (2023-01-10)
 
 * Back-ports fixes from v2.1.3 for Rails 6 users.

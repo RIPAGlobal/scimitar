@@ -13,6 +13,9 @@ Rails.application.routes.draw do
   patch  'Users/:id', to: 'mock_users#update'
   delete 'Users/:id', to: 'mock_users#destroy'
 
+  get    'Groups',     to: 'mock_groups#index'
+  get    'Groups/:id', to: 'mock_groups#show'
+
   # For testing blocks passed to ActiveRecordBackedResourcesController#destroy
   #
   delete 'CustomDestroyUsers/:id', to: 'custom_destroy_mock_users#destroy'
