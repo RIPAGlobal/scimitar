@@ -5,7 +5,7 @@ class MockUser < ActiveRecord::Base
   # ===========================================================================
 
   READWRITE_ATTRS = %w{
-    id
+    primary_key
     scim_uid
     username
     first_name
@@ -38,7 +38,7 @@ class MockUser < ActiveRecord::Base
 
   def self.scim_attributes_map
     return {
-      id:         :id,
+      id:         :primary_key,
       externalId: :scim_uid,
       userName:   :username,
       name:       {
@@ -92,7 +92,7 @@ class MockUser < ActiveRecord::Base
 
   def self.scim_queryable_attributes
     return {
-      'id'                => { column: :id },
+      'id'                => { column: :primary_key },
       'externalId'        => { column: :scim_uid },
       'meta.lastModified' => { column: :updated_at },
       'name.givenName'    => { column: :first_name },

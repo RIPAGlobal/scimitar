@@ -58,7 +58,7 @@ class MockGroup < ActiveRecord::Base
 
           case type.downcase
             when 'user'
-              MockUser.find_by_id(id)
+              MockUser.find_by_primary_key(id)
             when 'group'
               MockGroup.find_by_id(id)
             else

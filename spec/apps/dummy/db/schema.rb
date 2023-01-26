@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2023_01_09_012729) do
+ActiveRecord::Schema.define(version: 2021_03_08_044214) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -24,12 +24,14 @@ ActiveRecord::Schema.define(version: 2023_01_09_012729) do
 
   create_table "mock_groups_users", id: false, force: :cascade do |t|
     t.bigint "mock_group_id", null: false
-    t.bigint "mock_user_id", null: false
-    t.index ["mock_group_id", "mock_user_id"], name: "index_mock_groups_users_on_mock_group_id_and_mock_user_id"
-    t.index ["mock_user_id", "mock_group_id"], name: "index_mock_groups_users_on_mock_user_id_and_mock_group_id"
+    t.uuid "mock_user_id", null: false
+    t.index ["mock_group_id"], name: "index_mock_groups_users_on_mock_group_id"
+    t.index ["mock_user_id"], name: "index_mock_groups_users_on_mock_user_id"
   end
 
-  create_table "mock_users", force: :cascade do |t|
+  create_table "mock_users", primary_key: "primary_key", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
     t.text "scim_uid"
     t.text "username"
     t.text "first_name"
@@ -37,8 +39,8 @@ ActiveRecord::Schema.define(version: 2023_01_09_012729) do
     t.text "work_email_address"
     t.text "home_email_address"
     t.text "work_phone_number"
-    t.datetime "created_at", precision: 6, null: false
-    t.datetime "updated_at", precision: 6, null: false
   end
 
+  add_foreign_key "mock_groups_users", "mock_groups"
+  add_foreign_key "mock_groups_users", "mock_users", primary_key: "primary_key"
 end

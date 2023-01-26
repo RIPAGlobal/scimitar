@@ -7,9 +7,21 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
     lmt = Time.parse("2023-01-09 14:25:00 +1300")
 
-    @u1 = MockUser.create(username: '1', first_name: 'Foo', last_name: 'Ark', home_email_address: 'home_1@test.com', scim_uid: '001', created_at: lmt, updated_at: lmt + 1)
-    @u2 = MockUser.create(username: '2', first_name: 'Foo', last_name: 'Bar', home_email_address: 'home_2@test.com', scim_uid: '002', created_at: lmt, updated_at: lmt + 2)
-    @u3 = MockUser.create(username: '3', first_name: 'Foo',                   home_email_address: 'home_3@test.com', scim_uid: '003', created_at: lmt, updated_at: lmt + 3)
+    # If a sort order is unspecified, the controller defaults to ID ascending.
+    # With UUID based IDs, testing life is made easier by ensuring that the
+    # creation order matches an ascending UUID sort order (which is what would
+    # happen if we were using integer primary keys).
+    #
+    lmt = Time.parse("2023-01-09 14:25:00 +1300")
+    ids = 3.times.map { SecureRandom.uuid }.sort()
+
+    @u1 = MockUser.create(primary_key: ids.shift(), username: '1', first_name: 'Foo', last_name: 'Ark', home_email_address: 'home_1@test.com', scim_uid: '001', created_at: lmt, updated_at: lmt + 1)
+    @u2 = MockUser.create(primary_key: ids.shift(), username: '2', first_name: 'Foo', last_name: 'Bar', home_email_address: 'home_2@test.com', scim_uid: '002', created_at: lmt, updated_at: lmt + 2)
+    @u3 = MockUser.create(primary_key: ids.shift(), username: '3', first_name: 'Foo',                   home_email_address: 'home_3@test.com', scim_uid: '003', created_at: lmt, updated_at: lmt + 3)
+
+    @g1 = MockGroup.create!(display_name: 'Group 1')
+    @g2 = MockGroup.create!(display_name: 'Group 2')
+    @g3 = MockGroup.create!(display_name: 'Group 3')
   end
 
   # ===========================================================================
@@ -32,21 +44,41 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
     end # "context 'with no items' do"
 
     context 'with items' do
-      it 'returns all items' do
-        get '/Users', params: { format: :scim }
+      context 'with a UUID, renamed primary key column' do
+        it 'returns all items' do
+          get '/Users', params: { format: :scim }
 
-        expect(response.status).to eql(200)
-        result = JSON.parse(response.body)
+          expect(response.status).to eql(200)
+          result = JSON.parse(response.body)
 
-        expect(result['totalResults']).to eql(3)
-        expect(result['Resources'].size).to eql(3)
+          expect(result['totalResults']).to eql(3)
+          expect(result['Resources'].size).to eql(3)
 
-        ids = result['Resources'].map { |resource| resource['id'] }
-        expect(ids).to match_array([@u1.id.to_s, @u2.id.to_s, @u3.id.to_s])
+          ids = result['Resources'].map { |resource| resource['id'] }
+          expect(ids).to match_array([@u1.primary_key.to_s, @u2.primary_key.to_s, @u3.primary_key.to_s])
 
-        usernames = result['Resources'].map { |resource| resource['userName'] }
-        expect(usernames).to match_array(['1', '2', '3'])
-      end
+          usernames = result['Resources'].map { |resource| resource['userName'] }
+          expect(usernames).to match_array(['1', '2', '3'])
+        end
+      end # "context 'with a UUID, renamed primary key column' do"
+
+      context 'with an integer, conventionally named primary key column' do
+        it 'returns all items' do
+          get '/Groups', params: { format: :scim }
+
+          expect(response.status).to eql(200)
+          result = JSON.parse(response.body)
+
+          expect(result['totalResults']).to eql(3)
+          expect(result['Resources'].size).to eql(3)
+
+          ids = result['Resources'].map { |resource| resource['id'] }
+          expect(ids).to match_array([@g1.id.to_s, @g2.id.to_s, @g3.id.to_s])
+
+          usernames = result['Resources'].map { |resource| resource['displayName'] }
+          expect(usernames).to match_array(['Group 1', 'Group 2', 'Group 3'])
+        end
+      end # "context 'with an integer, conventionally named primary key column' do"
 
       it 'applies a filter, with case-insensitive value comparison' do
         get '/Users', params: {
@@ -61,7 +93,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         expect(result['Resources'].size).to eql(1)
 
         ids = result['Resources'].map { |resource| resource['id'] }
-        expect(ids).to match_array([@u2.id.to_s])
+        expect(ids).to match_array([@u2.primary_key.to_s])
 
         usernames = result['Resources'].map { |resource| resource['userName'] }
         expect(usernames).to match_array(['2'])
@@ -80,7 +112,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         expect(result['Resources'].size).to eql(1)
 
         ids = result['Resources'].map { |resource| resource['id'] }
-        expect(ids).to match_array([@u2.id.to_s])
+        expect(ids).to match_array([@u2.primary_key.to_s])
 
         usernames = result['Resources'].map { |resource| resource['userName'] }
         expect(usernames).to match_array(['2'])
@@ -93,7 +125,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         it 'applies a filter on primary keys, using direct comparison (rather than e.g. case-insensitive operators)' do
           get '/Users', params: {
             format: :scim,
-            filter: "id eq \"#{@u3.id}\""
+            filter: "id eq \"#{@u3.primary_key}\""
           }
 
           expect(response.status).to eql(200)
@@ -103,7 +135,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           expect(result['Resources'].size).to eql(1)
 
           ids = result['Resources'].map { |resource| resource['id'] }
-          expect(ids).to match_array([@u3.id.to_s])
+          expect(ids).to match_array([@u3.primary_key.to_s])
 
           usernames = result['Resources'].map { |resource| resource['userName'] }
           expect(usernames).to match_array(['3'])
@@ -122,7 +154,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           expect(result['Resources'].size).to eql(1)
 
           ids = result['Resources'].map { |resource| resource['id'] }
-          expect(ids).to match_array([@u2.id.to_s])
+          expect(ids).to match_array([@u2.primary_key.to_s])
 
           usernames = result['Resources'].map { |resource| resource['userName'] }
           expect(usernames).to match_array(['2'])
@@ -141,7 +173,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           expect(result['Resources'].size).to eql(1)
 
           ids = result['Resources'].map { |resource| resource['id'] }
-          expect(ids).to match_array([@u3.id.to_s])
+          expect(ids).to match_array([@u3.primary_key.to_s])
 
           usernames = result['Resources'].map { |resource| resource['userName'] }
           expect(usernames).to match_array(['3'])
@@ -161,7 +193,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         expect(result['Resources'].size).to eql(2)
 
         ids = result['Resources'].map { |resource| resource['id'] }
-        expect(ids).to match_array([@u1.id.to_s, @u2.id.to_s])
+        expect(ids).to match_array([@u1.primary_key.to_s, @u2.primary_key.to_s])
 
         usernames = result['Resources'].map { |resource| resource['userName'] }
         expect(usernames).to match_array(['1', '2'])
@@ -180,7 +212,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         expect(result['Resources'].size).to eql(2)
 
         ids = result['Resources'].map { |resource| resource['id'] }
-        expect(ids).to match_array([@u2.id.to_s, @u3.id.to_s])
+        expect(ids).to match_array([@u2.primary_key.to_s, @u3.primary_key.to_s])
 
         usernames = result['Resources'].map { |resource| resource['userName'] }
         expect(usernames).to match_array(['2', '3'])
@@ -204,18 +236,34 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
   # ===========================================================================
 
   context '#show' do
-    it 'shows an item' do
-      expect_any_instance_of(MockUsersController).to receive(:show).once.and_call_original
-      get "/Users/#{@u2.id}", params: { format: :scim }
+    context 'with a UUID, renamed primary key column' do
+      it 'shows an item' do
+        expect_any_instance_of(MockUsersController).to receive(:show).once.and_call_original
+        get "/Users/#{@u2.primary_key}", params: { format: :scim }
 
-      expect(response.status).to eql(200)
-      result = JSON.parse(response.body)
+        expect(response.status).to eql(200)
+        result = JSON.parse(response.body)
 
-      expect(result['id']).to eql(@u2.id.to_s) # Note - ID was converted String; not Integer
-      expect(result['userName']).to eql('2')
-      expect(result['name']['familyName']).to eql('Bar')
-      expect(result['meta']['resourceType']).to eql('User')
-    end
+        expect(result['id']).to eql(@u2.primary_key.to_s)
+        expect(result['userName']).to eql('2')
+        expect(result['name']['familyName']).to eql('Bar')
+        expect(result['meta']['resourceType']).to eql('User')
+      end
+    end # "context 'with a UUID, renamed primary key column' do"
+
+    context 'with an integer, conventionally named primary key column' do
+      it 'shows an item' do
+        expect_any_instance_of(MockGroupsController).to receive(:show).once.and_call_original
+        get "/Groups/#{@g2.id}", params: { format: :scim }
+
+        expect(response.status).to eql(200)
+        result = JSON.parse(response.body)
+
+        expect(result['id']).to eql(@g2.id.to_s) # Note - ID was converted String; not Integer
+        expect(result['displayName']).to eql('Group 2')
+        expect(result['meta']['resourceType']).to eql('Group')
+      end
+    end # "context 'with an integer, conventionally named primary key column' do"
 
     it 'renders 404' do
       get '/Users/xyz', params: { format: :scim }
@@ -248,7 +296,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           expect(response.status).to eql(201)
           result = JSON.parse(response.body)
 
-          expect(result['id']).to eql(new_mock.id.to_s)
+          expect(result['id']).to eql(new_mock.primary_key.to_s)
           expect(result['meta']['resourceType']).to eql('User')
           expect(new_mock.username).to eql('4')
         end
@@ -289,7 +337,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           expect(response.status).to eql(201)
           result = JSON.parse(response.body)
 
-          expect(result['id']).to eql(new_mock.id.to_s)
+          expect(result['id']).to eql(new_mock.primary_key.to_s)
           expect(result['meta']['resourceType']).to eql('User')
           expect(new_mock.username).to eql('4')
           expect(new_mock.first_name).to eql('Given')
@@ -363,13 +411,13 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
         expect_any_instance_of(MockUsersController).to receive(:replace).once.and_call_original
         expect {
-          put "/Users/#{@u2.id}", params: attributes.merge(format: :scim)
+          put "/Users/#{@u2.primary_key}", params: attributes.merge(format: :scim)
         }.to_not change { MockUser.count }
 
         expect(response.status).to eql(200)
         result = JSON.parse(response.body)
 
-        expect(result['id']).to eql(@u2.id.to_s)
+        expect(result['id']).to eql(@u2.primary_key.to_s)
         expect(result['meta']['resourceType']).to eql('User')
 
         @u2.reload
@@ -391,7 +439,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
     it 'notes schema validation failures' do
       expect {
-        put "/Users/#{@u2.id}", params: {
+        put "/Users/#{@u2.primary_key}", params: {
           format: :scim
           # userName parameter is required by schema, but missing
         }
@@ -470,13 +518,13 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
         expect_any_instance_of(MockUsersController).to receive(:update).once.and_call_original
         expect {
-          patch "/Users/#{@u2.id}", params: payload.merge(format: :scim)
+          patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
         }.to_not change { MockUser.count }
 
         expect(response.status).to eql(200)
         result = JSON.parse(response.body)
 
-        expect(result['id']).to eql(@u2.id.to_s)
+        expect(result['id']).to eql(@u2.primary_key.to_s)
         expect(result['meta']['resourceType']).to eql('User')
 
         @u2.reload
@@ -507,13 +555,13 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
           expect_any_instance_of(MockUsersController).to receive(:update).once.and_call_original
           expect {
-            patch "/Users/#{@u2.id}", params: payload.merge(format: :scim)
+            patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
           }.to_not change { MockUser.count }
 
           expect(response.status).to eql(200)
           result = JSON.parse(response.body)
 
-          expect(result['id']).to eql(@u2.id.to_s)
+          expect(result['id']).to eql(@u2.primary_key.to_s)
           expect(result['meta']['resourceType']).to eql('User')
 
           @u2.reload
@@ -539,13 +587,13 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
           expect_any_instance_of(MockUsersController).to receive(:update).once.and_call_original
           expect {
-            patch "/Users/#{@u2.id}", params: payload.merge(format: :scim)
+            patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
           }.to_not change { MockUser.count }
 
           expect(response.status).to eql(200)
           result = JSON.parse(response.body)
 
-          expect(result['id']).to eql(@u2.id.to_s)
+          expect(result['id']).to eql(@u2.primary_key.to_s)
           expect(result['meta']['resourceType']).to eql('User')
 
           @u2.reload
@@ -571,13 +619,13 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
           expect_any_instance_of(MockUsersController).to receive(:update).once.and_call_original
           expect {
-            patch "/Users/#{@u2.id}", params: payload.merge(format: :scim)
+            patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
           }.to_not change { MockUser.count }
 
           expect(response.status).to eql(200)
           result = JSON.parse(response.body)
 
-          expect(result['id']).to eql(@u2.id.to_s)
+          expect(result['id']).to eql(@u2.primary_key.to_s)
           expect(result['meta']['resourceType']).to eql('User')
 
           @u2.reload
@@ -601,7 +649,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
     it 'notes Rails validation failures' do
       expect {
-        patch "/Users/#{@u2.id}", params: {
+        patch "/Users/#{@u2.primary_key}", params: {
           format: :scim,
           Operations: [
             {
@@ -654,7 +702,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
       expect_any_instance_of(MockUsersController).to receive(:destroy).once.and_call_original
       expect_any_instance_of(MockUser).to receive(:destroy!).once.and_call_original
       expect {
-        delete "/Users/#{@u2.id}", params: { format: :scim }
+        delete "/Users/#{@u2.primary_key}", params: { format: :scim }
       }.to change { MockUser.count }.by(-1)
 
       expect(response.status).to eql(204)
@@ -666,7 +714,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
       expect_any_instance_of(MockUser).to_not receive(:destroy!)
 
       expect {
-        delete "/CustomDestroyUsers/#{@u2.id}", params: { format: :scim }
+        delete "/CustomDestroyUsers/#{@u2.primary_key}", params: { format: :scim }
       }.to_not change { MockUser.count }
 
       expect(response.status).to eql(204)
