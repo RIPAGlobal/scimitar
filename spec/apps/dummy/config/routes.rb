@@ -15,6 +15,7 @@ Rails.application.routes.draw do
 
   get    'Groups',     to: 'mock_groups#index'
   get    'Groups/:id', to: 'mock_groups#show'
+  patch  'Groups/:id', to: 'mock_groups#update'
 
   # For testing blocks passed to ActiveRecordBackedResourcesController#destroy
   #
