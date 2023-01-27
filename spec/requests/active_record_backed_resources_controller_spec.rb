@@ -691,6 +691,142 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
       result = JSON.parse(response.body)
       expect(result['status']).to eql('404')
     end
+
+    context 'when removing users from groups' do
+      before :each do
+        @g1.mock_users << @u1
+        @g1.mock_users << @u2
+        @g1.mock_users << @u3
+
+        # (Self-check) Verify group representation
+        #
+        get "/Groups/#{@g1.id}", params: { format: :scim }
+
+        expect(response.status).to eql(200)
+        result = JSON.parse(response.body)
+
+        expect(result['members'].map { |m| m['value'] }.sort()).to eql(MockUser.pluck(:primary_key).sort())
+      end
+
+      it 'can remove all users' do
+        expect {
+          expect {
+            patch "/Groups/#{@g1.id}", params: {
+              format: :scim,
+              Operations: [
+                {
+                  op: 'remove',
+                  path: 'members'
+                }
+              ]
+            }
+          }.to_not change { MockUser.count }
+        }.to_not change { MockGroup.count }
+
+        get "/Groups/#{@g1.id}", params: { format: :scim }
+
+        expect(response.status).to eql(200)
+        result = JSON.parse(response.body)
+
+        expect(result['members']).to be_empty
+        expect(@g1.reload().mock_users).to be_empty
+      end
+
+      # Define via 'let':
+      #
+      # * Hash 'payload', to send via 'patch'
+      # * MockUser 'removed_user', which is the user that should be removed
+      #
+      shared_examples 'a user remover' do
+        it 'which removes the identified user' do
+          expect {
+            expect {
+              patch "/Groups/#{@g1.id}", params: payload()
+            }.to_not change { MockUser.count }
+          }.to_not change { MockGroup.count }
+
+          expected_remaining_user_ids = MockUser
+            .where.not(primary_key: removed_user().id)
+            .pluck(:primary_key)
+            .sort()
+
+          get "/Groups/#{@g1.id}", params: { format: :scim }
+
+          expect(response.status).to eql(200)
+          result = JSON.parse(response.body)
+
+          expect(result['members'].map { |m| m['value'] }.sort()).to eql(expected_remaining_user_ids)
+          expect(@g1.reload().mock_users.map(&:primary_key).sort()).to eql(expected_remaining_user_ids)
+        end
+      end
+
+      # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.2
+      #
+      context 'and using an RFC-compliant payload' do
+        let(:removed_user) { @u2 }
+        let(:payload) do
+          {
+            format: :scim,
+            Operations: [
+              {
+                op: 'remove',
+                path: "members[value eq \"#{removed_user().primary_key}\"]",
+              }
+            ]
+          }
+        end
+
+        it_behaves_like 'a user remover'
+      end # context 'and using an RFC-compliant payload' do
+
+      # https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/use-scim-to-provision-users-and-groups#update-group-remove-members
+      #
+      context 'and using a Microsoft variant payload' do
+        let(:removed_user) { @u2 }
+        let(:payload) do
+          {
+            format: :scim,
+            Operations: [
+              {
+                op: 'remove',
+                path: 'members',
+                value: [{
+                  '$ref' => nil,
+                  'value' => removed_user().primary_key
+                }]
+              }
+            ]
+          }
+        end
+
+        it_behaves_like 'a user remover'
+      end # context 'and using a Microsoft variant payload' do
+
+      # https://help.salesforce.com/s/articleView?id=sf.identity_scim_manage_groups.htm&type=5
+      #
+      context 'and using a Salesforce variant payload' do
+        let(:removed_user) { @u2 }
+        let(:payload) do
+          {
+            format: :scim,
+            Operations: [
+              {
+                op: 'remove',
+                path: 'members',
+                value: {
+                  'members' => [{
+                    '$ref' => nil,
+                    'value' => removed_user().primary_key
+                  }]
+                }
+              }
+            ]
+          }
+        end
+
+        it_behaves_like 'a user remover'
+      end # context 'and using a Salesforce variant payload' do
+    end # "context 'when removing users from groups' do"
   end # "context '#update' do"
 
   # ===========================================================================
