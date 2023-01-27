@@ -1,3 +1,7 @@
+# 2.4.0 (2023-01-27)
+
+* Address https://github.com/RIPAGlobal/scimitar/issues/43 - allows Microsoft-style payloads for removing Users from Groups, with a special case exception for hypothetical inbound SCIM calls originating from Salesforce software. For more details of the fix, please see https://github.com/RIPAGlobal/scimitar/pull/45.
+
 # 2.3.0 (2023-01-17)
 
 * Address https://github.com/RIPAGlobal/scimitar/issues/35. Declaring primary key in the ActiveRecord model would solve most of the problems described, but v2.2.0 did introduce a default order clause that would trip up a model with a different primary key name; this is now fixed. In any case, it may be possible to avoid declaring the primary key override in the model entirely if using Scimitar v2.3.0, should that be your wish. This is in effect an edge case new feature, which is why the gem's minor version has been bumped up.
