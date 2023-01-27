@@ -901,14 +901,86 @@ module Scimitar
                   else
                     altering_hash[path_component] = value
                   end
+
                 when 'replace'
                   if path_component == 'root'
                     altering_hash[path_component].merge!(value)
                   else
                     altering_hash[path_component] = value
                   end
+
+                # The array check handles payloads seen from e.g. Microsoft for
+                # remove-user-from-group, where contrary to examples in the RFC
+                # which would imply "payload removes all users", there is the
+                # clear intent to remove just one.
+                #
+                # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.2
+                # https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/use-scim-to-provision-users-and-groups#update-group-remove-members
+                #
+                # Since remove-all in the face of remove-one is destructive, we
+                # do a special check here to see if there's an array value for
+                # the array path that the payload yielded. If so, we can match
+                # each value against array items and remove just those items.
+                #
+                # There is an additional special case to handle a bad example
+                # from Salesforce:
+                #
+                #   https://help.salesforce.com/s/articleView?id=sf.identity_scim_manage_groups.htm&type=5
+                #
                 when 'remove'
-                  altering_hash.delete(path_component)
+                  if altering_hash[path_component].is_a?(Array) && value.present?
+
+                    # Handle bad Salesforce example. That might be simply a
+                    # documentation error, but just in case...
+                    #
+                    value = value.values.first if (
+                      path_component&.downcase == 'members' &&
+                      value.is_a?(Hash)                     &&
+                      value.keys.size == 1                  &&
+                      value.keys.first&.downcase == 'members'
+                    )
+
+                    # The Microsoft example provides an array of values, but we
+                    # may as well cope with a value specified 'flat'. Promote
+                    # such a thing to an Array to simplify the following code.
+                    #
+                    value = [value] unless value.is_a?(Array)
+
+                    # For each value item, delete matching array entries. The
+                    # concept of "matching" is:
+                    #
+                    # * For simple non-Hash values (if possible) just delete on
+                    #   an exact match
+                    #
+                    # * For Hash-based values, only delete if all 'patch' keys
+                    #   are present in the resource and all values thus match.
+                    #
+                    # Special case to ignore '$ref' from the Microsoft payload.
+                    #
+                    # Note coercion to strings to account for SCIM vs the usual
+                    # tricky case of underlying implementations with (say)
+                    # integer primary keys, which all end up as strings anyway.
+                    #
+                    value.each do | value_item |
+                      altering_hash[path_component].delete_if do | item |
+                        if item.is_a?(Hash) && value_item.is_a?(Hash)
+                          matched_all = true
+                          value_item.each do | value_key, value_value |
+                            next if value_key == '$ref'
+                            if ! item.key?(value_key) || item[value_key]&.to_s != value_value&.to_s
+                              matched_all = false
+                            end
+                          end
+                          matched_all
+                        else
+                          item&.to_s == value_item&.to_s
+                        end
+                      end
+                    end
+                  else
+                    altering_hash.delete(path_component)
+                  end
+
               end
             end
           end
