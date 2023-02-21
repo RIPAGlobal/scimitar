@@ -616,7 +616,13 @@ module Scimitar
                 attrs_map_or_leaf_value.each do | scim_attribute, sub_attrs_map_or_leaf_value |
                   next if scim_attribute&.to_s&.downcase == 'id' && path.empty?
 
-                  sub_scim_hash_or_leaf_value = scim_hash_or_leaf_value&.dig(scim_attribute.to_s)
+                  attribute_tree = []
+                  resource_class.extended_schemas.each do |schema|
+                    attribute_tree << schema.id and break if schema.scim_attributes.any? { |attribute| attribute.name == scim_attribute.to_s }
+                  end
+                  attribute_tree << scim_attribute.to_s
+
+                  sub_scim_hash_or_leaf_value = scim_hash_or_leaf_value&.dig(*attribute_tree)
 
                   self.from_scim_backend!(
                     attrs_map_or_leaf_value: sub_attrs_map_or_leaf_value,
