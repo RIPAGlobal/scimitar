@@ -443,9 +443,17 @@ module Scimitar
               ci_scim_hash = { 'root' => ci_scim_hash }.with_indifferent_case_insensitive_access()
             end
 
+            paths = []
+            self.class.scim_resource_type.extended_schemas.each do |schema|
+              path_str.split(schema.id + ':').drop(1).each do |path|
+                paths += [schema.id] + path.split('.')
+              end
+            end
+            paths = path_str.split('.') if paths.empty?
+
             self.from_patch_backend!(
               nature:        nature,
-              path:          (path_str || '').split('.'),
+              path:          paths,
               value:         value,
               altering_hash: ci_scim_hash
             )
