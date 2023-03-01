@@ -415,7 +415,7 @@ end
 Scimitar::Resources::User.extend_schema(UserEnterpriseExtension)
 ```
 
-This is often done in `config/initializers/scimitar.&nbsp;rb` to help make it very clear that extensions are globally available and remove the risk of SCIM resources somehow being referenced before schema extensions have been applied.
+This is often done in `config/initializers/scimitar.rb` to help make it very clear that extensions are globally available and remove the risk of SCIM resources somehow being referenced before schema extensions have been applied.
 
 In `def self.scim_attributes_map` in the underlying data model, add any new fields - `organization` and `manager` in this example - to map them to whatever the equivalent data model attributes are, just as you would do with any other resource fields. These are declared without any special nesting - for example:
 
