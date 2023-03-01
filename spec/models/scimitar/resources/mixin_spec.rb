@@ -416,7 +416,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
                 'organization' => 'SOMEORG',
-                'manager'      => 'SOMEMGR'
+                'MANAGER'      => 'SOMEMGR'
               }
             }
 
@@ -721,6 +721,21 @@ RSpec.describe Scimitar::Resources::Mixin do
                 expect(scim_hash['name']['familyName']).to eql('Bar')
               end
 
+              it 'with schema extensions: overwrites' do
+                path      = [ 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User', 'organization' ]
+                scim_hash = { 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => { 'organization' => 'SOMEORG' } }.with_indifferent_case_insensitive_access()
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'add',
+                  path:          path,
+                  value:         'OTHERORG',
+                  altering_hash: scim_hash
+                )
+
+                expect(scim_hash['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']['organization' ]).to eql('OTHERORG')
+              end
+
               # For 'add', filter at end-of-path is nonsensical and not
               # supported by spec or Scimitar; we only test mid-path filters.
               #
@@ -907,6 +922,21 @@ RSpec.describe Scimitar::Resources::Mixin do
                 )
 
                 expect(scim_hash['name']['givenName']).to eql('Baz')
+              end
+
+              it 'with schema extensions: adds' do
+                path      = [ 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User', 'organization' ]
+                scim_hash = {}.with_indifferent_case_insensitive_access()
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'add',
+                  path:          path,
+                  value:         'SOMEORG',
+                  altering_hash: scim_hash
+                )
+
+                expect(scim_hash['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']['organization' ]).to eql('SOMEORG')
               end
 
               context 'with filter mid-path: adds' do
@@ -2695,6 +2725,38 @@ RSpec.describe Scimitar::Resources::Mixin do
 
             @instance.from_scim_patch!(patch_hash: patch)
             expect(@instance.first_name).to eql('Baz')
+          end
+
+          # Note odd ":" separating schema ID from first attribute, although
+          # the nature of JSON rendering / other payloads might lead you to
+          # expect a "." as with any other path component.
+          #
+          # Note the ":" separating the schema ID (URN) from the attribute.
+          # The nature of JSON rendering / other payloads might lead you to
+          # expect a "." as with any complex types, but that's not the case;
+          # see https://www.rfc-editor.org/rfc/rfc7644#section-3.10, or
+          # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2 of which in
+          # particular, https://www.rfc-editor.org/rfc/rfc7644#page-35.
+          #
+          it 'which updates attributes defined by extension schema' do
+            @instance.update!(manager: 'SOMEMGR')
+
+            path = 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager'
+            path = path.upcase if force_upper_case
+
+            patch = {
+              'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+              'Operations' => [
+                {
+                  'op'    => 'replace',
+                  'path'  => path,
+                  'value' => 'OTHERMGR'
+                }
+              ]
+            }
+
+            @instance.from_scim_patch!(patch_hash: patch)
+            expect(@instance.manager).to eql('OTHERMGR')
           end
 
           it 'which updates with filter match' do
