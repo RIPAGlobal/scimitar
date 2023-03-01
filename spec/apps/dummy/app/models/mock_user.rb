@@ -15,6 +15,8 @@ class MockUser < ActiveRecord::Base
     work_email_address
     home_email_address
     work_phone_number
+    organization
+    manager
   }
 
   has_and_belongs_to_many :mock_groups
@@ -84,7 +86,13 @@ class MockUser < ActiveRecord::Base
           }
         }
       ],
-      active: :is_active
+      active: :is_active,
+
+      # Custom extension schema - see configuration in
+      # "spec/apps/dummy/config/initializers/scimitar.rb".
+      #
+      organization: :organization,
+      manager:      :manager
     }
   end
 

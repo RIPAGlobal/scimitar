@@ -172,6 +172,7 @@ RSpec.describe Scimitar::Resources::Mixin do
           instance.work_email_address = 'foo.bar@test.com'
           instance.home_email_address = nil
           instance.work_phone_number  = '+642201234567'
+          instance.organization       = 'SOMEORG'
 
           g1 = MockGroup.create!(display_name: 'Group 1')
           g2 = MockGroup.create!(display_name: 'Group 2')
@@ -194,7 +195,12 @@ RSpec.describe Scimitar::Resources::Mixin do
             'externalId'  => 'AA02984',
             'groups'      => [{'display'=>g1.display_name, 'value'=>g1.id.to_s}, {'display'=>g3.display_name, 'value'=>g3.id.to_s}],
             'meta'        => {'location'=>"https://test.com/mock_users/#{uuid}", 'resourceType'=>'User'},
-            'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User']
+            'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
+
+            'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
+              'organization' => 'SOMEORG',
+              'manager'      => nil
+            }
           })
         end
       end # "context 'with a UUID, renamed primary key column' do"
@@ -318,7 +324,9 @@ RSpec.describe Scimitar::Resources::Mixin do
               ],
 
               'meta'    => {'location'=>'https://test.com/static_map_test', 'resourceType'=>'User'},
-              'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User']
+              'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
+
+              'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {}
             })
           end
         end # "context 'using static mappings' do"
@@ -345,7 +353,9 @@ RSpec.describe Scimitar::Resources::Mixin do
               ],
 
               'meta'    => {'location'=>'https://test.com/dynamic_map_test', 'resourceType'=>'User'},
-              'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User']
+              'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
+
+              'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {}
             })
           end
         end # "context 'using dynamic lists' do"
@@ -402,7 +412,12 @@ RSpec.describe Scimitar::Resources::Mixin do
               'id'           => '42', # Note, String
               'externalId'   => 'AA02984',
               'meta'         => {'location' => 'https://test.com/mock_users/42', 'resourceType' => 'User'},
-              'schemas'      => ['urn:ietf:params:scim:schemas:core:2.0:User']
+              'schemas'      => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
+
+              'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
+                'organization' => 'SOMEORG',
+                'manager'      => 'SOMEMGR'
+              }
             }
 
             hash = spec_helper_hupcase(hash) if force_upper_case
@@ -418,6 +433,8 @@ RSpec.describe Scimitar::Resources::Mixin do
             expect(instance.work_email_address).to eql('foo.bar@test.com')
             expect(instance.home_email_address).to be_nil
             expect(instance.work_phone_number ).to eql('+642201234567')
+            expect(instance.organization      ).to eql('SOMEORG')
+            expect(instance.manager           ).to eql('SOMEMGR')
           end
 
           it 'honouring read-write lists' do
