@@ -416,7 +416,7 @@ module Scimitar
               raise Scimitar::InvalidSyntaxError.new("Unrecognised PATCH \"op\" value of \"#{nature}\"")
             end
 
-            # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.2
+            # https://tools.ietf.org/html/rfc7644#section-3.5.2.2
             #
             # o  If "path" is unspecified, the operation fails with HTTP status
             #    code 400 and a "scimType" error code of "noTarget".
@@ -452,9 +452,9 @@ module Scimitar
             # Note the ":" separating the schema ID (URN) from the attribute.
             # The nature of JSON rendering / other payloads might lead you to
             # expect a "." as with any complex types, but that's not the case;
-            # see https://www.rfc-editor.org/rfc/rfc7644#section-3.10, or
-            # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2 of which in
-            # particular, https://www.rfc-editor.org/rfc/rfc7644#page-35.
+            # see https://tools.ietf.org/html/rfc7644#section-3.10, or
+            # https://tools.ietf.org/html/rfc7644#section-3.5.2 of which in
+            # particular, https://tools.ietf.org/html/rfc7644#page-35.
             #
             paths = []
             self.class.scim_resource_type.extended_schemas.each do |schema|
@@ -791,12 +791,12 @@ module Scimitar
 
             path_component, filter = extract_filter_from(path_component: path.first)
 
-            # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.1
+            # https://tools.ietf.org/html/rfc7644#section-3.5.2.1
             #
             # o  If the target location specifies an attribute that does not exist
             #    (has no value), the attribute is added with the new value.
             #
-            # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.3
+            # https://tools.ietf.org/html/rfc7644#section-3.5.2.3
             #
             # o  If the target location path specifies an attribute that does not
             #    exist, the service provider SHALL treat the operation as an "add".
@@ -870,7 +870,7 @@ module Scimitar
               end
 
             # Path filters are not described for 'add' and assumed to have no
-            # meaning - https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.1
+            # meaning - https://tools.ietf.org/html/rfc7644#section-3.5.2.1
             #
             elsif filter.present? && nature != 'add'
               compact_after = false
@@ -891,12 +891,12 @@ module Scimitar
 
               current_data_at_path.compact! if compact_after
 
-              # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.1
+              # https://tools.ietf.org/html/rfc7644#section-3.5.2.1
               #
               # o  If the target location specifies an attribute that does not exist
               #    (has no value), the attribute is added with the new value.
               #
-              # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.3
+              # https://tools.ietf.org/html/rfc7644#section-3.5.2.3
               #
               # o  If the target location path specifies an attribute that does not
               #    exist, the service provider SHALL treat the operation as an "add".
@@ -947,7 +947,7 @@ module Scimitar
                 # which would imply "payload removes all users", there is the
                 # clear intent to remove just one.
                 #
-                # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.2
+                # https://tools.ietf.org/html/rfc7644#section-3.5.2.2
                 # https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/use-scim-to-provision-users-and-groups#update-group-remove-members
                 #
                 # Since remove-all in the face of remove-one is destructive, we

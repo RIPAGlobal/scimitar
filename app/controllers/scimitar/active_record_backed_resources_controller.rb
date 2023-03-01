@@ -167,7 +167,7 @@ module Scimitar
       rescue ActiveRecord::RecordInvalid => exception
         joined_errors = record.errors.full_messages.join('; ')
 
-        # https://www.rfc-editor.org/rfc/rfc7644#page-12
+        # https://tools.ietf.org/html/rfc7644#page-12
         #
         #   If the service provider determines that the creation of the requested
         #   resource conflicts with existing resources (e.g., a "User" resource

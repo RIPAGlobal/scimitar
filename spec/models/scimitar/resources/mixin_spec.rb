@@ -1280,7 +1280,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               # What we expect:
               #
-              # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.2
+              # https://tools.ietf.org/html/rfc7644#section-3.5.2.2
               # https://docs.snowflake.com/en/user-guide/scim-intro.html#patch-scim-v2-groups-id
               #
               # ...vs accounting for the unusual payloads we sometimes get,
@@ -2734,9 +2734,9 @@ RSpec.describe Scimitar::Resources::Mixin do
           # Note the ":" separating the schema ID (URN) from the attribute.
           # The nature of JSON rendering / other payloads might lead you to
           # expect a "." as with any complex types, but that's not the case;
-          # see https://www.rfc-editor.org/rfc/rfc7644#section-3.10, or
-          # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2 of which in
-          # particular, https://www.rfc-editor.org/rfc/rfc7644#page-35.
+          # see https://tools.ietf.org/html/rfc7644#section-3.10, or
+          # https://tools.ietf.org/html/rfc7644#section-3.5.2 of which in
+          # particular, https://tools.ietf.org/html/rfc7644#page-35.
           #
           it 'which updates attributes defined by extension schema' do
             @instance.update!(manager: 'SOMEMGR')
