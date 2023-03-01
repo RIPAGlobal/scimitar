@@ -17,7 +17,7 @@ class CreateMockUsers < ActiveRecord::Migration[6.1]
       # "spec/apps/dummy/config/initializers/scimitar.rb".
       #
       t.text :organization
-      t.text :manager
+      t.text :department
     end
   end
 end

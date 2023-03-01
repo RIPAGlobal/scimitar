@@ -199,7 +199,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
             'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
               'organization' => 'SOMEORG',
-              'manager'      => nil
+              'department'   => nil
             }
           })
         end
@@ -416,7 +416,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
                 'organization' => 'SOMEORG',
-                'MANAGER'      => 'SOMEMGR'
+                'DEPARTMENT'   => 'SOMEDPT'
               }
             }
 
@@ -434,7 +434,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             expect(instance.home_email_address).to be_nil
             expect(instance.work_phone_number ).to eql('+642201234567')
             expect(instance.organization      ).to eql('SOMEORG')
-            expect(instance.manager           ).to eql('SOMEMGR')
+            expect(instance.department        ).to eql('SOMEDPT')
           end
 
           it 'honouring read-write lists' do
@@ -2739,9 +2739,9 @@ RSpec.describe Scimitar::Resources::Mixin do
           # particular, https://tools.ietf.org/html/rfc7644#page-35.
           #
           it 'which updates attributes defined by extension schema' do
-            @instance.update!(manager: 'SOMEMGR')
+            @instance.update!(department: 'SOMEDPT')
 
-            path = 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager'
+            path = 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:department'
             path = path.upcase if force_upper_case
 
             patch = {
@@ -2750,13 +2750,13 @@ RSpec.describe Scimitar::Resources::Mixin do
                 {
                   'op'    => 'replace',
                   'path'  => path,
-                  'value' => 'OTHERMGR'
+                  'value' => 'OTHERDPT'
                 }
               ]
             }
 
             @instance.from_scim_patch!(patch_hash: patch)
-            expect(@instance.manager).to eql('OTHERMGR')
+            expect(@instance.department).to eql('OTHERDPT')
           end
 
           it 'which updates with filter match' do

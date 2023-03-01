@@ -347,7 +347,7 @@ RSpec.describe Scimitar::Resources::Base do
         def self.scim_attributes
           [
             Scimitar::Schema::Attribute.new(name: 'organization', type: 'string'),
-            Scimitar::Schema::Attribute.new(name: 'manager',      type: 'string')
+            Scimitar::Schema::Attribute.new(name: 'department',   type: 'string')
           ]
         end
       end
@@ -369,20 +369,20 @@ RSpec.describe Scimitar::Resources::Base do
 
       context '#initialize' do
         it 'allows setting extension attributes' do
-          resource = resource_class.new('urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {organization: 'SOMEORG', manager: 'SOMEMGR'})
+          resource = resource_class.new('urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {organization: 'SOMEORG', department: 'SOMEDPT'})
 
           expect(resource.organization).to eql('SOMEORG')
-          expect(resource.manager     ).to eql('SOMEMGR')
+          expect(resource.department  ).to eql('SOMEDPT')
         end
       end # "context '#initialize' do"
 
       context '#as_json' do
         it 'namespaces the extension attributes' do
-          resource = resource_class.new(organization: 'SOMEORG', manager: 'SOMEMGR')
+          resource = resource_class.new(organization: 'SOMEORG', department: 'SOMEDPT')
           hash = resource.as_json
 
           expect(hash['schemas']).to eql(['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'])
-          expect(hash['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']).to eql('organization' => 'SOMEORG', 'manager' => 'SOMEMGR')
+          expect(hash['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']).to eql('organization' => 'SOMEORG', 'department' => 'SOMEDPT')
         end
       end # "context '#as_json' do"
 
@@ -402,13 +402,13 @@ RSpec.describe Scimitar::Resources::Base do
               'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
                 userName:     'SOMEUSR',
                 organization: 'SOMEORG',
-                manager:      'SOMEMGR'
+                department:   'SOMEDPT'
               }
             )
 
             expect(resource.organization).to eql('SOMEORG')
-            expect(resource.manager     ).to eql('SOMEMGR')
-            expect(resource.valid?).to eql(true)
+            expect(resource.department  ).to eql('SOMEDPT')
+            expect(resource.valid?      ).to eql(true)
           end
         end # context 'validation'
       end # "context '.resource_type' do"

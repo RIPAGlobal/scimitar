@@ -16,7 +16,7 @@ class MockUser < ActiveRecord::Base
     home_email_address
     work_phone_number
     organization
-    manager
+    department
   }
 
   has_and_belongs_to_many :mock_groups
@@ -92,7 +92,7 @@ class MockUser < ActiveRecord::Base
       # "spec/apps/dummy/config/initializers/scimitar.rb".
       #
       organization: :organization,
-      manager:      :manager
+      department:   :department
     }
   end
 

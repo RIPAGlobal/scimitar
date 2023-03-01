@@ -403,7 +403,7 @@ class UserEnterpriseExtension < Scimitar::Schema::Base
   def self.scim_attributes
     [
       Scimitar::Schema::Attribute.new(name: 'organization', type: 'string'),
-      Scimitar::Schema::Attribute.new(name: 'manager',      type: 'string')
+      Scimitar::Schema::Attribute.new(name: 'department',   type: 'string')
     ]
   end
 end
@@ -417,7 +417,7 @@ Scimitar::Resources::User.extend_schema(UserEnterpriseExtension)
 
 This is often done in `config/initializers/scimitar.rb` to help make it very clear that extensions are globally available and remove the risk of SCIM resources somehow being referenced before schema extensions have been applied.
 
-In `def self.scim_attributes_map` in the underlying data model, add any new fields - `organization` and `manager` in this example - to map them to whatever the equivalent data model attributes are, just as you would do with any other resource fields. These are declared without any special nesting - for example:
+In `def self.scim_attributes_map` in the underlying data model, add any new fields - `organization` and `department` in this example - to map them to whatever the equivalent data model attributes are, just as you would do with any other resource fields. These are declared without any special nesting - for example:
 
 ```ruby
 def self.scim_attributes_map
@@ -426,8 +426,8 @@ def self.scim_attributes_map
     externalId:   :scim_uid,
     userName:     :username,
     # ...etc...
-    organization: :team,
-    manager:      :authorising_manager
+    organization: :company,
+    department:   :team
   }
 end
 ```
@@ -446,8 +446,8 @@ Whatever you provide in the `::id` method in your extension class will be used a
   // ...
 
   "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
-    "organization": "Marketing",
-    "manager": "Lauren Smith",
+    "organization": "Corporation Incorporated",
+    "department": "Marketing",
   },
   // ...
 }
