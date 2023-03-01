@@ -23,8 +23,8 @@ Rails.application.config.to_prepare do
 
   })
 
-  module Scim
-    module Schema
+  module ScimSchemaExtensions
+    module User
       class Enterprise < Scimitar::Schema::Base
         def initialize(options = {})
           super(
@@ -49,5 +49,5 @@ Rails.application.config.to_prepare do
     end
   end
 
-  Scimitar::Resources::User.extend_schema Scim::Schema::Enterprise
+  Scimitar::Resources::User.extend_schema ScimSchemaExtensions::User::Enterprise
 end

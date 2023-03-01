@@ -18,9 +18,9 @@ In the context of the names used by the SCIM standard, the service that is provi
 
 * [Overview](https://en.wikipedia.org/wiki/System_for_Cross-domain_Identity_Management) at Wikipedia
 * [More detailed introduction](http://www.simplecloud.info) at SimpleCloud
-* SCIM v2 RFC [7642](https://tools.ietf.org/html/rfc7642): Concepts
-* SCIM v2 RFC [7643](https://tools.ietf.org/html/rfc7643): Core schema
-* SCIM v2 RFC [7644](https://tools.ietf.org/html/rfc7644): Protocol
+* SCIM v2 RFC [7642](https://www.rfc-editor.org/rfc/rfc7642): Concepts
+* SCIM v2 RFC [7643](https://www.rfc-editor.org/rfc/rfc7643): Core schema
+* SCIM v2 RFC [7644](https://www.rfc-editor.org/rfc/rfc7644): Protocol
 
 
 
@@ -375,11 +375,106 @@ end
 
 Note that the [`Scimitar::ApplicationController` parent class](https://www.rubydoc.info/gems/scimitar/Scimitar/ApplicationController) of `Scimitar::ResourcesController` has a few methods to help with handling exceptions and rendering them as SCIM responses; for example, if a resource were not found by ID, you might wish to use [`Scimitar::ApplicationController#handle_resource_not_found`](https://github.com/RIPAGlobal/scimitar/blob/v1.0.3/app/controllers/scimitar/application_controller.rb#L22).
 
+### Extension schema
+
+You can extend schema with custom data by defining an extension class and calling `::extend_schema` on the SCIM resource class to which the extension applies. These extension classes:
+
+* Must subclass `Scimitar::Schema::Base`
+* Must call `super` in `def initialize`, providing data as shown in the example below
+* Must define class methods for `::id` and `::scim_attributes`
+
+The `::id` class method defines a unique schema ID that is used to namespace payloads or paths in JSON responses describing extended resources, JSON payloads creating them or PATCH paths modifying them. The SCIM RFCs would refer to this as the URN. For example, we might choose to use the [RFC-defined User extension schema](https://www.rfc-editor.org/rfc/rfc7643#section-4.3) to define a couple of extra fields our User model happens to support:
+
+```ruby
+class UserEnterpriseExtension < Scimitar::Schema::Base
+  def initialize(options = {})
+    super(
+      name:            'ExtendedUser',
+      description:     'Enterprise extension for a User',
+      id:              self.class.id,
+      scim_attributes: self.class.scim_attributes
+    )
+  end
+
+  def self.id
+    'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'
+  end
+
+  def self.scim_attributes
+    [
+      Scimitar::Schema::Attribute.new(name: 'organization', type: 'string'),
+      Scimitar::Schema::Attribute.new(name: 'manager',      type: 'string')
+    ]
+  end
+end
+```
+
+...with the `super` call providing your choice of `name` and `description`, but also always providing `id` and `scim_attributes` as shown above. The class name chosen here is just an example and the class can be put inside any level of wrapping namespaces you choose - it's *your* class that can be named however you like. The extension class is then applied to the SCIM User resource _globally in your application_ by calling:
+
+```ruby
+Scimitar::Resources::User.extend_schema(UserEnterpriseExtension)
+```
+
+This is often done in `config/initializers/scimitar.&nbsp;rb` to help make it very clear that extensions are globally available and remove the risk of SCIM resources somehow being referenced before schema extensions have been applied.
+
+In `def self.scim_attributes_map` in the underlying data model, add any new fields - `organization` and `manager` in this example - to map them to whatever the equivalent data model attributes are, just as you would do with any other resource fields. These are declared without any special nesting - for example:
+
+```ruby
+def self.scim_attributes_map
+  return {
+    id:           :id,
+    externalId:   :scim_uid,
+    userName:     :username,
+    # ...etc...
+    organization: :team,
+    manager:      :authorising_manager
+  }
+end
+```
+
+Whatever you provide in the `::id` method in your extension class will be used as a namespace in JSON data. This means that, for example, a SCIM representation of the above resource would look something like this:
+
+```json
+{
+  "schemas": [
+    "urn:ietf:params:scim:schemas:core:2.0:User",
+    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+  ],
+  "id": "2819c223-7f76-453a-413861904646",
+  "externalId": "701984",
+  "userName": "bjensen@example.com",
+  // ...
+
+  "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+    "organization": "Marketing",
+    "manager": "Lauren Smith",
+  },
+  // ...
+}
+```
+
+...and likewise, creation via `POST` would require the same nesting if a caller wanted to create a resource instance with those extended properties set (and RFC-compliant consumers of your SCIM API should already be doing this). For `PATCH` operations, [the `path` uses a _colon_ to separate the ID/URN part from the path](https://www.rfc-editor.org/rfc/rfc7644#section-3.10) rather than just using a dot as you might expect from the JSON nesting above:
+
+```json
+{
+  "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+  "Operations":[
+    {
+      "op": "replace",
+      "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:organization",
+      "value": "Sales"
+    }
+  ]
+}
+```
+
+Resource extensions can provide any fields you choose, under any ID/URN you choose, to either RFC-described resources or entirely custom SCIM resources. There are no hard-coded assumptions or other "magic" that might require you to only extend RFC-described resources with RFC-described extensions. Of course, if you use custom resources or custom extensions that are not described by the SCIM RFCs, then the SCIM API you provide may only work with custom-written API callers that are aware of your bespoke resources and/or extensions.
+
 
 
 ## Security
 
-One vital feature of SCIM is its authorisation and security model. The best resource I've found to describe this in any detail is [section 2 of the protocol RFC, 7644](https://tools.ietf.org/html/rfc7644#section-2).
+One vital feature of SCIM is its authorisation and security model. The best resource I've found to describe this in any detail is [section 2 of the protocol RFC, 7644](https://www.rfc-editor.org/rfc/rfc7644#section-2).
 
 Often, you'll find that bearer tokens are in use by SCIM API consumers, but the way in which this is used by that consumer in practice can vary a great deal. For example, suppose a corporation uses Microsoft Azure Active Directory to maintain a master database of employee details. Azure lets administrators [connect to SCIM endpoints](https://docs.microsoft.com/en-us/azure/active-directory/app-provisioning/how-provisioning-works) for services that this corporation might use. In all cases, bearer tokens are used.
 
@@ -395,23 +490,25 @@ Often, you'll find that bearer tokens are in use by SCIM API consumers, but the 
 
 ### Specification versus implementation
 
-* The `name` complex type of a User has `givenName` and `familyName` fields which [the RFC 7643 core schema](https://tools.ietf.org/html/rfc7643#section-8.7.1) describes as optional. Scimitar marks these as required, in the belief that most user synchronisation scenarios between clients and a Scimitar-based provider would require at least those names for basic user management on the provider side, in conjunction with the in-spec-required `userName` field. That's only if the whole `name` type is given at all - at the top level, this itself remains optional per spec, but if you're going to bother specifying names at all, Scimitar wants at least those two pieces of data.
+* The `name` complex type of a User has `givenName` and `familyName` fields which [the RFC 7643 core schema](https://www.rfc-editor.org/rfc/rfc7643#section-8.7.1) describes as optional. Scimitar marks these as required, in the belief that most user synchronisation scenarios between clients and a Scimitar-based provider would require at least those names for basic user management on the provider side, in conjunction with the in-spec-required `userName` field. That's only if the whole `name` type is given at all - at the top level, this itself remains optional per spec, but if you're going to bother specifying names at all, Scimitar wants at least those two pieces of data.
 
 * Several complex types for User contain the same set of `value`, `display`, `type` and `primary` fields, all used in synonymous ways.
 
-  - The `value` field - which is e.g. an e-mail address or phone number - is described as optional by [the RFC 7643 core schema](https://tools.ietf.org/html/rfc7643#section-8.7.1), also using "SHOULD" rather than "MUST" in field descriptions elsewhere. Scimitar marks this as required by default, since there's not much point being sent (say) an e-mail section which has entries that don't provide the e-mail address. Some services might send `null` values here regardless so, if you need to be able to accept such data, you can set [engine configuration option `optional_value_fields_required`](https://github.com/RIPAGlobal/scimitar/blob/main/config/initializers/scimitar.rb) to `false`.
+  - The `value` field - which is e.g. an e-mail address or phone number - is described as optional by [the RFC 7643 core schema](https://www.rfc-editor.org/rfc/rfc7643#section-8.7.1), also using "SHOULD" rather than "MUST" in field descriptions elsewhere. Scimitar marks this as required by default, since there's not much point being sent (say) an e-mail section which has entries that don't provide the e-mail address. Some services might send `null` values here regardless so, if you need to be able to accept such data, you can set [engine configuration option `optional_value_fields_required`](https://github.com/RIPAGlobal/scimitar/blob/main/config/initializers/scimitar.rb) to `false`.
 
   - The schema _descriptions_ for `display` declare that the field is something optionally sent by the service provider and state clearly that it is read-only - yet the formal schema declares it `readWrite`. Scimitar marks it as read-only.
 
-* The `displayName` of a Group is described in [RFC 7643 section 4.2](https://tools.ietf.org/html/rfc7643#section-4.2) and in the free-text schema `description` field as required, but the schema nonetheless states `"required" : false` in the formal definition. We consider this to be an error and mark the property as `"required" : true`.
+* The `displayName` of a Group is described in [RFC 7643 section 4.2](https://www.rfc-editor.org/rfc/rfc7643#section-4.2) and in the free-text schema `description` field as required, but the schema nonetheless states `"required" : false` in the formal definition. We consider this to be an error and mark the property as `"required" : true`.
 
-* In the `members` section of a [`Group` in the RFC 7643 core schema](https://tools.ietf.org/html/rfc7643#page-69), any member's `value` is noted as _not_ required but [the RFC also says](https://tools.ietf.org/html/rfc7643#section-4.2) "Service providers MAY require clients to provide a non-empty value by setting the "required" attribute characteristic of a sub-attribute of the "members" attribute in the "Group" resource schema". Scimitar does this. The `value` field would contain the `id` of a SCIM resource, which is the primary key on "our side" as a service provider. Just as we must store `externalId` values to maintain a mapping on "our side", we in turn _do_ require clients to provide our ID in group member lists via the `value` field.
+* In the `members` section of a [`Group` in the RFC 7643 core schema](https://www.rfc-editor.org/rfc/rfc7643#page-69), any member's `value` is noted as _not_ required but [the RFC also says](https://www.rfc-editor.org/rfc/rfc7643#section-4.2) "Service providers MAY require clients to provide a non-empty value by setting the "required" attribute characteristic of a sub-attribute of the "members" attribute in the "Group" resource schema". Scimitar does this. The `value` field would contain the `id` of a SCIM resource, which is the primary key on "our side" as a service provider. Just as we must store `externalId` values to maintain a mapping on "our side", we in turn _do_ require clients to provide our ID in group member lists via the `value` field.
 
 * While the gem attempts to support difficult/complex filter strings via incorporating code and ideas in [SCIM Query Filter Parser](https://github.com/ingydotnet/scim-query-filter-parser-rb), it is possible that ActiveRecord / Rails precedence on some query operations in complex cases might not exactly match the SCIM specification. Please do submit a bug report if you encounter this. You may also wish to view [`query_parser_spec.rb`](https://github.com/RIPAGlobal/scimitar/blob/main/spec/models/scimitar/lists/query_parser_spec.rb) to get an idea of the tested examples - more interesting test cases are in the "`context 'with complex cases' do`" section.
 
-* Group resource examples show the `members` array including field `display`, but this is not in the [formal schema](https://tools.ietf.org/html/rfc7643#page-69); Scimitar includes it in the Group definition.
+* Group resource examples show the `members` array including field `display`, but this is not in the [formal schema](https://www.rfc-editor.org/rfc/rfc7643#page-69); Scimitar includes it in the Group definition.
 
 * `POST` actions with only a subset of attributes specified treat missing attributes "to be cleared" for anything that's mapped for the target model. If you have defaults established at instantiation rather than (say) before-validation, you'll need to override `Scimitar::ActiveRecordBackedResourcesController#create` (if using that controller as a base class) as normally the controller just instantiates a model, applies _all_ attributes (with any mapped attribute values without an inbound value set to `nil`), then saves the record. This might cause default values to be overwritten. For consistency, `PUT` operations apply the same behaviour. The decision on this optional specification aspect is in part constrained by the difficulties of implementing `PATCH`.
+
+* [RFC 7644 indicates](https://www.rfc-editor.org/rfc/rfc7644#page-35) that a resource might only return its core schema in the `schemas` attribute if it was created without any extension fields used. Only if e.g. a subsequent `PATCH` operation added data provided by extension schema, would that extension also appear in `schemas`. This behaviour is extremely difficult to implement and Scimitar does not try - it will always return a resource's core schema and any/all defined extension schemas in the `schemas` array at all times.
 
 If you believe choices made in this section may be incorrect, please [create a GitHub issue](https://github.com/RIPAGlobal/scimitar/issues/new) describing the problem.
 
@@ -419,13 +516,13 @@ If you believe choices made in this section may be incorrect, please [create a G
 
 * Bulk operations are not supported.
 
-* List ("index") endpoint [filters in SCIM](https://tools.ietf.org/html/rfc7644#section-3.4.2.2) are _extremely_ complicated. There is a syntax for specifying equals, not-equals, precedence through parentheses and things like "and"/"or"/"not" along the lines of "attribute operator value", which Scimitar supports to a reasonably comprehensive degree but with some limitations discussed shortly. That aside, it isn't at all clear what some of the [examples in the RFC](https://tools.ietf.org/html/rfc7644#page-23) are even meant to mean. Consider:
+* List ("index") endpoint [filters in SCIM](https://www.rfc-editor.org/rfc/rfc7644#section-3.4.2.2) are _extremely_ complicated. There is a syntax for specifying equals, not-equals, precedence through parentheses and things like "and"/"or"/"not" along the lines of "attribute operator value", which Scimitar supports to a reasonably comprehensive degree but with some limitations discussed shortly. That aside, it isn't at all clear what some of the [examples in the RFC](https://www.rfc-editor.org/rfc/rfc7644#page-23) are even meant to mean. Consider:
 
   - `filter=userType eq "Employee" and (emails co "example.com" or emails.value co "example.org")`
 
   It's very strange just specifying `emails co...`, since this is an Array which contains complex types. Is the filter there meant to try and match every attribute of the nested types in all array entries? I.e. if `type` happened to contain `example.com`, is that meant to match? It's strongly implied, because the next part of the filter specifically says `emails.value`. Again, we have to reach a little and assume that `emails.value` means "in _any_ of the objects in the `emails` Array, match all things where `value` contains `example.org`. It seems likely that this is a specification error and both of the specifiers should be `emails.value`.
 
-  Adding even more complexity - the specification shows filters _which include filters within them_. In the same way that PATCH operations use paths to identify attributes not just by name, but by filter matches within collections - e.g. `emails[type eq "work"]`, for all e-mail objects inside the `emails` array with a `type` attribute that has a value of `work`) - so also can a filter _contain a filter_, which isn't supported. So, this [example from the RFC](https://tools.ietf.org/html/rfc7644#page-23) is not supported by Scimitar:
+  Adding even more complexity - the specification shows filters _which include filters within them_. In the same way that PATCH operations use paths to identify attributes not just by name, but by filter matches within collections - e.g. `emails[type eq "work"]`, for all e-mail objects inside the `emails` array with a `type` attribute that has a value of `work`) - so also can a filter _contain a filter_, which isn't supported. So, this [example from the RFC](https://www.rfc-editor.org/rfc/rfc7644#page-23) is not supported by Scimitar:
 
   - `filter=userType eq "Employee" and emails[type eq "work" and value co "@example.com"]`
 

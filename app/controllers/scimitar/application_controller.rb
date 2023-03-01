@@ -112,7 +112,7 @@ module Scimitar
 
       def add_mandatory_response_headers
 
-        # https://tools.ietf.org/html/rfc7644#section-2
+        # https://www.rfc-editor.org/rfc/rfc7644#section-2
         #
         #   "...a SCIM service provider SHALL indicate supported HTTP
         #   authentication schemes via the "WWW-Authenticate" header."

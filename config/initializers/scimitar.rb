@@ -16,7 +16,7 @@ Rails.application.config.to_prepare do # (required for >= Rails 7 / Zeitwerk)
   #
   Scimitar.service_provider_configuration = Scimitar::ServiceProviderConfiguration.new({
 
-    # See https://tools.ietf.org/html/rfc7643#section-8.5 for properties.
+    # See https://www.rfc-editor.org/rfc/rfc7643#section-8.5 for properties.
     #
     # See Gem file 'app/models/scimitar/service_provider_configuration.rb'
     # for defaults. Define Hash keys here that override defaults; e.g. to

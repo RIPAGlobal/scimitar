@@ -416,7 +416,7 @@ module Scimitar
               raise Scimitar::InvalidSyntaxError.new("Unrecognised PATCH \"op\" value of \"#{nature}\"")
             end
 
-            # https://tools.ietf.org/html/rfc7644#section-3.5.2.2
+            # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.2
             #
             # o  If "path" is unspecified, the operation fails with HTTP status
             #    code 400 and a "scimType" error code of "noTarget".
@@ -791,12 +791,12 @@ module Scimitar
 
             path_component, filter = extract_filter_from(path_component: path.first)
 
-            # https://tools.ietf.org/html/rfc7644#section-3.5.2.1
+            # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.1
             #
             # o  If the target location specifies an attribute that does not exist
             #    (has no value), the attribute is added with the new value.
             #
-            # https://tools.ietf.org/html/rfc7644#section-3.5.2.3
+            # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.3
             #
             # o  If the target location path specifies an attribute that does not
             #    exist, the service provider SHALL treat the operation as an "add".
@@ -870,7 +870,7 @@ module Scimitar
               end
 
             # Path filters are not described for 'add' and assumed to have no
-            # meaning - https://tools.ietf.org/html/rfc7644#section-3.5.2.1
+            # meaning - https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.1
             #
             elsif filter.present? && nature != 'add'
               compact_after = false
@@ -891,12 +891,12 @@ module Scimitar
 
               current_data_at_path.compact! if compact_after
 
-              # https://tools.ietf.org/html/rfc7644#section-3.5.2.1
+              # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.1
               #
               # o  If the target location specifies an attribute that does not exist
               #    (has no value), the attribute is added with the new value.
               #
-              # https://tools.ietf.org/html/rfc7644#section-3.5.2.3
+              # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.3
               #
               # o  If the target location path specifies an attribute that does not
               #    exist, the service provider SHALL treat the operation as an "add".

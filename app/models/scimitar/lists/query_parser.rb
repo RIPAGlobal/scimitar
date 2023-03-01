@@ -279,7 +279,7 @@ module Scimitar
         # some of the simpler cases of filters-in-filters by realising that the
         # expression can be done in two ways.
         #
-        # https://tools.ietf.org/html/rfc7644#page-23 includes these examples:
+        # https://www.rfc-editor.org/rfc/rfc7644#page-23 includes these examples:
         #
         #     filter=userType eq "Employee" and (emails.type eq "work")
         #     filter=userType eq "Employee" and emails[type eq "work" and value co "@example.com"]
