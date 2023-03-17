@@ -98,10 +98,10 @@ module Scimitar
       def require_scim
         scim_mime_type = Mime::Type.lookup_by_extension(:scim).to_s
 
-        if request.content_type.nil?
+        if request.media_type.nil?
           request.format = :scim
           request.headers['CONTENT_TYPE'] = scim_mime_type
-        elsif request.content_type&.downcase == scim_mime_type
+        elsif request.media_type.downcase == scim_mime_type
           request.format = :scim
         elsif request.format == :scim
           request.headers['CONTENT_TYPE'] = scim_mime_type
