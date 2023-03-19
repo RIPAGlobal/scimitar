@@ -1,3 +1,7 @@
+# 2.4.1 (2023-03-02)
+
+* Address https://github.com/RIPAGlobal/scimitar/issues/48 by adapting https://github.com/RIPAGlobal/scimitar/issues/49, so that extension schemas work properly. Missing documentation in `README.md` addressed.
+
 # 2.4.0 (2023-01-27)
 
 * Address https://github.com/RIPAGlobal/scimitar/issues/43 - allows Microsoft-style payloads for removing Users from Groups, with a special case exception for hypothetical inbound SCIM calls originating from Salesforce software. For more details of the fix, please see https://github.com/RIPAGlobal/scimitar/pull/45.
