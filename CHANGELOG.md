@@ -1,3 +1,7 @@
+# 2.4.2 (2023-03-21)
+
+* Fix shortcoming in `Content-Type` header handling via [#51](https://github.com/RIPAGlobal/scimitar/pull/51). Thanks to `@Flixt` for the contribution.
+
 # 2.4.1 (2023-03-02)
 
 * Address https://github.com/RIPAGlobal/scimitar/issues/48 by adapting https://github.com/RIPAGlobal/scimitar/issues/49, so that extension schemas work properly. Missing documentation in `README.md` addressed.
