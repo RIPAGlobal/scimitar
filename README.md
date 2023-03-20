@@ -385,9 +385,11 @@ class UserEnterpriseExtension < Scimitar::Schema::Base
       scim_attributes: self.class.scim_attributes
     )
   end
+
   def self.id
     'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'
   end
+
   def self.scim_attributes
     [
       Scimitar::Schema::Attribute.new(name: 'organization', type: 'string'),
