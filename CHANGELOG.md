@@ -1,3 +1,7 @@
+# 1.5.2 (2023-03-21)
+
+* Back-ports fix in [#51](https://github.com/RIPAGlobal/scimitar/pull/51) from v2.4.1. Thanks to `@Flixt` for the contribution.
+
 # 1.5.1 (2023-03-20)
 
 * Back-ports features from v2.3.1 (addressing https://github.com/RIPAGlobal/scimitar/issues/48 by incorporating https://github.com/RIPAGlobal/scimitar/issues/49 into https://github.com/RIPAGlobal/scimitar/issues/50), for Rails 6 users.
