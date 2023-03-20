@@ -443,9 +443,30 @@ module Scimitar
               ci_scim_hash = { 'root' => ci_scim_hash }.with_indifferent_case_insensitive_access()
             end
 
+            # Handle extension schema. Contributed by @bettysteger and
+            # @MorrisFreeman via:
+            #
+            #   https://github.com/RIPAGlobal/scimitar/issues/48
+            #   https://github.com/RIPAGlobal/scimitar/pull/49
+            #
+            # Note the ":" separating the schema ID (URN) from the attribute.
+            # The nature of JSON rendering / other payloads might lead you to
+            # expect a "." as with any complex types, but that's not the case;
+            # see https://tools.ietf.org/html/rfc7644#section-3.10, or
+            # https://tools.ietf.org/html/rfc7644#section-3.5.2 of which in
+            # particular, https://tools.ietf.org/html/rfc7644#page-35.
+            #
+            paths = []
+            self.class.scim_resource_type.extended_schemas.each do |schema|
+              path_str.downcase.split(schema.id.downcase + ':').drop(1).each do |path|
+                paths += [schema.id] + path.split('.')
+              end
+            end
+            paths = path_str.split('.') if paths.empty?
+
             self.from_patch_backend!(
               nature:        nature,
-              path:          (path_str || '').split('.'),
+              path:          paths,
               value:         value,
               altering_hash: ci_scim_hash
             )
@@ -616,7 +637,19 @@ module Scimitar
                 attrs_map_or_leaf_value.each do | scim_attribute, sub_attrs_map_or_leaf_value |
                   next if scim_attribute&.to_s&.downcase == 'id' && path.empty?
 
-                  sub_scim_hash_or_leaf_value = scim_hash_or_leaf_value&.dig(scim_attribute.to_s)
+                  # Handle extension schema. Contributed by @bettysteger and
+                  # @MorrisFreeman via:
+                  #
+                  #   https://github.com/RIPAGlobal/scimitar/issues/48
+                  #   https://github.com/RIPAGlobal/scimitar/pull/49
+                  #
+                  attribute_tree = []
+                  resource_class.extended_schemas.each do |schema|
+                    attribute_tree << schema.id and break if schema.scim_attributes.any? { |attribute| attribute.name == scim_attribute.to_s }
+                  end
+                  attribute_tree << scim_attribute.to_s
+
+                  sub_scim_hash_or_leaf_value = scim_hash_or_leaf_value&.dig(*attribute_tree)
 
                   self.from_scim_backend!(
                     attrs_map_or_leaf_value: sub_attrs_map_or_leaf_value,
@@ -914,7 +947,7 @@ module Scimitar
                 # which would imply "payload removes all users", there is the
                 # clear intent to remove just one.
                 #
-                # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.2
+                # https://tools.ietf.org/html/rfc7644#section-3.5.2.2
                 # https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/use-scim-to-provision-users-and-groups#update-group-remove-members
                 #
                 # Since remove-all in the face of remove-one is destructive, we

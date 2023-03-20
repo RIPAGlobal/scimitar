@@ -762,7 +762,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         end
       end
 
-      # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.2
+      # https://tools.ietf.org/html/rfc7644#section-3.5.2.2
       #
       context 'and using an RFC-compliant payload' do
         let(:removed_user) { @u2 }

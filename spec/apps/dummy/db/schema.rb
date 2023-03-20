@@ -39,6 +39,8 @@ ActiveRecord::Schema.define(version: 2021_03_08_044214) do
     t.text "work_email_address"
     t.text "home_email_address"
     t.text "work_phone_number"
+    t.text "organization"
+    t.text "department"
   end
 
   add_foreign_key "mock_groups_users", "mock_groups"

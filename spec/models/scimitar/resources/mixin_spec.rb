@@ -172,6 +172,7 @@ RSpec.describe Scimitar::Resources::Mixin do
           instance.work_email_address = 'foo.bar@test.com'
           instance.home_email_address = nil
           instance.work_phone_number  = '+642201234567'
+          instance.organization       = 'SOMEORG'
 
           g1 = MockGroup.create!(display_name: 'Group 1')
           g2 = MockGroup.create!(display_name: 'Group 2')
@@ -194,7 +195,12 @@ RSpec.describe Scimitar::Resources::Mixin do
             'externalId'  => 'AA02984',
             'groups'      => [{'display'=>g1.display_name, 'value'=>g1.id.to_s}, {'display'=>g3.display_name, 'value'=>g3.id.to_s}],
             'meta'        => {'location'=>"https://test.com/mock_users/#{uuid}", 'resourceType'=>'User'},
-            'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User']
+            'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
+
+            'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
+              'organization' => 'SOMEORG',
+              'department'   => nil
+            }
           })
         end
       end # "context 'with a UUID, renamed primary key column' do"
@@ -318,7 +324,9 @@ RSpec.describe Scimitar::Resources::Mixin do
               ],
 
               'meta'    => {'location'=>'https://test.com/static_map_test', 'resourceType'=>'User'},
-              'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User']
+              'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
+
+              'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {}
             })
           end
         end # "context 'using static mappings' do"
@@ -345,7 +353,9 @@ RSpec.describe Scimitar::Resources::Mixin do
               ],
 
               'meta'    => {'location'=>'https://test.com/dynamic_map_test', 'resourceType'=>'User'},
-              'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User']
+              'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
+
+              'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {}
             })
           end
         end # "context 'using dynamic lists' do"
@@ -402,7 +412,12 @@ RSpec.describe Scimitar::Resources::Mixin do
               'id'           => '42', # Note, String
               'externalId'   => 'AA02984',
               'meta'         => {'location' => 'https://test.com/mock_users/42', 'resourceType' => 'User'},
-              'schemas'      => ['urn:ietf:params:scim:schemas:core:2.0:User']
+              'schemas'      => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
+
+              'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
+                'organization' => 'SOMEORG',
+                'DEPARTMENT'   => 'SOMEDPT'
+              }
             }
 
             hash = spec_helper_hupcase(hash) if force_upper_case
@@ -418,6 +433,8 @@ RSpec.describe Scimitar::Resources::Mixin do
             expect(instance.work_email_address).to eql('foo.bar@test.com')
             expect(instance.home_email_address).to be_nil
             expect(instance.work_phone_number ).to eql('+642201234567')
+            expect(instance.organization      ).to eql('SOMEORG')
+            expect(instance.department        ).to eql('SOMEDPT')
           end
 
           it 'honouring read-write lists' do
@@ -704,6 +721,21 @@ RSpec.describe Scimitar::Resources::Mixin do
                 expect(scim_hash['name']['familyName']).to eql('Bar')
               end
 
+              it 'with schema extensions: overwrites' do
+                path      = [ 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User', 'organization' ]
+                scim_hash = { 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => { 'organization' => 'SOMEORG' } }.with_indifferent_case_insensitive_access()
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'add',
+                  path:          path,
+                  value:         'OTHERORG',
+                  altering_hash: scim_hash
+                )
+
+                expect(scim_hash['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']['organization' ]).to eql('OTHERORG')
+              end
+
               # For 'add', filter at end-of-path is nonsensical and not
               # supported by spec or Scimitar; we only test mid-path filters.
               #
@@ -890,6 +922,21 @@ RSpec.describe Scimitar::Resources::Mixin do
                 )
 
                 expect(scim_hash['name']['givenName']).to eql('Baz')
+              end
+
+              it 'with schema extensions: adds' do
+                path      = [ 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User', 'organization' ]
+                scim_hash = {}.with_indifferent_case_insensitive_access()
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'add',
+                  path:          path,
+                  value:         'SOMEORG',
+                  altering_hash: scim_hash
+                )
+
+                expect(scim_hash['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']['organization' ]).to eql('SOMEORG')
               end
 
               context 'with filter mid-path: adds' do
@@ -1233,7 +1280,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
               # What we expect:
               #
-              # https://www.rfc-editor.org/rfc/rfc7644#section-3.5.2.2
+              # https://tools.ietf.org/html/rfc7644#section-3.5.2.2
               # https://docs.snowflake.com/en/user-guide/scim-intro.html#patch-scim-v2-groups-id
               #
               # ...vs accounting for the unusual payloads we sometimes get,
@@ -2678,6 +2725,38 @@ RSpec.describe Scimitar::Resources::Mixin do
 
             @instance.from_scim_patch!(patch_hash: patch)
             expect(@instance.first_name).to eql('Baz')
+          end
+
+          # Note odd ":" separating schema ID from first attribute, although
+          # the nature of JSON rendering / other payloads might lead you to
+          # expect a "." as with any other path component.
+          #
+          # Note the ":" separating the schema ID (URN) from the attribute.
+          # The nature of JSON rendering / other payloads might lead you to
+          # expect a "." as with any complex types, but that's not the case;
+          # see https://tools.ietf.org/html/rfc7644#section-3.10, or
+          # https://tools.ietf.org/html/rfc7644#section-3.5.2 of which in
+          # particular, https://tools.ietf.org/html/rfc7644#page-35.
+          #
+          it 'which updates attributes defined by extension schema' do
+            @instance.update!(department: 'SOMEDPT')
+
+            path = 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:department'
+            path = path.upcase if force_upper_case
+
+            patch = {
+              'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+              'Operations' => [
+                {
+                  'op'    => 'replace',
+                  'path'  => path,
+                  'value' => 'OTHERDPT'
+                }
+              ]
+            }
+
+            @instance.from_scim_patch!(patch_hash: patch)
+            expect(@instance.department).to eql('OTHERDPT')
           end
 
           it 'which updates with filter match' do

@@ -250,90 +250,185 @@ RSpec.describe Scimitar::Resources::Base do
   end # "context 'dynamic setters based on schema' do"
 
   context 'schema extension' do
-    ThirdCustomSchema = Class.new(Scimitar::Schema::Base) do
-      def self.id
-        'custom-id'
-      end
-
-      def self.scim_attributes
-        [ Scimitar::Schema::Attribute.new(name: 'name', type: 'string') ]
-      end
-    end
-
-    ExtensionSchema = Class.new(Scimitar::Schema::Base) do
-      def self.id
-        'extension-id'
-      end
-
-      def self.scim_attributes
-        [ Scimitar::Schema::Attribute.new(name: 'relationship', type: 'string', required: true) ]
-      end
-    end
-
-    let(:resource_class) {
-      Class.new(Scimitar::Resources::Base) do
-        set_schema ThirdCustomSchema
-        extend_schema ExtensionSchema
-
-        def self.endpoint
-          '/gaga'
+    context 'of custom schema' do
+      ThirdCustomSchema = Class.new(Scimitar::Schema::Base) do
+        def self.id
+          'custom-id'
         end
 
-        def self.resource_type_id
-          'CustomResource'
+        def self.scim_attributes
+          [ Scimitar::Schema::Attribute.new(name: 'name', type: 'string') ]
         end
       end
-    }
 
-    context '#initialize' do
-      it 'allows setting extension attributes' do
-        resource = resource_class.new('extension-id' => {relationship: 'GAGA'})
-        expect(resource.relationship).to eql('GAGA')
-      end
-    end # "context '#initialize' do"
+      ExtensionSchema = Class.new(Scimitar::Schema::Base) do
+        def self.id
+          'extension-id'
+        end
 
-    context '#as_json' do
-      it 'namespaces the extension attributes' do
-        resource = resource_class.new(relationship: 'GAGA')
-        hash = resource.as_json
-        expect(hash["schemas"]).to eql(['custom-id', 'extension-id'])
-        expect(hash["extension-id"]).to eql("relationship" => 'GAGA')
-      end
-    end # "context '#as_json' do"
-
-    context '.resource_type' do
-      it 'appends the extension schemas' do
-        resource_type = resource_class.resource_type('http://gaga')
-        expect(resource_type.meta.location).to eql('http://gaga')
-        expect(resource_type.schemaExtensions.count).to eql(1)
+        def self.scim_attributes
+          [ Scimitar::Schema::Attribute.new(name: 'relationship', type: 'string', required: true) ]
+        end
       end
 
-      context 'validation' do
-        it 'validates into custom schema' do
-          resource = resource_class.new('extension-id' => {})
-          expect(resource.valid?).to eql(false)
+      let(:resource_class) {
+        Class.new(Scimitar::Resources::Base) do
+          set_schema ThirdCustomSchema
+          extend_schema ExtensionSchema
 
+          def self.endpoint
+            '/gaga'
+          end
+
+          def self.resource_type_id
+            'CustomResource'
+          end
+        end
+      }
+
+      context '#initialize' do
+        it 'allows setting extension attributes' do
           resource = resource_class.new('extension-id' => {relationship: 'GAGA'})
           expect(resource.relationship).to eql('GAGA')
-          expect(resource.valid?).to eql(true)
         end
-      end # context 'validation'
-    end # "context '.resource_type' do"
+      end # "context '#initialize' do"
 
-    context '.find_attribute' do
-      it 'finds in first schema' do
-        found = resource_class().find_attribute('name') # Defined in ThirdCustomSchema
-        expect(found).to be_present
-        expect(found.name).to eql('name')
-        expect(found.type).to eql('string')
+      context '#as_json' do
+        it 'namespaces the extension attributes' do
+          resource = resource_class.new(relationship: 'GAGA')
+          hash = resource.as_json
+          expect(hash["schemas"]).to eql(['custom-id', 'extension-id'])
+          expect(hash["extension-id"]).to eql("relationship" => 'GAGA')
+        end
+      end # "context '#as_json' do"
+
+      context '.resource_type' do
+        it 'appends the extension schemas' do
+          resource_type = resource_class.resource_type('http://gaga')
+          expect(resource_type.meta.location).to eql('http://gaga')
+          expect(resource_type.schemaExtensions.count).to eql(1)
+        end
+
+        context 'validation' do
+          it 'validates into custom schema' do
+            resource = resource_class.new('extension-id' => {})
+            expect(resource.valid?).to eql(false)
+
+            resource = resource_class.new('extension-id' => {relationship: 'GAGA'})
+            expect(resource.relationship).to eql('GAGA')
+            expect(resource.valid?).to eql(true)
+          end
+        end # context 'validation'
+      end # "context '.resource_type' do"
+
+      context '.find_attribute' do
+        it 'finds in first schema' do
+          found = resource_class().find_attribute('name') # Defined in ThirdCustomSchema
+          expect(found).to be_present
+          expect(found.name).to eql('name')
+          expect(found.type).to eql('string')
+        end
+
+        it 'finds across schemas' do
+          found = resource_class().find_attribute('relationship') # Defined in ExtensionSchema
+          expect(found).to be_present
+          expect(found.name).to eql('relationship')
+          expect(found.type).to eql('string')
+        end
+      end # "context '.find_attribute' do"
+    end # "context 'of custom schema' do"
+
+    context 'of core schema' do
+      EnterpriseExtensionSchema = Class.new(Scimitar::Schema::Base) do
+        def self.id
+          'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'
+        end
+
+        def self.scim_attributes
+          [
+            Scimitar::Schema::Attribute.new(name: 'organization', type: 'string'),
+            Scimitar::Schema::Attribute.new(name: 'department',   type: 'string')
+          ]
+        end
       end
 
-      it 'finds across schemas' do
-        found = resource_class().find_attribute('relationship') # Defined in ExtensionSchema
-        expect(found).to be_present
-        expect(found.name).to eql('relationship')
-        expect(found.type).to eql('string')
-      end
-    end # "context '.find_attribute' do"
+      let(:resource_class) {
+        Class.new(Scimitar::Resources::Base) do
+          set_schema Scimitar::Schema::User
+          extend_schema EnterpriseExtensionSchema
+
+          def self.endpoint
+            '/Users'
+          end
+
+          def self.resource_type_id
+            'User'
+          end
+        end
+      }
+
+      context '#initialize' do
+        it 'allows setting extension attributes' do
+          resource = resource_class.new('urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {organization: 'SOMEORG', department: 'SOMEDPT'})
+
+          expect(resource.organization).to eql('SOMEORG')
+          expect(resource.department  ).to eql('SOMEDPT')
+        end
+      end # "context '#initialize' do"
+
+      context '#as_json' do
+        it 'namespaces the extension attributes' do
+          resource = resource_class.new(organization: 'SOMEORG', department: 'SOMEDPT')
+          hash = resource.as_json
+
+          expect(hash['schemas']).to eql(['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'])
+          expect(hash['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']).to eql('organization' => 'SOMEORG', 'department' => 'SOMEDPT')
+        end
+      end # "context '#as_json' do"
+
+      context '.resource_type' do
+        it 'appends the extension schemas' do
+          resource_type = resource_class.resource_type('http://example.com')
+          expect(resource_type.meta.location).to eql('http://example.com')
+          expect(resource_type.schemaExtensions.count).to eql(1)
+        end
+
+        context 'validation' do
+          it 'validates into custom schema' do
+            resource = resource_class.new('urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {})
+            expect(resource.valid?).to eql(false)
+
+            resource = resource_class.new(
+              'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
+                userName:     'SOMEUSR',
+                organization: 'SOMEORG',
+                department:   'SOMEDPT'
+              }
+            )
+
+            expect(resource.organization).to eql('SOMEORG')
+            expect(resource.department  ).to eql('SOMEDPT')
+            expect(resource.valid?      ).to eql(true)
+          end
+        end # context 'validation'
+      end # "context '.resource_type' do"
+
+      context '.find_attribute' do
+        it 'finds in first schema' do
+          found = resource_class().find_attribute('userName') # Defined in Scimitar::Schema::User
+
+          expect(found).to be_present
+          expect(found.name).to eql('userName')
+          expect(found.type).to eql('string')
+        end
+
+        it 'finds across schemas' do
+          found = resource_class().find_attribute('organization') # Defined in EnterpriseExtensionSchema
+          expect(found).to be_present
+          expect(found.name).to eql('organization')
+          expect(found.type).to eql('string')
+        end
+      end # "context '.find_attribute' do"
+    end # "context 'of core schema' do"
   end # "context 'schema extension' do"
 end
