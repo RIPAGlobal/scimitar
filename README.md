@@ -363,8 +363,6 @@ end
 
 Note that the [`Scimitar::ApplicationController` parent class](https://www.rubydoc.info/gems/scimitar/Scimitar/ApplicationController) of `Scimitar::ResourcesController` has a few methods to help with handling exceptions and rendering them as SCIM responses; for example, if a resource were not found by ID, you might wish to use [`Scimitar::ApplicationController#handle_resource_not_found`](https://github.com/RIPAGlobal/scimitar/blob/v1.0.3/app/controllers/scimitar/application_controller.rb#L22).
 
-
-
 ### Extension schema
 
 You can extend schema with custom data by defining an extension class and calling `::extend_schema` on the SCIM resource class to which the extension applies. These extension classes:
