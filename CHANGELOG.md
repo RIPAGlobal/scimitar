@@ -1,3 +1,7 @@
+# 1.5.1 (2023-03-20)
+
+* Back-ports features from v2.3.1 (addressing https://github.com/RIPAGlobal/scimitar/issues/48 by incorporating https://github.com/RIPAGlobal/scimitar/issues/49 into https://github.com/RIPAGlobal/scimitar/issues/50), for Rails 6 users.
+
 # 1.5.0 (2023-01-27)
 
 * Back-ports features from v2.3.0 (addressing https://github.com/RIPAGlobal/scimitar/issues/43) for Rails 6 users.
