@@ -432,6 +432,7 @@ Whatever you provide in the `::id` method in your extension class will be used a
   "externalId": "701984",
   "userName": "bjensen@example.com",
   // ...
+
   "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
     "organization": "Corporation Incorporated",
     "department": "Marketing",
