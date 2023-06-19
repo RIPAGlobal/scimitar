@@ -2,6 +2,7 @@
 #
 # For supporting information and rationale, please see README.md.
 
+Rails.application.config.to_prepare do
 # =============================================================================
 # SERVICE PROVIDER CONFIGURATION
 # =============================================================================
@@ -100,3 +101,4 @@ Scimitar.engine_configuration = Scimitar::EngineConfiguration.new({
   #
   #     optional_value_fields_required: false
 })
+end
