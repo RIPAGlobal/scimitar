@@ -92,7 +92,17 @@ class MockUser < ActiveRecord::Base
       # "spec/apps/dummy/config/initializers/scimitar.rb".
       #
       organization: :organization,
-      department:   :department
+      department:   :department,
+      userGroups: [
+        {
+          list:      :mock_groups,
+          find_with: ->(value) { MockGroup.find(value["value"]) },
+          using: {
+            value:   :id,
+            display: :display_name
+          }
+        }
+      ]
     }
   end
 
