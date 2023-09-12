@@ -481,6 +481,66 @@ RSpec.describe Scimitar::Lists::QueryParser do
       end
     end # "context 'when instructed to ignore an attribute' do"
 
+    context 'when an arel column is mapped' do
+      let(:scope_with_groups) { MockUser.left_joins(:mock_groups) }
+
+      context 'with binary operators' do
+        it 'reads across all using OR' do
+          @instance.parse('groups eq "12345"')
+          query = @instance.to_activerecord_query(scope_with_groups)
+
+          expect(query.to_sql).to eql(<<~SQL.squish)
+            SELECT "mock_users".*
+            FROM "mock_users"
+              LEFT OUTER JOIN "mock_groups_users" ON "mock_groups_users"."mock_user_id" = "mock_users"."primary_key"
+              LEFT OUTER JOIN "mock_groups" ON "mock_groups"."id" = "mock_groups_users"."mock_group_id"
+            WHERE "mock_groups"."id" ILIKE 12345
+          SQL
+        end
+
+        it 'works with other query elements using correct precedence' do
+          @instance.parse('groups eq "12345" and emails eq "any@test.com"')
+          query = @instance.to_activerecord_query(scope_with_groups)
+
+          expect(query.to_sql).to eql(<<~SQL.squish)
+            SELECT "mock_users".*
+            FROM "mock_users"
+              LEFT OUTER JOIN "mock_groups_users" ON "mock_groups_users"."mock_user_id" = "mock_users"."primary_key"
+              LEFT OUTER JOIN "mock_groups" ON "mock_groups"."id" = "mock_groups_users"."mock_group_id"
+            WHERE "mock_groups"."id" ILIKE 12345 AND ("mock_users"."work_email_address" ILIKE 'any@test.com' OR "mock_users"."home_email_address" ILIKE 'any@test.com')
+          SQL
+        end
+      end # "context 'with binary operators' do"
+
+      context 'with unary operators' do
+        it 'reads across all using OR' do
+          @instance.parse('groups pr')
+          query = @instance.to_activerecord_query(scope_with_groups)
+
+          expect(query.to_sql).to eql(<<~SQL.squish)
+            SELECT "mock_users".*
+            FROM "mock_users"
+              LEFT OUTER JOIN "mock_groups_users" ON "mock_groups_users"."mock_user_id" = "mock_users"."primary_key"
+              LEFT OUTER JOIN "mock_groups" ON "mock_groups"."id" = "mock_groups_users"."mock_group_id"
+            WHERE ("mock_groups"."id" != NULL AND "mock_groups"."id" IS NOT NULL)
+          SQL
+        end
+
+        it 'works with other query elements using correct precedence' do
+          @instance.parse('name.familyName eq "John" and groups pr')
+          query = @instance.to_activerecord_query(scope_with_groups)
+
+          expect(query.to_sql).to eql(<<~SQL.squish)
+            SELECT "mock_users".*
+            FROM "mock_users"
+              LEFT OUTER JOIN "mock_groups_users" ON "mock_groups_users"."mock_user_id" = "mock_users"."primary_key"
+              LEFT OUTER JOIN "mock_groups" ON "mock_groups"."id" = "mock_groups_users"."mock_group_id"
+            WHERE "mock_users"."last_name" ILIKE 'John' AND ("mock_groups"."id" != NULL AND "mock_groups"."id" IS NOT NULL)
+          SQL
+        end
+      end # "context 'with unary operators' do
+    end # "context 'when an arel column is mapped' do"
+
     context 'with complex cases' do
       context 'using AND' do
         it 'generates expected SQL' do
