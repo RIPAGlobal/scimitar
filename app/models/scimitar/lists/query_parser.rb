@@ -601,9 +601,15 @@ module Scimitar
           column_names   = self.activerecord_columns(scim_attribute)
           value          = self.activerecord_parameter(scim_parameter)
           value_for_like = self.sql_modified_value(scim_operator, value)
-          all_supported  = column_names.all? { | column_name | base_scope.model.column_names.include?(column_name.to_s) }
+          arel_columns   = column_names.map do |column|
+            if base_scope.model.column_names.include?(column.to_s)
+              arel_table[column]
+            elsif column.is_a?(Arel::Attribute)
+              column
+            end
+          end
 
-          raise Scimitar::FilterError unless all_supported
+          raise Scimitar::FilterError unless arel_columns.all?
 
           unless case_sensitive
             lc_scim_attribute = scim_attribute.downcase()
@@ -615,8 +621,7 @@ module Scimitar
             )
           end
 
-          column_names.each.with_index do | column_name, index |
-            arel_column    = arel_table[column_name]
+          arel_columns.each.with_index do | arel_column, index |
             arel_operation = case scim_operator
               when 'eq'
                 if case_sensitive
@@ -641,7 +646,7 @@ module Scimitar
               when 'co', 'sw', 'ew'
                 arel_column.matches(value_for_like, nil, case_sensitive)
               when 'pr'
-                arel_table.grouping(arel_column.not_eq_all(['', nil]))
+                arel_column.relation.grouping(arel_column.not_eq_all(['', nil]))
               else
                 raise Scimitar::FilterError.new("Unsupported operator: '#{scim_operator}'")
             end
