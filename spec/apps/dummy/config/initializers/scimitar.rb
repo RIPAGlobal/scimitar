@@ -10,12 +10,12 @@
 # All related schema tests are written with this in mind.
 #
 # Further, https://github.com/RIPAGlobal/scimitar/pull/54 fixed warning
-# messages in a way that worked on Rails 6+ but backported for V1, it would
-# break existing working setups that didn't use the "to_prepare" wrapper since
-# that would mean their own configuration got written *first* but then
-# *overwritten* by the default "to_prepare" block in Scimitar itself, since
-# that runs later. The file below does *not* use "to_prepare" in order to test
-# the workaround that was produced; it should work on all Ruby versions as-is.
+# messages in a way that worked on Rails 6+ but, for V1 Scimitar, it would
+# break existing working setups that didn't use the +to_prepare+ wrapper. Their
+# application configuration would be written *first* but then *overwritten* by
+# the default +to_prepare+ block in Scimitar itself, since that runs later. The
+# file below does *not* use +to_prepare+ in order to test the workaround that
+# was produced; it should work on all Ruby versions as-is.
 #
 Scimitar.engine_configuration = Scimitar::EngineConfiguration.new({
 
