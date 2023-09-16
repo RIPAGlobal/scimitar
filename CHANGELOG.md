@@ -1,4 +1,4 @@
-# 1.5.3 (2023-06-20)
+# 1.5.3 (2023-09-16)
 
 * Fix warning messages for Rails 6 and Zeitwerk. Thanks to `@sobrinho` for the contribution.
 
