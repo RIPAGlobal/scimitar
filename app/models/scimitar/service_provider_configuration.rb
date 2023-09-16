@@ -9,11 +9,22 @@ module Scimitar
   class ServiceProviderConfiguration
     include ActiveModel::Model
 
-    attr_accessor :patch, :bulk, :filter, :changePassword,
-      :sort, :etag, :authenticationSchemes,
-      :schemas, :meta
+    attr_accessor(
+      :uses_defaults,
+      :patch,
+      :bulk,
+      :filter,
+      :changePassword,
+      :sort,
+      :etag,
+      :authenticationSchemes,
+      :schemas,
+      :meta,
+    )
 
     def initialize(attributes = {})
+      @uses_defaults = attributes.empty?
+
       defaults = {
         bulk:           Supportable.unsupported,
         changePassword: Supportable.unsupported,

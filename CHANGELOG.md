@@ -1,3 +1,7 @@
+# 1.5.3 (2023-06-20)
+
+* Fix warning messages for Rails 6 and Zeitwerk. Thanks to `@sobrinho` for the contribution.
+
 # 1.5.2 (2023-03-21)
 
 * Back-ports fix in [#51](https://github.com/RIPAGlobal/scimitar/pull/51) from v2.4.1. Thanks to `@Flixt` for the contribution.
