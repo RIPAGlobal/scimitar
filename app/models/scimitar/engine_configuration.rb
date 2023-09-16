@@ -7,13 +7,17 @@ module Scimitar
   class EngineConfiguration
     include ActiveModel::Model
 
-    attr_accessor :basic_authenticator,
-                  :token_authenticator,
-                  :application_controller_mixin,
-                  :exception_reporter,
-                  :optional_value_fields_required
+    attr_accessor(
+      :uses_defaults,
+      :basic_authenticator,
+      :token_authenticator,
+      :application_controller_mixin,
+      :exception_reporter,
+      :optional_value_fields_required,
+    )
 
     def initialize(attributes = {})
+      @uses_defaults = attributes.empty?
 
       # Set defaults that may be overridden by the initializer.
       #
