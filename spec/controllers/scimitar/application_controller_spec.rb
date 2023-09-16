@@ -22,7 +22,6 @@ RSpec.describe Scimitar::ApplicationController do
       request.env['HTTP_AUTHORIZATION'] = ActionController::HttpAuthentication::Basic.encode_credentials('A', 'B')
 
       get :index, params: { format: :scim }
-
       expect(response).to be_ok
       expect(JSON.parse(response.body)).to eql({ 'message' => 'cool, cool!' })
       expect(response.headers['WWW_AUTHENTICATE']).to eql('Basic')
