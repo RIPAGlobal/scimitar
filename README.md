@@ -38,8 +38,6 @@ gem 'scimitar', '~> 1.0'
 
 Scimitar uses [semantic versioning](https://semver.org) so you can be confident that patch and minor version updates for features, bug fixes and/or security patches will not break your application.
 
-
-
 ## Heritage
 
 Scimitar borrows heavily - to the point of cut-and-paste - from:
@@ -49,8 +47,6 @@ Scimitar borrows heavily - to the point of cut-and-paste - from:
 * [SCIM Query Filter Parser](https://github.com/ingydotnet/scim-query-filter-parser-rb) for advanced filter handling.
 
 All three are provided under the MIT license. Scimitar is too.
-
-
 
 ## Usage
 
@@ -187,9 +183,11 @@ class User < ActiveRecord::Base
 
   def self.scim_queryable_attributes
     return {
-      givenName:  :first_name,
-      familyName: :last_name,
-      emails:     :work_email_address,
+      givenName:        { column: :first_name },
+      familyName:       { column: :last_name },
+      emails:           { column: :work_email_address },
+      "groups":         { column: MockGroup.arel_table[:id] },
+      "groups.value":   { column: MockGroup.arel_table[:id] },
     }
   end
 
@@ -210,6 +208,8 @@ end
 ```
 
 ### Controllers
+
+#### ActiveRecord
 
 If you use ActiveRecord, your controllers can potentially be extremely simple by subclassing [`Scimitar::ActiveRecordBackedResourcesController`](https://www.rubydoc.info/gems/scimitar/Scimitar/ActiveRecordBackedResourcesController) - at a minimum:
 
@@ -234,6 +234,26 @@ end
 ```
 
 All data-layer actions are taken via `#find` or `#save!`, with exceptions such as `ActiveRecord::RecordNotFound`, `ActiveRecord::RecordInvalid` or generalised SCIM exceptions handled by various superclasses. For a real Rails example of this, see the [test suite's controllers](https://github.com/RIPAGlobal/scimitar/tree/main/spec/apps/dummy/app/controllers) which are invoked via its [routing declarations](https://github.com/RIPAGlobal/scimitar/blob/main/spec/apps/dummy/config/routes.rb).
+
+#### Queries & Optimizations
+
+The scope can be optimized to eager load the data exposed by the SCIM interface, i.e.:
+
+```ruby
+      def storage_scope
+        User.eager_load(:groups)
+      end
+```
+
+In cases where you have references to related columns in your `scim_queryable_attributes`, your `storage_scope` must join the relation:
+
+```ruby
+      def storage_scope
+        User.left_join(:groups)
+      end
+```
+
+#### Other source types
 
 If you do _not_ use ActiveRecord to store data, or if you have very esoteric read-write requirements, you can subclass [`Scimigar::ResourcesController`](https://www.rubydoc.info/gems/scimitar/Scimitar/ResourcesController) in a manner similar to this:
 
@@ -531,8 +551,6 @@ If you believe choices made in this section may be incorrect, please [create a G
 * The `PATCH` mechanism is supported, but where filters are included, only a single "attribute eq value" is permitted - no other operators or combinations. For example, a work e-mail address's value could be replaced by a PATCH patch of `emails[type eq "work"].value`. For in-path filters such as this, other operators such as `ne` are not supported; combinations with "and"/"or" are not supported; negation with "not" is not supported.
 
 If you would like to see something listed in the session implemented, please [create a GitHub issue](https://github.com/RIPAGlobal/scimitar/issues/new) asking for it to be implemented, or if possible, implement the feature and send a Pull Request.
-
-
 
 ## Development
 
