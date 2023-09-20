@@ -1,3 +1,7 @@
+# 2.4.3 (2023-09-16)
+
+* Maintenance release which merges a warning removal patch in [#54](https://github.com/RIPAGlobal/scimitar/pull/54) (thanks to `@sobrinho` for the contribution) via [#63](https://github.com/RIPAGlobal/scimitar/pull/63) and it is the changes in the latter which are brought into Scimitar V2 to keep a minimal overall diff between the V1 and V2.
+
 # 2.4.2 (2023-03-21)
 
 * Fix shortcoming in `Content-Type` header handling via [#51](https://github.com/RIPAGlobal/scimitar/pull/51). Thanks to `@Flixt` for the contribution.
