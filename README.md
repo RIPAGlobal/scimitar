@@ -466,7 +466,7 @@ Whatever you provide in the `::id` method in your extension class will be used a
 ```json
 {
   "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-  "Operations":[
+  "Operations": [
     {
       "op": "replace",
       "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:organization",
@@ -476,9 +476,7 @@ Whatever you provide in the `::id` method in your extension class will be used a
 }
 ```
 
-Resource extensions can provide any fields you choose, under any ID/URN you choose, to either RFC-described resources or entirely custom SCIM resources. There are no hard-coded assumptions or other "magic" that might require you to only extend RFC-described resources with RFC-described extensions. Of course, if you use custom resources or custom extensions that are not described by the SCIM RFCs, then the SCIM API you provide may only work with custom-written API callers that are aware of your bespoke resources and/or extensions.
-
-
+Resource extensions can provide any fields you choose, under any ID/URN you choose, to either RFC-described resources or entirely custom SCIM resources. They can also have Complex attributes such as phone numbers and groups. There are no hard-coded assumptions or other "magic" that might require you to only extend RFC-described resources with RFC-described extensions. Of course, if you use custom resources or custom extensions that are not described by the SCIM RFCs, then the SCIM API you provide may only work with custom-written API callers that are aware of your bespoke resources and/or extensions.
 
 ## Security
 
