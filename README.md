@@ -476,7 +476,43 @@ Whatever you provide in the `::id` method in your extension class will be used a
 }
 ```
 
-Resource extensions can provide any fields you choose, under any ID/URN you choose, to either RFC-described resources or entirely custom SCIM resources. They can also have Complex attributes such as phone numbers and groups. There are no hard-coded assumptions or other "magic" that might require you to only extend RFC-described resources with RFC-described extensions. Of course, if you use custom resources or custom extensions that are not described by the SCIM RFCs, then the SCIM API you provide may only work with custom-written API callers that are aware of your bespoke resources and/or extensions.
+Resource extensions can provide any fields you choose, under any ID/URN you choose, to either RFC-described resources or entirely custom SCIM resources. There are no hard-coded assumptions or other "magic" that might require you to only extend RFC-described resources with RFC-described extensions. Of course, if you use custom resources or custom extensions that are not described by the SCIM RFCs, then the SCIM API you provide may only work with custom-written API callers that are aware of your bespoke resources and/or extensions.
+
+Extensions can also contain complex attributes such as groups. For instance, if you want the ability to write to groups from the User resource perspective (since 'groups' collection in a SCIM User resource is read-only), you can add one attribute to your extension like this:
+
+```ruby
+Scimitar::Schema::Attribute.new(name: "userGroups", multiValued: true, complexType: Scimitar::ComplexTypes::ReferenceGroup, mutability: "writeOnly"),
+```
+
+Then map it in your `scim_attributes_map`:
+
+```ruby
+  userGroups: [
+    {
+      list: :groups,
+      find_with: ->(value) { Group.find(value["value"]) },
+      using: {
+        value:   :id,
+        display: :name
+      }
+    }
+  ]
+```
+
+And write to it like this:
+
+```json
+{
+  "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+  "Operations": [
+    {
+      "op": "replace",
+      "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:userGroups",
+      "value": [{ "value": "1" }]
+    }
+  ]
+}
+```
 
 ## Security
 
