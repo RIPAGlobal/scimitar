@@ -406,8 +406,11 @@ module Scimitar
         def from_scim_patch!(patch_hash:)
           frozen_ci_patch_hash = patch_hash.with_indifferent_case_insensitive_access().freeze()
           ci_scim_hash         = self.to_scim(location: '(unused)').as_json().with_indifferent_case_insensitive_access()
+          operations           = frozen_ci_patch_hash['operations']
 
-          frozen_ci_patch_hash['operations'].each do |operation|
+          raise Scimitar::InvalidSyntaxError.new("Missing PATCH \"operations\"") unless operations
+
+          operations.each do |operation|
             nature   = operation['op'   ]&.downcase
             path_str = operation['path' ]
             value    = operation['value']
