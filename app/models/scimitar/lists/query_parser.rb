@@ -192,7 +192,7 @@ module Scimitar
 
             ast.push(self.start_group? ? self.parse_group() : self.pop())
 
-            unless ! ast.last.is_a?(String) || UNARY_OPERATORS.include?(ast.last.downcase)
+            if ast.last.is_a?(String) && !UNARY_OPERATORS.include?(ast.last.downcase) || ast.last.is_a?(Array)
               expect_op ^= true
             end
           end

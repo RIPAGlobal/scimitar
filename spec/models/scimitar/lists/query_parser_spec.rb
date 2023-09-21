@@ -592,6 +592,13 @@ RSpec.describe Scimitar::Lists::QueryParser do
           expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE "mock_users"."first_name" ILIKE 'Jane' AND ("mock_users"."last_name" ILIKE '%avi%' OR "mock_users"."last_name" ILIKE '%ith')})
         end
 
+        it 'combined parentheses generates expected SQL' do
+          @instance.parse('(name.givenName eq "Jane" OR name.givenName eq "Jaden") and (name.familyName co "avi" or name.familyName ew "ith")')
+          query = @instance.to_activerecord_query(MockUser.all)
+
+          expect(query.to_sql).to eql(%q{SELECT "mock_users".* FROM "mock_users" WHERE ("mock_users"."first_name" ILIKE 'Jane' OR "mock_users"."first_name" ILIKE 'Jaden') AND ("mock_users"."last_name" ILIKE '%avi%' OR "mock_users"."last_name" ILIKE '%ith')})
+        end
+
         it 'finds expected items' do
           user_1 = MockUser.create(username: '1', first_name: 'Jane', last_name: 'Davis')   # Match
           user_2 = MockUser.create(username: '2', first_name: 'Jane', last_name: 'Smith')   # Match
