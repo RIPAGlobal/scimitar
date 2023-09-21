@@ -267,7 +267,10 @@ RSpec.describe Scimitar::Resources::Base do
         end
 
         def self.scim_attributes
-          [ Scimitar::Schema::Attribute.new(name: 'relationship', type: 'string', required: true) ]
+          [
+            Scimitar::Schema::Attribute.new(name: 'relationship', type: 'string', required: true),
+            Scimitar::Schema::Attribute.new(name: "userGroups", multiValued: true, complexType: Scimitar::ComplexTypes::ReferenceGroup, mutability: "writeOnly")
+          ]
         end
       end
 
@@ -290,6 +293,12 @@ RSpec.describe Scimitar::Resources::Base do
         it 'allows setting extension attributes' do
           resource = resource_class.new('extension-id' => {relationship: 'GAGA'})
           expect(resource.relationship).to eql('GAGA')
+        end
+
+        it 'allows setting complex extension attributes' do
+          user_groups = [{ value: '123' }, { value: '456'}]
+          resource = resource_class.new('extension-id' => {userGroups: user_groups})
+          expect(resource.userGroups.map(&:value)).to eql(['123', '456'])
         end
       end # "context '#initialize' do"
 

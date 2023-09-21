@@ -17,6 +17,7 @@ class MockUser < ActiveRecord::Base
     work_phone_number
     organization
     department
+    mock_groups
   }
 
   has_and_belongs_to_many :mock_groups
@@ -92,7 +93,17 @@ class MockUser < ActiveRecord::Base
       # "spec/apps/dummy/config/initializers/scimitar.rb".
       #
       organization: :organization,
-      department:   :department
+      department:   :department,
+      userGroups: [
+        {
+          list:      :mock_groups,
+          find_with: ->(value) { MockGroup.find(value["value"]) },
+          using: {
+            value:   :id,
+            display: :display_name
+          }
+        }
+      ]
     }
   end
 
