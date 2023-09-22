@@ -185,13 +185,18 @@ class User < ActiveRecord::Base
     return nil
   end
 
+  # The attributes in the SCIM section below include a reference to this
+  # hypothesised 'Group' model, same as the HABTM relationship above.
+  # In this case, in order to filter by `groups.value` or `groups`, the
+  # SCIM controller `storage_scope` has to introduce a join with Groups.
+  #
   def self.scim_queryable_attributes
     return {
       givenName:        { column: :first_name },
       familyName:       { column: :last_name },
       emails:           { column: :work_email_address },
-      "groups":         { column: MockGroup.arel_table[:id] },
-      "groups.value":   { column: MockGroup.arel_table[:id] },
+      groups:           { column: Group.arel_table[:id] },
+      "groups.value" => { column: Group.arel_table[:id] },
     }
   end
 
