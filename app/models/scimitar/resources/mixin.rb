@@ -220,13 +220,8 @@ module Scimitar
     # allow for different client searching "styles", given ambiguities in RFC
     # 7644 filter examples).
     #
-    # Each value is a Hash with Symbol keys ':column', naming just one simple
-    # column for a mapping; ':columns', with an Array of column names that you
-    # want to map using 'OR' for a single search on the corresponding SCIM
-    # attribute; or ':ignore' with value 'true', which means that a fitler on
-    # the matching attribute is ignored rather than resulting in an "invalid
-    # filter" exception - beware possibilities for surprised clients getting a
-    # broader result set than expected. Example:
+    # Each value is a hash of queryable SCIM attribute options, described
+    # below - for example:
     #
     #     def self.scim_queryable_attributes
     #       return {
@@ -234,9 +229,26 @@ module Scimitar
     #         'name.familyName' => { column: :last_name  },
     #         'emails'          => { columns: [ :work_email_address, :home_email_address ] },
     #         'emails.value'    => { columns: [ :work_email_address, :home_email_address ] },
-    #         'emails.type'     => { ignore: true }
+    #         'emails.type'     => { ignore: true },
+    #         'groups.value'    => { column: Group.arel_table[:id] }
     #       }
     #     end
+    #
+    # Column references can be either a Symbol representing a column within
+    # the resource model table, or an <tt>Arel::Attribute</tt> instance via
+    # e.g. <tt>MyModel.arel_table[:my_column]</tt>.
+    #
+    # === Queryable SCIM attribute options
+    #
+    # +:column+::  Just one simple column for a mapping.
+    #
+    # +:columns+:: An Array of columns that you want to map using 'OR' for a
+    #              single search of the corresponding entity.
+    #
+    # +:ignore+::  When set to +true+, the matching attribute is ignored rather
+    #              than resulting in an "invalid filter" exception. Beware
+    #              possibilities for surprised clients getting a broader result
+    #              set than expected, since a constraint may have been ignored.
     #
     # Filtering is currently limited and searching within e.g. arrays of data
     # is not supported; only simple top-level keys can be mapped.
@@ -406,8 +418,11 @@ module Scimitar
         def from_scim_patch!(patch_hash:)
           frozen_ci_patch_hash = patch_hash.with_indifferent_case_insensitive_access().freeze()
           ci_scim_hash         = self.to_scim(location: '(unused)').as_json().with_indifferent_case_insensitive_access()
+          operations           = frozen_ci_patch_hash['operations']
 
-          frozen_ci_patch_hash['operations'].each do |operation|
+          raise Scimitar::InvalidSyntaxError.new("Missing PATCH \"operations\"") unless operations
+
+          operations.each do |operation|
             nature   = operation['op'   ]&.downcase
             path_str = operation['path' ]
             value    = operation['value']

@@ -2685,6 +2685,14 @@ RSpec.describe Scimitar::Resources::Mixin do
       #
       context 'public interface' do
         shared_examples 'a patcher' do | force_upper_case: |
+          it 'gives the user a comprehensible error when operations are missing' do
+            patch = { 'schemas' => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'] }
+
+            expect do
+              @instance.from_scim_patch!(patch_hash: patch)
+            end.to raise_error Scimitar::InvalidSyntaxError, "Missing PATCH \"operations\""
+          end
+
           it 'which updates simple values' do
             @instance.update!(username: 'foo')
 

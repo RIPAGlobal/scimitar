@@ -6,6 +6,8 @@
 
 A SCIM v2 API endpoint implementation for Ruby On Rails.
 
+For a list of changes and information on major version upgrades, please see `CHANGELOG.md`.
+
 
 
 ## Overview
@@ -76,6 +78,16 @@ Scimitar.engine_configuration = Scimitar::EngineConfiguration.new({
 ```
 
 When it comes to token access, Scimitar neither enforces nor presumes any kind of encoding for bearer tokens. You can use anything you like, including encoding/encrypting JWTs if you so wish - https://rubygems.org/gems/jwt may be useful. The way in which a client might integrate with your SCIM service varies by client and you will have to check documentation to see how a token gets conveyed to that client in the first place (e.g. a full OAuth flow with your application, or just a static token generated in some UI which an administrator copies and pastes into their client's SCIM configuration UI).
+
+**Important:** Under some more recent versions of Rails 6, you may need to wrap any Scimitar configuration with `Rails.application.config.to_prepare do...` to avoid `NameError: uninitialized constant...` exceptions arising due to autoloader problems:
+
+```ruby
+Rails.application.config.to_prepare do
+  Scimitar.engine_configuration = Scimitar::EngineConfiguration.new({
+    # ...
+  end
+end
+```
 
 ### Routes
 
@@ -185,11 +197,20 @@ class User < ActiveRecord::Base
     return nil
   end
 
+  # The attributes in this example include a reference to the same hypothesised
+  # 'Group' model as in the HABTM relationship above. In this case, in order to
+  # filter by "groups" or "groups.value", the 'column' entry must reference the
+  # Group model's ID column as an AREL attribute as shown below, and the SCIM
+  # controller's #storage_scope implementation must also introduce a #join with
+  # ':groups' - see the "Queries & Optimisations" section below.
+  #
   def self.scim_queryable_attributes
     return {
-      givenName:  :first_name,
-      familyName: :last_name,
-      emails:     :work_email_address,
+      givenName:        { column: :first_name },
+      familyName:       { column: :last_name },
+      emails:           { column: :work_email_address },
+      groups:           { column: Group.arel_table[:id] },
+      "groups.value" => { column: Group.arel_table[:id] },
     }
   end
 
@@ -210,6 +231,8 @@ end
 ```
 
 ### Controllers
+
+#### ActiveRecord
 
 If you use ActiveRecord, your controllers can potentially be extremely simple by subclassing [`Scimitar::ActiveRecordBackedResourcesController`](https://www.rubydoc.info/gems/scimitar/Scimitar/ActiveRecordBackedResourcesController) - at a minimum:
 
@@ -234,6 +257,26 @@ end
 ```
 
 All data-layer actions are taken via `#find` or `#save!`, with exceptions such as `ActiveRecord::RecordNotFound`, `ActiveRecord::RecordInvalid` or generalised SCIM exceptions handled by various superclasses. For a real Rails example of this, see the [test suite's controllers](https://github.com/RIPAGlobal/scimitar/tree/main/spec/apps/dummy/app/controllers) which are invoked via its [routing declarations](https://github.com/RIPAGlobal/scimitar/blob/main/spec/apps/dummy/config/routes.rb).
+
+#### Queries & Optimisations
+
+The scope can be optimised to eager load the data exposed by the SCIM interface, i.e.:
+
+```ruby
+def storage_scope
+  User.eager_load(:groups)
+end
+```
+
+In cases where you have references to related columns in your `scim_queryable_attributes`, your `storage_scope` must join the relation:
+
+```ruby
+def storage_scope
+  User.left_join(:groups)
+end
+```
+
+#### Other source types
 
 If you do _not_ use ActiveRecord to store data, or if you have very esoteric read-write requirements, you can subclass [`Scimigar::ResourcesController`](https://www.rubydoc.info/gems/scimitar/Scimitar/ResourcesController) in a manner similar to this:
 
@@ -446,7 +489,7 @@ Whatever you provide in the `::id` method in your extension class will be used a
 ```json
 {
   "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-  "Operations":[
+  "Operations": [
     {
       "op": "replace",
       "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:organization",
@@ -458,7 +501,41 @@ Whatever you provide in the `::id` method in your extension class will be used a
 
 Resource extensions can provide any fields you choose, under any ID/URN you choose, to either RFC-described resources or entirely custom SCIM resources. There are no hard-coded assumptions or other "magic" that might require you to only extend RFC-described resources with RFC-described extensions. Of course, if you use custom resources or custom extensions that are not described by the SCIM RFCs, then the SCIM API you provide may only work with custom-written API callers that are aware of your bespoke resources and/or extensions.
 
+Extensions can also contain complex attributes such as groups. For instance, if you want the ability to write to groups from the User resource perspective (since 'groups' collection in a SCIM User resource is read-only), you can add one attribute to your extension like this:
 
+```ruby
+Scimitar::Schema::Attribute.new(name: "userGroups", multiValued: true, complexType: Scimitar::ComplexTypes::ReferenceGroup, mutability: "writeOnly"),
+```
+
+Then map it in your `scim_attributes_map`:
+
+```ruby
+  userGroups: [
+    {
+      list: :groups,
+      find_with: ->(value) { Group.find(value["value"]) },
+      using: {
+        value:   :id,
+        display: :name
+      }
+    }
+  ]
+```
+
+And write to it like this:
+
+```json
+{
+  "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+  "Operations": [
+    {
+      "op": "replace",
+      "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:userGroups",
+      "value": [{ "value": "1" }]
+    }
+  ]
+}
+```
 
 ## Security
 

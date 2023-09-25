@@ -9,7 +9,7 @@ GIT
 PATH
   remote: .
   specs:
-    scimitar (1.5.3)
+    scimitar (1.6.0)
       rails (~> 6.0)
 
 GEM

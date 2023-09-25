@@ -112,7 +112,7 @@ module Scimitar
       end
 
       def self.complex_scim_attributes
-        schema.scim_attributes.select(&:complexType).group_by(&:name)
+        schemas.flat_map(&:scim_attributes).select(&:complexType).group_by(&:name)
       end
 
       def complex_type_from_hash(scim_attribute, attr_value)

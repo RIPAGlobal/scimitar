@@ -15,6 +15,7 @@ class MockUser < ActiveRecord::Base
     work_phone_number
     organization
     department
+    mock_groups
   }
 
   has_and_belongs_to_many :mock_groups
@@ -90,7 +91,17 @@ class MockUser < ActiveRecord::Base
       # "spec/apps/dummy/config/initializers/scimitar.rb".
       #
       organization: :organization,
-      department:   :department
+      department:   :department,
+      userGroups: [
+        {
+          list:      :mock_groups,
+          find_with: ->(value) { MockGroup.find(value["value"]) },
+          using: {
+            value:   :id,
+            display: :display_name
+          }
+        }
+      ]
     }
   end
 
@@ -105,6 +116,8 @@ class MockUser < ActiveRecord::Base
       'meta.lastModified' => { column: :updated_at },
       'name.givenName'    => { column: :first_name },
       'name.familyName'   => { column: :last_name  },
+      'groups'            => { column: MockGroup.arel_table[:id] },
+      'groups.value'      => { column: MockGroup.arel_table[:id] },
       'emails'            => { columns: [ :work_email_address, :home_email_address ] },
       'emails.value'      => { columns: [ :work_email_address, :home_email_address ] },
       'emails.type'       => { ignore: true } # We can't filter on that; it'll just search all e-mails
