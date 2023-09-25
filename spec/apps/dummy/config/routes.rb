@@ -6,12 +6,12 @@
 Rails.application.routes.draw do
   mount Scimitar::Engine, at: '/'
 
-  get    'Users',     to: 'mock_users#index'
-  get    'Users/:id', to: 'mock_users#show'
-  post   'Users',     to: 'mock_users#create'
-  put    'Users/:id', to: 'mock_users#replace'
-  patch  'Users/:id', to: 'mock_users#update'
-  delete 'Users/:id', to: 'mock_users#destroy'
+  get    'Users',      to: 'mock_users#index'
+  get    'Users/:id',  to: 'mock_users#show'
+  post   'Users',      to: 'mock_users#create'
+  put    'Users/:id',  to: 'mock_users#replace'
+  patch  'Users/:id',  to: 'mock_users#update'
+  delete 'Users/:id',  to: 'mock_users#destroy'
 
   get    'Groups',     to: 'mock_groups#index'
   get    'Groups/:id', to: 'mock_groups#show'

@@ -25,7 +25,6 @@ module Scimitar
       #
       # ...to "globally" invoke this handler if you wish.
       #
-      #
       # +exception+:: Exception instance, used for a configured error reporter
       #               via #handle_scim_error (if present).
       #

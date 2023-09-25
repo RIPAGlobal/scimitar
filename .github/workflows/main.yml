@@ -40,6 +40,7 @@ jobs:
     - name: Install PostgreSQL client
       run: |
         sudo apt-get -yqq install libpq-dev
+
     - name: Build app
       env:
         PGHOST: localhost
@@ -50,6 +51,7 @@ jobs:
         pushd spec/apps/dummy
         bundle exec rake db:create db:schema:load db:migrate
         popd
+
     - name: Run tests
       env:
         PGHOST: localhost

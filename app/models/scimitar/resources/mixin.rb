@@ -220,7 +220,8 @@ module Scimitar
     # allow for different client searching "styles", given ambiguities in RFC
     # 7644 filter examples).
     #
-    # Each value is a hash of queryable SCIM attribute options:
+    # Each value is a hash of queryable SCIM attribute options, described
+    # below - for example:
     #
     #     def self.scim_queryable_attributes
     #       return {
@@ -233,18 +234,21 @@ module Scimitar
     #       }
     #     end
     #
+    # Column references can be either a Symbol representing a column within
+    # the resource model table, or an <tt>Arel::Attribute</tt> instance via
+    # e.g. <tt>MyModel.arel_table[:my_column]</tt>.
+    #
     # === Queryable SCIM attribute options
     #
-    # Column references can be either a Symbol representing a column within
-    # the resource model table, or an `Arel::Attribute` (i.e.: `MyModel.arel_table[:my_column]`).
+    # +:column+::  Just one simple column for a mapping.
     #
-    # `:column`, with just one simple column for a mapping
-    # `:columns`, an Array of columns that you want to map using 'OR' for a
-    #             single search on the corresponding SCIM
-    # `:ignore`, when set to `true`, the matching attribute is ignored rather
-    #            than resulting in an "invalid filter" exception - beware
-    #            possibilities for surprised clients getting a broader result
-    #            set than expected. Example:
+    # +:columns+:: An Array of columns that you want to map using 'OR' for a
+    #              single search of the corresponding entity.
+    #
+    # +:ignore+::  When set to +true+, the matching attribute is ignored rather
+    #              than resulting in an "invalid filter" exception. Beware
+    #              possibilities for surprised clients getting a broader result
+    #              set than expected, since a constraint may have been ignored.
     #
     # Filtering is currently limited and searching within e.g. arrays of data
     # is not supported; only simple top-level keys can be mapped.

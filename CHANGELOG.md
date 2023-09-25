@@ -1,3 +1,15 @@
+# 1.6.0 (2023-09-25)
+
+Many thanks to `@xjunior`, who contributed a series of improvements and fixes back-ported into this version. New features:
+
+* Allow writable complex types in custom extensions via [#61](https://github.com/RIPAGlobal/scimitar/pull/61)
+* Allow complex queries via table joins via [#62](https://github.com/RIPAGlobal/scimitar/pull/62)
+
+Fixes:
+
+* Much better error message raised if `PatchOp` misses operations in [#65](https://github.com/RIPAGlobal/scimitar/pull/65)
+* Combined logical groups generate working queries with [#66](https://github.com/RIPAGlobal/scimitar/pull/66)
+
 # 1.5.3 (2023-09-16)
 
 * Fix warning messages for Rails 6 and Zeitwerk. Thanks to `@sobrinho` for the contribution.

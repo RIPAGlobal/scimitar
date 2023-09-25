@@ -6,6 +6,8 @@
 
 A SCIM v2 API endpoint implementation for Ruby On Rails.
 
+For a list of changes and information on major version upgrades, please see `CHANGELOG.md`.
+
 
 
 ## Overview
@@ -76,6 +78,16 @@ Scimitar.engine_configuration = Scimitar::EngineConfiguration.new({
 ```
 
 When it comes to token access, Scimitar neither enforces nor presumes any kind of encoding for bearer tokens. You can use anything you like, including encoding/encrypting JWTs if you so wish - https://rubygems.org/gems/jwt may be useful. The way in which a client might integrate with your SCIM service varies by client and you will have to check documentation to see how a token gets conveyed to that client in the first place (e.g. a full OAuth flow with your application, or just a static token generated in some UI which an administrator copies and pastes into their client's SCIM configuration UI).
+
+**Important:** Under some more recent versions of Rails 6, you may need to wrap any Scimitar configuration with `Rails.application.config.to_prepare do...` to avoid `NameError: uninitialized constant...` exceptions arising due to autoloader problems:
+
+```ruby
+Rails.application.config.to_prepare do
+  Scimitar.engine_configuration = Scimitar::EngineConfiguration.new({
+    # ...
+  end
+end
+```
 
 ### Routes
 
@@ -185,10 +197,12 @@ class User < ActiveRecord::Base
     return nil
   end
 
-  # The attributes in the SCIM section below include a reference to this
-  # hypothesised 'Group' model, same as the HABTM relationship above.
-  # In this case, in order to filter by `groups.value` or `groups`, the
-  # SCIM controller `storage_scope` has to introduce a join with Groups.
+  # The attributes in this example include a reference to the same hypothesised
+  # 'Group' model as in the HABTM relationship above. In this case, in order to
+  # filter by "groups" or "groups.value", the 'column' entry must reference the
+  # Group model's ID column as an AREL attribute as shown below, and the SCIM
+  # controller's #storage_scope implementation must also introduce a #join with
+  # ':groups' - see the "Queries & Optimisations" section below.
   #
   def self.scim_queryable_attributes
     return {
@@ -244,22 +258,22 @@ end
 
 All data-layer actions are taken via `#find` or `#save!`, with exceptions such as `ActiveRecord::RecordNotFound`, `ActiveRecord::RecordInvalid` or generalised SCIM exceptions handled by various superclasses. For a real Rails example of this, see the [test suite's controllers](https://github.com/RIPAGlobal/scimitar/tree/main/spec/apps/dummy/app/controllers) which are invoked via its [routing declarations](https://github.com/RIPAGlobal/scimitar/blob/main/spec/apps/dummy/config/routes.rb).
 
-#### Queries & Optimizations
+#### Queries & Optimisations
 
-The scope can be optimized to eager load the data exposed by the SCIM interface, i.e.:
+The scope can be optimised to eager load the data exposed by the SCIM interface, i.e.:
 
 ```ruby
-      def storage_scope
-        User.eager_load(:groups)
-      end
+def storage_scope
+  User.eager_load(:groups)
+end
 ```
 
 In cases where you have references to related columns in your `scim_queryable_attributes`, your `storage_scope` must join the relation:
 
 ```ruby
-      def storage_scope
-        User.left_join(:groups)
-      end
+def storage_scope
+  User.left_join(:groups)
+end
 ```
 
 #### Other source types
