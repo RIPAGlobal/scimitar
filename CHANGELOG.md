@@ -1,3 +1,15 @@
+# 2.5.0 (2023-09-25)
+
+Many thanks to `@xjunior`, who contributed a series of improvements and fixes present in this version. New features:
+
+* Allow writable complex types in custom extensions via [#61](https://github.com/RIPAGlobal/scimitar/pull/61)
+* Allow complex queries via table joins via [#62](https://github.com/RIPAGlobal/scimitar/pull/62)
+
+Fixes:
+
+* Much better error message raised if `PatchOp` misses operations in [#65](https://github.com/RIPAGlobal/scimitar/pull/65)
+* Combined logical groups generate working queries with [#66](https://github.com/RIPAGlobal/scimitar/pull/66)
+
 # 2.4.3 (2023-09-16)
 
 * Maintenance release which merges a warning removal patch in [#54](https://github.com/RIPAGlobal/scimitar/pull/54) (thanks to `@sobrinho` for the contribution) via [#63](https://github.com/RIPAGlobal/scimitar/pull/63) and it is the changes in the latter which are brought into Scimitar V2 to keep a minimal overall diff between the V1 and V2.
