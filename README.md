@@ -197,11 +197,18 @@ class User < ActiveRecord::Base
     return nil
   end
 
+  # The attributes in the SCIM section below include a reference to this
+  # hypothesised 'Group' model, same as the HABTM relationship above.
+  # In this case, in order to filter by `groups.value` or `groups`, the
+  # SCIM controller `storage_scope` has to introduce a join with Groups.
+  #
   def self.scim_queryable_attributes
     return {
-      givenName:  :first_name,
-      familyName: :last_name,
-      emails:     :work_email_address,
+      givenName:        { column: :first_name },
+      familyName:       { column: :last_name },
+      emails:           { column: :work_email_address },
+      groups:           { column: Group.arel_table[:id] },
+      "groups.value" => { column: Group.arel_table[:id] },
     }
   end
 
@@ -222,6 +229,8 @@ end
 ```
 
 ### Controllers
+
+#### ActiveRecord
 
 If you use ActiveRecord, your controllers can potentially be extremely simple by subclassing [`Scimitar::ActiveRecordBackedResourcesController`](https://www.rubydoc.info/gems/scimitar/Scimitar/ActiveRecordBackedResourcesController) - at a minimum:
 
@@ -246,6 +255,26 @@ end
 ```
 
 All data-layer actions are taken via `#find` or `#save!`, with exceptions such as `ActiveRecord::RecordNotFound`, `ActiveRecord::RecordInvalid` or generalised SCIM exceptions handled by various superclasses. For a real Rails example of this, see the [test suite's controllers](https://github.com/RIPAGlobal/scimitar/tree/main/spec/apps/dummy/app/controllers) which are invoked via its [routing declarations](https://github.com/RIPAGlobal/scimitar/blob/main/spec/apps/dummy/config/routes.rb).
+
+#### Queries & Optimizations
+
+The scope can be optimized to eager load the data exposed by the SCIM interface, i.e.:
+
+```ruby
+      def storage_scope
+        User.eager_load(:groups)
+      end
+```
+
+In cases where you have references to related columns in your `scim_queryable_attributes`, your `storage_scope` must join the relation:
+
+```ruby
+      def storage_scope
+        User.left_join(:groups)
+      end
+```
+
+#### Other source types
 
 If you do _not_ use ActiveRecord to store data, or if you have very esoteric read-write requirements, you can subclass [`Scimigar::ResourcesController`](https://www.rubydoc.info/gems/scimitar/Scimitar/ResourcesController) in a manner similar to this:
 

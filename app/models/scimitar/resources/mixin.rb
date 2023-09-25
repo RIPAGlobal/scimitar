@@ -220,13 +220,7 @@ module Scimitar
     # allow for different client searching "styles", given ambiguities in RFC
     # 7644 filter examples).
     #
-    # Each value is a Hash with Symbol keys ':column', naming just one simple
-    # column for a mapping; ':columns', with an Array of column names that you
-    # want to map using 'OR' for a single search on the corresponding SCIM
-    # attribute; or ':ignore' with value 'true', which means that a fitler on
-    # the matching attribute is ignored rather than resulting in an "invalid
-    # filter" exception - beware possibilities for surprised clients getting a
-    # broader result set than expected. Example:
+    # Each value is a hash of queryable SCIM attribute options:
     #
     #     def self.scim_queryable_attributes
     #       return {
@@ -234,9 +228,23 @@ module Scimitar
     #         'name.familyName' => { column: :last_name  },
     #         'emails'          => { columns: [ :work_email_address, :home_email_address ] },
     #         'emails.value'    => { columns: [ :work_email_address, :home_email_address ] },
-    #         'emails.type'     => { ignore: true }
+    #         'emails.type'     => { ignore: true },
+    #         'groups.value'    => { column: Group.arel_table[:id] }
     #       }
     #     end
+    #
+    # === Queryable SCIM attribute options
+    #
+    # Column references can be either a Symbol representing a column within
+    # the resource model table, or an `Arel::Attribute` (i.e.: `MyModel.arel_table[:my_column]`).
+    #
+    # `:column`, with just one simple column for a mapping
+    # `:columns`, an Array of columns that you want to map using 'OR' for a
+    #             single search on the corresponding SCIM
+    # `:ignore`, when set to `true`, the matching attribute is ignored rather
+    #            than resulting in an "invalid filter" exception - beware
+    #            possibilities for surprised clients getting a broader result
+    #            set than expected. Example:
     #
     # Filtering is currently limited and searching within e.g. arrays of data
     # is not supported; only simple top-level keys can be mapped.
