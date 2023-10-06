@@ -952,7 +952,10 @@ module Scimitar
 
                 when 'replace'
                   if path_component == 'root'
-                    altering_hash[path_component].merge!(value)
+                    dot_pathed_value = value.inject({}) do |hsh, (k, v)|
+                      hsh.deep_merge!(dot_path(k.split('.'), v))
+                    end
+                    altering_hash[path_component].deep_merge!(dot_pathed_value)
                   else
                     altering_hash[path_component] = value
                   end
@@ -1105,6 +1108,13 @@ module Scimitar
             end
           end
 
+          def dot_path(arr, value)
+            return value if arr.empty?
+
+            {}.tap do |hash|
+              hash[arr.shift] = dot_path(arr, value)
+            end
+          end
       end # "included do"
     end # "module Mixin"
   end # "module Resources"
