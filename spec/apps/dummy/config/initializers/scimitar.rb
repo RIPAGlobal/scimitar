@@ -19,6 +19,14 @@ Rails.application.config.to_prepare do
           before_action :test_hook
         end
       end
+
+      def scim_schemas_url(options)
+        super(test: 1, **options)
+      end
+
+      def scim_resource_type_url(options)
+        super(test: 1, **options)
+      end
     end
 
   })
