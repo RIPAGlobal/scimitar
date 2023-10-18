@@ -21,6 +21,11 @@ Rails.application.routes.draw do
   #
   delete 'CustomDestroyUsers/:id', to: 'custom_destroy_mock_users#destroy'
 
+  # For testing blocks passed to ActiveRecordBackedResourcesController#save!
+  #
+  post 'CustomSaveUsers', to: 'custom_save_mock_users#create'
+  get 'CustomSaveUsers/:id', to: 'custom_save_mock_users#show'
+
   # For testing environment inside Scimitar::ApplicationController subclasses.
   #
   get  'CustomRequestVerifiers', to: 'custom_request_verifiers#index'

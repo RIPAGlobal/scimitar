@@ -397,6 +397,22 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
       expect(result['scimType']).to eql('invalidValue')
       expect(result['detail']).to include('is reserved')
     end
+
+    it 'invokes a block if given one' do
+      mock_before = MockUser.all.to_a
+      attributes = { userName: '5' } # Minimum required by schema
+
+      expect_any_instance_of(CustomSaveMockUsersController).to receive(:create).once.and_call_original
+      expect {
+        post "/CustomSaveUsers", params: attributes.merge(format: :scim)
+      }.to change { MockUser.count }.by(1)
+
+      mock_after = MockUser.all.to_a
+      new_mock = (mock_after - mock_before).first
+
+      expect(response.status).to eql(201)
+      expect(new_mock.username).to eql(CustomSaveMockUsersController::CUSTOM_SAVE_BLOCK_USERNAME_INDICATOR)
+    end
   end # "context '#create' do"
 
   # ===========================================================================
