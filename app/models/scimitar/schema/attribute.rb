@@ -93,12 +93,21 @@ module Scimitar
       end
 
       def valid_simple_type?(value)
-        valid = (type == 'string' && value.is_a?(String)) ||
+        if multiValued
+          valid = value.is_a?(Array) && value.all? { |v| simple_type?(v) }
+          errors.add(self.name, "or one of its elements has the wrong type. It has to be an array of #{self.type}s.") unless valid
+        else
+          valid = simple_type?(value)
+          errors.add(self.name, "has the wrong type. It has to be a(n) #{self.type}.") unless valid
+        end
+        valid
+      end
+
+      def simple_type?(value)
+        (type == 'string' && value.is_a?(String)) ||
           (type == 'boolean' && (value.is_a?(TrueClass) || value.is_a?(FalseClass))) ||
           (type == 'integer' && (value.is_a?(Integer))) ||
           (type == 'dateTime' && valid_date_time?(value))
-        errors.add(self.name, "has the wrong type. It has to be a(n) #{self.type}.") unless valid
-        valid
       end
 
       def valid_date_time?(value)

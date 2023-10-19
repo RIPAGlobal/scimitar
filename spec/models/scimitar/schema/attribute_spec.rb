@@ -46,6 +46,28 @@ RSpec.describe Scimitar::Schema::Attribute do
       expect(attribute.errors.messages.to_h).to eql({userName: ['has the wrong type. It has to be a(n) string.']})
     end
 
+    it 'is valid if multi-valued and type is string and given value is an array of strings' do
+      attribute = described_class.new(name: 'scopes', multiValued: true, type: 'string')
+      expect(attribute.valid?(['something', 'something else'])).to be(true)
+    end
+
+    it 'is valid if multi-valued and type is string and given value is an empty array' do
+      attribute = described_class.new(name: 'scopes', multiValued: true, type: 'string')
+      expect(attribute.valid?([])).to be(true)
+    end
+
+    it 'is invalid if multi-valued and type is string and given value is not an array' do
+      attribute = described_class.new(name: 'scopes', multiValued: true, type: 'string')
+      expect(attribute.valid?('something')).to be(false)
+      expect(attribute.errors.messages.to_h).to eql({scopes: ['or one of its elements has the wrong type. It has to be an array of strings.']})
+    end
+
+    it 'is invalid if multi-valued and type is string and given value is an array containing another type' do
+      attribute = described_class.new(name: 'scopes', multiValued: true, type: 'string')
+      expect(attribute.valid?(['something', 123])).to be(false)
+      expect(attribute.errors.messages.to_h).to eql({scopes: ['or one of its elements has the wrong type. It has to be an array of strings.']})
+    end
+
     it 'is valid if type is boolean and given value is boolean' do
       expect(described_class.new(name: 'name', type: 'boolean').valid?(false)).to be(true)
       expect(described_class.new(name: 'name', type: 'boolean').valid?(true)).to be(true)
