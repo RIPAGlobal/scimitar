@@ -173,8 +173,11 @@ module Scimitar
         else
           record.save!
         end
-
       rescue ActiveRecord::RecordInvalid => exception
+        handle_invalid_record(exception.record)
+      end
+
+      def handle_invalid_record(record)
         joined_errors = record.errors.full_messages.join('; ')
 
         # https://tools.ietf.org/html/rfc7644#page-12
