@@ -1,0 +1,54 @@
+version: '2.3'
+services:
+  herokuPostgresql:
+    image: postgres:13 # downgraded to 13 because 'pg_dump' is of version 13.11_something in the scimit container. 
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_PASSWORD=Sup3rSecr1tPasw8rd
+      - POSTGRES_USER=postgres
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgresql:/var/lib/postgresql/data
+
+  scimitar_image:
+    build: ./
+    image: scimitar_backend
+
+  scimitar_base:
+    image: scimitar_backend
+    volumes:
+      - .:/app
+    environment:
+      - REDIS_URL=redis://herokuRedis:6379/0 # was /1, doesn't matter?
+    tty: true
+
+  scimitar:
+    extends:
+      service: scimitar_base
+    depends_on:
+      - herokuPostgresql
+    links:
+      - herokuPostgresql
+    command: 'bundle exec rails s -p 4000 -b 0.0.0.0'
+    environment:
+      - PORT=4000
+    ports:
+      - "4000:4000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  test:
+    extends:
+      service: scimitar_base
+    depends_on:
+      - herokuPostgresql
+    command: './spec/apps/dummy/bin/test'
+    environment:
+      - RAILS_ENV=test
+      - DATABASE_URL=postgresql://postgres:Sup3rSecr1tPasw8rd@herokuPostgresql:5432/scimit_test
+      - RAILS_MASTER_KEY
+
+volumes:
+  postgresql:
+  redis:
