@@ -111,8 +111,13 @@ module Scimitar
         return found_attribute
       end
 
-      def self.complex_scim_attributes
-        schemas.flat_map(&:scim_attributes).select(&:complexType).group_by(&:name)
+      # Somehow this does not recognise extended schema's complex attributes?
+      # def self.complex_scim_attributes
+      #   schemas.flat_map(&:scim_attributes).select(&:complexType).group_by(&:name)
+      # end
+
+      def complex_scim_attributes
+        self.class.schemas.flat_map(&:scim_attributes).select(&:complexType).group_by(&:name)
       end
 
       def complex_type_from_hash(scim_attribute, attr_value)
