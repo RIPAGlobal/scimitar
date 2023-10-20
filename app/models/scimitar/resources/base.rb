@@ -130,7 +130,7 @@ module Scimitar
 
       def constantize_complex_types(hash)
         hash.with_indifferent_access.each_pair do |attr_name, attr_value|
-          scim_attribute = self.class.complex_scim_attributes[attr_name].try(:first)
+          scim_attribute = complex_scim_attributes[attr_name].try(:first)
 
           if scim_attribute && scim_attribute.complexType
             if scim_attribute.multiValued
