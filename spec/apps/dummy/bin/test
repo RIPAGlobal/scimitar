@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+set -e
+
+cd ./spec/app/dummy
+RAILS_ENV=test bundle exec rake db:drop db:create db:migrate
+cd ../../..
+bundle exec rspec
