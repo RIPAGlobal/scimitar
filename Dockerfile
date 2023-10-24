@@ -1,4 +1,4 @@
-FROM ruby:3.2.0
+FROM ruby:3.2.2
 
 WORKDIR /app
 
@@ -12,6 +12,3 @@ RUN gem install bundler:2.4.19
 
 # Install any needed packages
 RUN bundle install
-
-# Use port 4000 (change this if oZone ever uses it)
-EXPOSE 4000
