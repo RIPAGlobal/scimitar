@@ -177,6 +177,10 @@ module Scimitar
         handle_invalid_record(exception.record)
       end
 
+      # Deal with validation errors by responding with an appropriate SCIM error.
+      #
+      # +record+:: The record with validation errors.
+      #
       def handle_invalid_record(record)
         joined_errors = record.errors.full_messages.join('; ')
 
