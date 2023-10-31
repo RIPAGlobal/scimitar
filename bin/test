@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+set -e
+
+# go to dummy app (where the bundle and rake files are)
+cd ./spec/apps/dummy
+echo "==  Creating fresh database...  =="
+bundle exec rake db:reset
+cd ../../.. # nagivate back to root of project
+
+echo "==  Running tests...  =="
+bundle exec rspec
