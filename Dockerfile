@@ -5,7 +5,8 @@ WORKDIR /app
 ADD . /app
 
 # Install nodejs
-RUN apt-get update -qq && apt-get install -y nodejs postgresql-client
+RUN apt-get update -qq && apt-get install -y nodejs postgresql-client \
+        && apt-get clean
 
 # Update bundler to correct version
 RUN gem install bundler:2.4.19
