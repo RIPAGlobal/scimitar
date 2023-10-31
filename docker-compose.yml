@@ -17,7 +17,7 @@ services:
       - .:/app
     depends_on:
       - postgresql
-    command: './spec/apps/dummy/bin/test'
+    command: 'bin/test'
     environment:
       - RAILS_ENV=test
       - DATABASE_URL=postgresql://postgres:Sup3rSecr1tPasw8rd@postgresql:5432/scimitar-test
