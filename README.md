@@ -108,6 +108,10 @@ end
 
 All routes then will be available at `https://.../scim_v2/...` via controllers you write in `app/controllers/scim_v2/...`, e.g. `app/controllers/scim_v2/users_controller.rb`. More on controllers later.
 
+#### URL helpers
+
+Internally Scimitar always invokes URL helpers in the controller layer. I.e. any variable path parameters will be resolved by Rails automatically. If you need more control over the way URLs are generated you can override any URL helper by redefining it in the application controller mixin. See the [`application_controller_mixin` engine configuration option](https://github.com/RIPAGlobal/scimitar/blob/main/config/initializers/scimitar.rb).
+
 ### Data models
 
 Scimitar assumes that each SCIM resource maps to a single corresponding class in your system. This might be an abstraction over more complex underpinings, but either way, a 1:1 relationship is expected. For example, a SCIM User might map to a User ActiveRecord model in your Rails application, while a SCIM Group might map to some custom class called Team which operates on a more complex set of data "under the hood".
