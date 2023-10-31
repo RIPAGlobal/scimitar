@@ -4,7 +4,9 @@ require 'scimitar/engine'
 
 module Scimitar
   def self.service_provider_configuration=(custom_configuration)
-    @service_provider_configuration = custom_configuration
+    if @service_provider_configuration.nil? || ! custom_configuration.uses_defaults
+      @service_provider_configuration = custom_configuration
+    end
   end
 
   def self.service_provider_configuration(location:)
@@ -14,7 +16,9 @@ module Scimitar
   end
 
   def self.engine_configuration=(custom_configuration)
-    @engine_configuration = custom_configuration
+    if @engine_configuration.nil? || ! custom_configuration.uses_defaults
+      @engine_configuration = custom_configuration
+    end
   end
 
   def self.engine_configuration

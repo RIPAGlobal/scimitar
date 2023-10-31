@@ -78,7 +78,7 @@ module Scimitar
       #                   method's return value here.
       #
       def initialize(attribute_map)
-        @attribute_map = attribute_map
+        @attribute_map = attribute_map.with_indifferent_case_insensitive_access()
       end
 
       # Parse SCIM filter query into RPN stack
@@ -192,7 +192,7 @@ module Scimitar
 
             ast.push(self.start_group? ? self.parse_group() : self.pop())
 
-            unless ! ast.last.is_a?(String) || UNARY_OPERATORS.include?(ast.last.downcase)
+            if ast.last.is_a?(String) && !UNARY_OPERATORS.include?(ast.last.downcase) || ast.last.is_a?(Array)
               expect_op ^= true
             end
           end
@@ -601,12 +601,27 @@ module Scimitar
           column_names   = self.activerecord_columns(scim_attribute)
           value          = self.activerecord_parameter(scim_parameter)
           value_for_like = self.sql_modified_value(scim_operator, value)
-          all_supported  = column_names.all? { | column_name | base_scope.model.column_names.include?(column_name.to_s) }
+          arel_columns   = column_names.map do |column|
+            if base_scope.model.column_names.include?(column.to_s)
+              arel_table[column]
+            elsif column.is_a?(Arel::Attribute)
+              column
+            end
+          end
 
-          raise Scimitar::FilterError unless all_supported
+          raise Scimitar::FilterError unless arel_columns.all?
 
-          column_names.each.with_index do | column_name, index |
-            arel_column    = arel_table[column_name]
+          unless case_sensitive
+            lc_scim_attribute = scim_attribute.downcase()
+
+            case_sensitive = (
+              lc_scim_attribute == 'id' ||
+              lc_scim_attribute == 'externalid' ||
+              lc_scim_attribute.start_with?('meta.')
+            )
+          end
+
+          arel_columns.each.with_index do | arel_column, index |
             arel_operation = case scim_operator
               when 'eq'
                 if case_sensitive
@@ -631,9 +646,9 @@ module Scimitar
               when 'co', 'sw', 'ew'
                 arel_column.matches(value_for_like, nil, case_sensitive)
               when 'pr'
-                arel_table.grouping(arel_column.not_eq_all(['', nil]))
+                arel_column.relation.grouping(arel_column.not_eq_all(['', nil]))
               else
-                raise Scimitar::FilterError
+                raise Scimitar::FilterError.new("Unsupported operator: '#{scim_operator}'")
             end
 
             if index == 0
@@ -656,10 +671,10 @@ module Scimitar
         # +scim_attribute+:: SCIM attribute from a filter string.
         #
         def activerecord_columns(scim_attribute)
-          raise Scimitar::FilterError if scim_attribute.blank?
+          raise Scimitar::FilterError.new("No scim_attribute provided") if scim_attribute.blank?
 
           mapped_attribute = self.attribute_map()[scim_attribute]
-          raise Scimitar::FilterError if mapped_attribute.blank?
+          raise Scimitar::FilterError.new("Unable to find domain attribute from SCIM attribute: '#{scim_attribute}'") if mapped_attribute.blank?
 
           if mapped_attribute[:ignore]
             return []

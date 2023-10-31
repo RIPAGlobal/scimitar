@@ -197,11 +197,20 @@ class User < ActiveRecord::Base
     return nil
   end
 
+  # The attributes in this example include a reference to the same hypothesised
+  # 'Group' model as in the HABTM relationship above. In this case, in order to
+  # filter by "groups" or "groups.value", the 'column' entry must reference the
+  # Group model's ID column as an AREL attribute as shown below, and the SCIM
+  # controller's #storage_scope implementation must also introduce a #join with
+  # ':groups' - see the "Queries & Optimisations" section below.
+  #
   def self.scim_queryable_attributes
     return {
-      givenName:  :first_name,
-      familyName: :last_name,
-      emails:     :work_email_address,
+      givenName:        { column: :first_name },
+      familyName:       { column: :last_name },
+      emails:           { column: :work_email_address },
+      groups:           { column: Group.arel_table[:id] },
+      "groups.value" => { column: Group.arel_table[:id] },
     }
   end
 
@@ -222,6 +231,8 @@ end
 ```
 
 ### Controllers
+
+#### ActiveRecord
 
 If you use ActiveRecord, your controllers can potentially be extremely simple by subclassing [`Scimitar::ActiveRecordBackedResourcesController`](https://www.rubydoc.info/gems/scimitar/Scimitar/ActiveRecordBackedResourcesController) - at a minimum:
 
@@ -246,6 +257,26 @@ end
 ```
 
 All data-layer actions are taken via `#find` or `#save!`, with exceptions such as `ActiveRecord::RecordNotFound`, `ActiveRecord::RecordInvalid` or generalised SCIM exceptions handled by various superclasses. For a real Rails example of this, see the [test suite's controllers](https://github.com/RIPAGlobal/scimitar/tree/main/spec/apps/dummy/app/controllers) which are invoked via its [routing declarations](https://github.com/RIPAGlobal/scimitar/blob/main/spec/apps/dummy/config/routes.rb).
+
+#### Queries & Optimisations
+
+The scope can be optimised to eager load the data exposed by the SCIM interface, i.e.:
+
+```ruby
+def storage_scope
+  User.eager_load(:groups)
+end
+```
+
+In cases where you have references to related columns in your `scim_queryable_attributes`, your `storage_scope` must join the relation:
+
+```ruby
+def storage_scope
+  User.left_join(:groups)
+end
+```
+
+#### Other source types
 
 If you do _not_ use ActiveRecord to store data, or if you have very esoteric read-write requirements, you can subclass [`Scimigar::ResourcesController`](https://www.rubydoc.info/gems/scimitar/Scimitar/ResourcesController) in a manner similar to this:
 
@@ -305,7 +336,7 @@ class UsersController < Scimitar::ResourcesController
       record.from_scim!(scim_hash: scim_resource.as_json())
       self.save!(record)
       # Evaluate to the record as a SCIM object (or do that via "self.save!")
-      user.to_scim(location: url_for(action: :show, id: user_id))
+      user.to_scim(location: url_for(action: :show, id: record.id))
     end
   end
 
@@ -318,7 +349,7 @@ class UsersController < Scimitar::ResourcesController
       record.from_scim!(scim_hash: scim_resource.as_json())
       self.save!(record)
       # Evaluate to the record as a SCIM object (or do that via "self.save!")
-      user.to_scim(location: url_for(action: :show, id: user_id))
+      user.to_scim(location: url_for(action: :show, id: record_id))
     end
   end
 
@@ -331,7 +362,7 @@ class UsersController < Scimitar::ResourcesController
       record.from_scim_patch!(patch_hash: patch_hash)
       self.save!(record)
       # Evaluate to the record as a SCIM object (or do that via "self.save!")
-      user.to_scim(location: url_for(action: :show, id: user_id))
+      user.to_scim(location: url_for(action: :show, id: record_id))
     end
   end
 
@@ -375,7 +406,136 @@ end
 
 Note that the [`Scimitar::ApplicationController` parent class](https://www.rubydoc.info/gems/scimitar/Scimitar/ApplicationController) of `Scimitar::ResourcesController` has a few methods to help with handling exceptions and rendering them as SCIM responses; for example, if a resource were not found by ID, you might wish to use [`Scimitar::ApplicationController#handle_resource_not_found`](https://github.com/RIPAGlobal/scimitar/blob/v1.0.3/app/controllers/scimitar/application_controller.rb#L22).
 
+### Extension schema
 
+You can extend schema with custom data by defining an extension class and calling `::extend_schema` on the SCIM resource class to which the extension applies. These extension classes:
+
+* Must subclass `Scimitar::Schema::Base`
+* Must call `super` in `def initialize`, providing data as shown in the example below
+* Must define class methods for `::id` and `::scim_attributes`
+
+The `::id` class method defines a unique schema ID that is used to namespace payloads or paths in JSON responses describing extended resources, JSON payloads creating them or PATCH paths modifying them. The SCIM RFCs would refer to this as the URN. For example, we might choose to use the [RFC-defined User extension schema](https://tools.ietf.org/html/rfc7643#section-4.3) to define a couple of extra fields our User model happens to support:
+
+```ruby
+class UserEnterpriseExtension < Scimitar::Schema::Base
+  def initialize(options = {})
+    super(
+      name:            'ExtendedUser',
+      description:     'Enterprise extension for a User',
+      id:              self.class.id,
+      scim_attributes: self.class.scim_attributes
+    )
+  end
+
+  def self.id
+    'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'
+  end
+
+  def self.scim_attributes
+    [
+      Scimitar::Schema::Attribute.new(name: 'organization', type: 'string'),
+      Scimitar::Schema::Attribute.new(name: 'department',   type: 'string')
+    ]
+  end
+end
+```
+
+...with the `super` call providing your choice of `name` and `description`, but also always providing `id` and `scim_attributes` as shown above. The class name chosen here is just an example and the class can be put inside any level of wrapping namespaces you choose - it's *your* class that can be named however you like. The extension class is then applied to the SCIM User resource _globally in your application_ by calling:
+
+```ruby
+Scimitar::Resources::User.extend_schema(UserEnterpriseExtension)
+```
+
+This is often done in `config/initializers/scimitar.rb` to help make it very clear that extensions are globally available and remove the risk of SCIM resources somehow being referenced before schema extensions have been applied.
+
+In `def self.scim_attributes_map` in the underlying data model, add any new fields - `organization` and `department` in this example - to map them to whatever the equivalent data model attributes are, just as you would do with any other resource fields. These are declared without any special nesting - for example:
+
+```ruby
+def self.scim_attributes_map
+  return {
+    id:           :id,
+    externalId:   :scim_uid,
+    userName:     :username,
+    # ...etc...
+    organization: :company,
+    department:   :team
+  }
+end
+```
+
+Whatever you provide in the `::id` method in your extension class will be used as a namespace in JSON data. This means that, for example, a SCIM representation of the above resource would look something like this:
+
+```json
+{
+  "schemas": [
+    "urn:ietf:params:scim:schemas:core:2.0:User",
+    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+  ],
+  "id": "2819c223-7f76-453a-413861904646",
+  "externalId": "701984",
+  "userName": "bjensen@example.com",
+  // ...
+
+  "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+    "organization": "Corporation Incorporated",
+    "department": "Marketing",
+  },
+  // ...
+}
+```
+
+...and likewise, creation via `POST` would require the same nesting if a caller wanted to create a resource instance with those extended properties set (and RFC-compliant consumers of your SCIM API should already be doing this). For `PATCH` operations, [the `path` uses a _colon_ to separate the ID/URN part from the path](https://tools.ietf.org/html/rfc7644#section-3.10) rather than just using a dot as you might expect from the JSON nesting above:
+
+```json
+{
+  "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+  "Operations": [
+    {
+      "op": "replace",
+      "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:organization",
+      "value": "Sales"
+    }
+  ]
+}
+```
+
+Resource extensions can provide any fields you choose, under any ID/URN you choose, to either RFC-described resources or entirely custom SCIM resources. There are no hard-coded assumptions or other "magic" that might require you to only extend RFC-described resources with RFC-described extensions. Of course, if you use custom resources or custom extensions that are not described by the SCIM RFCs, then the SCIM API you provide may only work with custom-written API callers that are aware of your bespoke resources and/or extensions.
+
+Extensions can also contain complex attributes such as groups. For instance, if you want the ability to write to groups from the User resource perspective (since 'groups' collection in a SCIM User resource is read-only), you can add one attribute to your extension like this:
+
+```ruby
+Scimitar::Schema::Attribute.new(name: "userGroups", multiValued: true, complexType: Scimitar::ComplexTypes::ReferenceGroup, mutability: "writeOnly"),
+```
+
+Then map it in your `scim_attributes_map`:
+
+```ruby
+  userGroups: [
+    {
+      list: :groups,
+      find_with: ->(value) { Group.find(value["value"]) },
+      using: {
+        value:   :id,
+        display: :name
+      }
+    }
+  ]
+```
+
+And write to it like this:
+
+```json
+{
+  "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+  "Operations": [
+    {
+      "op": "replace",
+      "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:userGroups",
+      "value": [{ "value": "1" }]
+    }
+  ]
+}
+```
 
 ## Security
 
@@ -397,7 +557,11 @@ Often, you'll find that bearer tokens are in use by SCIM API consumers, but the 
 
 * The `name` complex type of a User has `givenName` and `familyName` fields which [the RFC 7643 core schema](https://tools.ietf.org/html/rfc7643#section-8.7.1) describes as optional. Scimitar marks these as required, in the belief that most user synchronisation scenarios between clients and a Scimitar-based provider would require at least those names for basic user management on the provider side, in conjunction with the in-spec-required `userName` field. That's only if the whole `name` type is given at all - at the top level, this itself remains optional per spec, but if you're going to bother specifying names at all, Scimitar wants at least those two pieces of data.
 
-* Several complex types for User contain the same set of `value`, `display`, `type` and `primary` fields, all used in synonymous ways. The `value` field - which is e.g. an e-mail address or phone number - is described as optional by [the RFC 7643 core schema](https://tools.ietf.org/html/rfc7643#section-8.7.1), also using "SHOULD" rather than "MUST" in field descriptions elsewhere. Scimitar marks this as required; there's no point being sent (say) an e-mail section which has entries that don't provide the e-mail address! The schema descriptions for `display` also note that this is something optionally sent by the service provider and says clearly that it is read-only - yet the schema declares it `readWrite`. Scimitar marks it as read-only in its schema.
+* Several complex types for User contain the same set of `value`, `display`, `type` and `primary` fields, all used in synonymous ways.
+
+  - The `value` field - which is e.g. an e-mail address or phone number - is described as optional by [the RFC 7643 core schema](https://tools.ietf.org/html/rfc7643#section-8.7.1), also using "SHOULD" rather than "MUST" in field descriptions elsewhere. Scimitar marks this as required by default, since there's not much point being sent (say) an e-mail section which has entries that don't provide the e-mail address. Some services might send `null` values here regardless so, if you need to be able to accept such data, you can set [engine configuration option `optional_value_fields_required`](https://github.com/RIPAGlobal/scimitar/blob/main/config/initializers/scimitar.rb) to `false`.
+
+  - The schema _descriptions_ for `display` declare that the field is something optionally sent by the service provider and state clearly that it is read-only - yet the formal schema declares it `readWrite`. Scimitar marks it as read-only.
 
 * The `displayName` of a Group is described in [RFC 7643 section 4.2](https://tools.ietf.org/html/rfc7643#section-4.2) and in the free-text schema `description` field as required, but the schema nonetheless states `"required" : false` in the formal definition. We consider this to be an error and mark the property as `"required" : true`.
 
@@ -408,6 +572,8 @@ Often, you'll find that bearer tokens are in use by SCIM API consumers, but the 
 * Group resource examples show the `members` array including field `display`, but this is not in the [formal schema](https://tools.ietf.org/html/rfc7643#page-69); Scimitar includes it in the Group definition.
 
 * `POST` actions with only a subset of attributes specified treat missing attributes "to be cleared" for anything that's mapped for the target model. If you have defaults established at instantiation rather than (say) before-validation, you'll need to override `Scimitar::ActiveRecordBackedResourcesController#create` (if using that controller as a base class) as normally the controller just instantiates a model, applies _all_ attributes (with any mapped attribute values without an inbound value set to `nil`), then saves the record. This might cause default values to be overwritten. For consistency, `PUT` operations apply the same behaviour. The decision on this optional specification aspect is in part constrained by the difficulties of implementing `PATCH`.
+
+* [RFC 7644 indicates](https://tools.ietf.org/html/rfc7644#page-35) that a resource might only return its core schema in the `schemas` attribute if it was created without any extension fields used. Only if e.g. a subsequent `PATCH` operation added data provided by extension schema, would that extension also appear in `schemas`. This behaviour is extremely difficult to implement and Scimitar does not try - it will always return a resource's core schema and any/all defined extension schemas in the `schemas` array at all times.
 
 If you believe choices made in this section may be incorrect, please [create a GitHub issue](https://github.com/RIPAGlobal/scimitar/issues/new) describing the problem.
 
@@ -436,6 +602,8 @@ If you believe choices made in this section may be incorrect, please [create a G
   ...so adding a mapping for `emails.value` would then allow a database query to be constructed.
 
 * Currently filtering for lists is always matched case-insensitive regardless of schema declarations that might indicate otherwise, for `eq`, `ne`, `co`, `sw` and `ew` operators; for greater/less-thank style filters, case is maintained with simple `>`, `<` etc. database operations in use. The standard Group and User schema have `caseExact` set to `false` for just about anything readily queryable, so this hopefully would only ever potentially be an issue for custom schema.
+
+* As an exception to the above, attributes `id`, `externalId` and `meta.*` are matched case-sensitive. Filters that use `eq` on such attributes will end up a comparison using `=` rather than e.g. `ILIKE` (arising from https://github.com/RIPAGlobal/scimitar/issues/36).
 
 * The `PATCH` mechanism is supported, but where filters are included, only a single "attribute eq value" is permitted - no other operators or combinations. For example, a work e-mail address's value could be replaced by a PATCH patch of `emails[type eq "work"].value`. For in-path filters such as this, other operators such as `ne` are not supported; combinations with "and"/"or" are not supported; negation with "not" is not supported.
 

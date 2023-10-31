@@ -112,7 +112,7 @@ module Scimitar
       end
 
       def self.complex_scim_attributes
-        schema.scim_attributes.select(&:complexType).group_by(&:name)
+        schemas.flat_map(&:scim_attributes).select(&:complexType).group_by(&:name)
       end
 
       def complex_type_from_hash(scim_attribute, attr_value)
@@ -138,7 +138,7 @@ module Scimitar
       end
 
       def as_json(options = {})
-        self.meta = Meta.new unless self.meta
+        self.meta = Meta.new unless self.meta && self.meta.is_a?(Meta)
         meta.resourceType = self.class.resource_type_id
         original_hash = super(options).except('errors')
         original_hash.merge!('schemas' => self.class.schemas.map(&:id))

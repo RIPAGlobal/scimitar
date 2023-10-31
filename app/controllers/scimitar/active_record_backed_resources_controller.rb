@@ -21,6 +21,8 @@ module Scimitar
 
     rescue_from ActiveRecord::RecordNotFound, with: :handle_resource_not_found # See Scimitar::ApplicationController
 
+    before_action :obtain_id_column_name_from_attribute_map
+
     # GET (list)
     #
     def index
@@ -37,12 +39,13 @@ module Scimitar
       pagination_info = scim_pagination_info(query.count())
 
       page_of_results = query
+        .order(@id_column => :asc)
         .offset(pagination_info.offset)
         .limit(pagination_info.limit)
         .to_a()
 
       super(pagination_info, page_of_results) do | record |
-        record.to_scim(location: url_for(action: :show, id: record.id))
+        record_to_scim(record)
       end
     end
 
@@ -51,7 +54,7 @@ module Scimitar
     def show
       super do |record_id|
         record = self.find_record(record_id)
-        record.to_scim(location: url_for(action: :show, id: record_id))
+        record_to_scim(record)
       end
     end
 
@@ -63,7 +66,7 @@ module Scimitar
           record = self.storage_class().new
           record.from_scim!(scim_hash: scim_resource.as_json())
           self.save!(record)
-          record.to_scim(location: url_for(action: :show, id: record.id))
+          record_to_scim(record)
         end
       end
     end
@@ -76,7 +79,7 @@ module Scimitar
           record = self.find_record(record_id)
           record.from_scim!(scim_hash: scim_resource.as_json())
           self.save!(record)
-          record.to_scim(location: url_for(action: :show, id: record.id))
+          record_to_scim(record)
         end
       end
     end
@@ -89,7 +92,7 @@ module Scimitar
           record = self.find_record(record_id)
           record.from_scim_patch!(patch_hash: patch_hash)
           self.save!(record)
-          record.to_scim(location: url_for(action: :show, id: record.id))
+          record_to_scim(record)
         end
       end
     end
@@ -137,13 +140,26 @@ module Scimitar
       # +record_id+:: Record ID (SCIM schema 'id' value - "our" ID).
       #
       def find_record(record_id)
-        self.storage_scope().find(record_id)
+        self.storage_scope().find_by!(@id_column => record_id)
+      end
+
+      # DRY up controller actions - pass a record; returns the SCIM
+      # representation, with a "show" location specified via #url_for.
+      #
+      def record_to_scim(record)
+        record.to_scim(location: url_for(action: :show, id: record.send(@id_column)))
       end
 
       # Save a record, dealing with validation exceptions by raising SCIM
       # errors.
       #
-      # +record+:: ActiveRecord subclass to save (via #save!).
+      # +record+:: ActiveRecord subclass to save.
+      #
+      # If you just let this superclass handle things, it'll call the standard
+      # +#save!+ method on the record. If you pass a block, then this block is
+      # invoked and passed the ActiveRecord model instance to be saved. You can
+      # then do things like calling a different method, using a service object of
+      # some kind, perform audit-related operations and so-on.
       #
       # The return value is not used internally, making life easier for
       # overriding subclasses to "do the right thing" / avoid mistakes (instead
@@ -151,10 +167,21 @@ module Scimitar
       # and relying upon this to generate correct response payloads - an early
       # version of the gem did this and it caused a confusing subclass bug).
       #
-      def save!(record)
-        record.save!
-
+      def save!(record, &block)
+        if block_given?
+          yield(record)
+        else
+          record.save!
+        end
       rescue ActiveRecord::RecordInvalid => exception
+        handle_invalid_record(exception.record)
+      end
+
+      # Deal with validation errors by responding with an appropriate SCIM error.
+      #
+      # +record+:: The record with validation errors.
+      #
+      def handle_invalid_record(record)
         joined_errors = record.errors.full_messages.join('; ')
 
         # https://tools.ietf.org/html/rfc7644#page-12
@@ -174,6 +201,17 @@ module Scimitar
         else
           raise Scimitar::ResourceInvalidError.new(joined_errors)
         end
+      end
+
+      # Called via +before_action+ - stores in @id_column the name of whatever
+      # model column is used to store the record ID, via
+      # Scimitar::Resources::Mixin::scim_attributes_map.
+      #
+      # Default is <tt>:id</tt>.
+      #
+      def obtain_id_column_name_from_attribute_map
+        attrs      = storage_class().scim_attributes_map() || {}
+        @id_column = attrs[:id] || :id
       end
 
   end

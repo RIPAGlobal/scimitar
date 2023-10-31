@@ -25,10 +25,10 @@ Gem::Specification.new do |s|
   s.add_dependency 'rails', '~> 7.0'
 
   s.add_development_dependency 'rake',           '~> 13.0'
-  s.add_development_dependency 'pg',             '~>  1.2'
-  s.add_development_dependency 'simplecov-rcov', '~>  0.2'
-  s.add_development_dependency 'rdoc',           '~>  6.4'
-  s.add_development_dependency 'rspec-rails',    '~>  5.0'
+  s.add_development_dependency 'pg',             '~>  1.4'
+  s.add_development_dependency 'simplecov-rcov', '~>  0.3'
+  s.add_development_dependency 'rdoc',           '~>  6.5'
+  s.add_development_dependency 'rspec-rails',    '~>  6.0'
   s.add_development_dependency 'byebug',         '~> 11.1'
-  s.add_development_dependency 'doggo',          '~>  1.2'
+  s.add_development_dependency 'doggo',          '~>  1.3'
 end

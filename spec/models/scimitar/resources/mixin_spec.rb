@@ -159,41 +159,73 @@ RSpec.describe Scimitar::Resources::Mixin do
     # =========================================================================
 
     context '#to_scim' do
-      it 'compiles instance attribute values into a SCIM representation' do
-        instance                    = MockUser.new
-        instance.id                 = 42
-        instance.scim_uid           = 'AA02984'
-        instance.username           = 'foo'
-        instance.first_name         = 'Foo'
-        instance.last_name          = 'Bar'
-        instance.work_email_address = 'foo.bar@test.com'
-        instance.home_email_address = nil
-        instance.work_phone_number  = '+642201234567'
+      context 'with a UUID, renamed primary key column' do
+        it 'compiles instance attribute values into a SCIM representation' do
+          uuid                        = SecureRandom.uuid
 
-        g1 = MockGroup.create!(display_name: 'Group 1')
-        g2 = MockGroup.create!(display_name: 'Group 2')
-        g3 = MockGroup.create!(display_name: 'Group 3')
+          instance                    = MockUser.new
+          instance.primary_key        = uuid
+          instance.scim_uid           = 'AA02984'
+          instance.username           = 'foo'
+          instance.first_name         = 'Foo'
+          instance.last_name          = 'Bar'
+          instance.work_email_address = 'foo.bar@test.com'
+          instance.home_email_address = nil
+          instance.work_phone_number  = '+642201234567'
+          instance.organization       = 'SOMEORG'
 
-        g1.mock_users << instance
-        g3.mock_users << instance
+          g1 = MockGroup.create!(display_name: 'Group 1')
+          g2 = MockGroup.create!(display_name: 'Group 2')
+          g3 = MockGroup.create!(display_name: 'Group 3')
 
-        scim = instance.to_scim(location: 'https://test.com/mock_users/42')
-        json = scim.to_json()
-        hash = JSON.parse(json)
+          g1.mock_users << instance
+          g3.mock_users << instance
 
-        expect(hash).to eql({
-          'userName'    => 'foo',
-          'name'        => {'givenName'=>'Foo', 'familyName'=>'Bar'},
-          'active'      => true,
-          'emails'      => [{'type'=>'work', 'primary'=>true, 'value'=>'foo.bar@test.com'}, {"primary"=>false, "type"=>"home", "value"=>nil}],
-          'phoneNumbers'=> [{'type'=>'work', 'primary'=>false, 'value'=>'+642201234567'}],
-          'id'          => '42', # Note, String
-          'externalId'  => 'AA02984',
-          'groups'      => [{'display'=>g1.display_name, 'value'=>g1.id.to_s}, {'display'=>g3.display_name, 'value'=>g3.id.to_s}],
-          'meta'        => {'location'=>'https://test.com/mock_users/42', 'resourceType'=>'User'},
-          'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User']
-        })
-      end
+          scim = instance.to_scim(location: "https://test.com/mock_users/#{uuid}")
+          json = scim.to_json()
+          hash = JSON.parse(json)
+
+          expect(hash).to eql({
+            'userName'    => 'foo',
+            'name'        => {'givenName'=>'Foo', 'familyName'=>'Bar'},
+            'active'      => true,
+            'emails'      => [{'type'=>'work', 'primary'=>true, 'value'=>'foo.bar@test.com'}, {"primary"=>false, "type"=>"home", "value"=>nil}],
+            'phoneNumbers'=> [{'type'=>'work', 'primary'=>false, 'value'=>'+642201234567'}],
+            'id'          => uuid,
+            'externalId'  => 'AA02984',
+            'groups'      => [{'display'=>g1.display_name, 'value'=>g1.id.to_s}, {'display'=>g3.display_name, 'value'=>g3.id.to_s}],
+            'meta'        => {'location'=>"https://test.com/mock_users/#{uuid}", 'resourceType'=>'User'},
+            'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
+
+            'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
+              'organization' => 'SOMEORG',
+              'department'   => nil
+            }
+          })
+        end
+      end # "context 'with a UUID, renamed primary key column' do"
+
+      context 'with an integer, conventionally named primary key column' do
+        it 'compiles instance attribute values into a SCIM representation' do
+          instance              = MockGroup.new
+          instance.id           = 42
+          instance.scim_uid     = 'GG02984'
+          instance.display_name = 'Some group'
+
+          scim = instance.to_scim(location: 'https://test.com/mock_groups/42')
+          json = scim.to_json()
+          hash = JSON.parse(json)
+
+          expect(hash).to eql({
+            'displayName' => 'Some group',
+            'id'          => '42', # Note, String
+            'externalId'  => 'GG02984',
+            'members'     => [],
+            'meta'        => {'location'=>'https://test.com/mock_groups/42', 'resourceType'=>'Group'},
+            'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:Group']
+          })
+        end
+      end # "context 'with an integer, conventionally named primary key column' do"
 
       context 'with optional timestamps' do
         context 'creation only' do
@@ -292,7 +324,9 @@ RSpec.describe Scimitar::Resources::Mixin do
               ],
 
               'meta'    => {'location'=>'https://test.com/static_map_test', 'resourceType'=>'User'},
-              'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User']
+              'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
+
+              'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {}
             })
           end
         end # "context 'using static mappings' do"
@@ -319,7 +353,9 @@ RSpec.describe Scimitar::Resources::Mixin do
               ],
 
               'meta'    => {'location'=>'https://test.com/dynamic_map_test', 'resourceType'=>'User'},
-              'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User']
+              'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
+
+              'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {}
             })
           end
         end # "context 'using dynamic lists' do"
@@ -376,7 +412,12 @@ RSpec.describe Scimitar::Resources::Mixin do
               'id'           => '42', # Note, String
               'externalId'   => 'AA02984',
               'meta'         => {'location' => 'https://test.com/mock_users/42', 'resourceType' => 'User'},
-              'schemas'      => ['urn:ietf:params:scim:schemas:core:2.0:User']
+              'schemas'      => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
+
+              'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
+                'organization' => 'SOMEORG',
+                'DEPARTMENT'   => 'SOMEDPT'
+              }
             }
 
             hash = spec_helper_hupcase(hash) if force_upper_case
@@ -392,6 +433,8 @@ RSpec.describe Scimitar::Resources::Mixin do
             expect(instance.work_email_address).to eql('foo.bar@test.com')
             expect(instance.home_email_address).to be_nil
             expect(instance.work_phone_number ).to eql('+642201234567')
+            expect(instance.organization      ).to eql('SOMEORG')
+            expect(instance.department        ).to eql('SOMEDPT')
           end
 
           it 'honouring read-write lists' do
@@ -405,8 +448,8 @@ RSpec.describe Scimitar::Resources::Mixin do
               'displayName' => 'Foo Group',
               'members'     => [
                 {'type' => 'Group', 'value' => g1.id.to_s},
-                {'type' => 'User',  'value' => u1.id.to_s},
-                {'type' => 'User',  'value' => u3.id.to_s}
+                {'type' => 'User',  'value' => u1.primary_key.to_s},
+                {'type' => 'User',  'value' => u3.primary_key.to_s}
               ],
               'externalId'  => 'GG01536',
               'meta'        => {'location'=>'https://test.com/mock_groups/1', 'resourceType'=>'Group'},
@@ -453,8 +496,10 @@ RSpec.describe Scimitar::Resources::Mixin do
       end # "context 'using upper case' do"
 
       it 'clears things not present in input' do
+        uuid                        = SecureRandom.uuid
+
         instance                    = MockUser.new
-        instance.id                 = 42
+        instance.primary_key        = uuid
         instance.scim_uid           = 'AA02984'
         instance.username           = 'foo'
         instance.first_name         = 'Foo'
@@ -465,7 +510,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
         instance.from_scim!(scim_hash: {})
 
-        expect(instance.id                ).to eql(42)
+        expect(instance.primary_key       ).to eql(uuid)
         expect(instance.scim_uid          ).to be_nil
         expect(instance.username          ).to be_nil
         expect(instance.first_name        ).to be_nil
@@ -676,6 +721,21 @@ RSpec.describe Scimitar::Resources::Mixin do
                 expect(scim_hash['name']['familyName']).to eql('Bar')
               end
 
+              it 'with schema extensions: overwrites' do
+                path      = [ 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User', 'organization' ]
+                scim_hash = { 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => { 'organization' => 'SOMEORG' } }.with_indifferent_case_insensitive_access()
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'add',
+                  path:          path,
+                  value:         'OTHERORG',
+                  altering_hash: scim_hash
+                )
+
+                expect(scim_hash['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']['organization' ]).to eql('OTHERORG')
+              end
+
               # For 'add', filter at end-of-path is nonsensical and not
               # supported by spec or Scimitar; we only test mid-path filters.
               #
@@ -862,6 +922,21 @@ RSpec.describe Scimitar::Resources::Mixin do
                 )
 
                 expect(scim_hash['name']['givenName']).to eql('Baz')
+              end
+
+              it 'with schema extensions: adds' do
+                path      = [ 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User', 'organization' ]
+                scim_hash = {}.with_indifferent_case_insensitive_access()
+
+                @instance.send(
+                  :from_patch_backend!,
+                  nature:        'add',
+                  path:          path,
+                  value:         'SOMEORG',
+                  altering_hash: scim_hash
+                )
+
+                expect(scim_hash['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']['organization' ]).to eql('SOMEORG')
               end
 
               context 'with filter mid-path: adds' do
@@ -1202,6 +1277,595 @@ RSpec.describe Scimitar::Resources::Mixin do
 
                 expect(scim_hash).to_not have_key('emails')
               end
+
+              # What we expect:
+              #
+              # https://tools.ietf.org/html/rfc7644#section-3.5.2.2
+              # https://docs.snowflake.com/en/user-guide/scim-intro.html#patch-scim-v2-groups-id
+              #
+              # ...vs accounting for the unusual payloads we sometimes get,
+              # tested here.
+              #
+              context 'special cases' do
+
+                # https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/use-scim-to-provision-users-and-groups#update-group-remove-members
+                #
+                context 'Microsoft-style payload' do
+                  context 'removing a user from a group' do
+                    it 'removes identified user' do
+                      path      = [ 'members' ]
+                      value     = [ { '$ref' => nil, 'value' => 'f648f8d5ea4e4cd38e9c' } ]
+                      scim_hash = {
+                        'displayname' => 'Mock group',
+                        'members'     => [
+                          {
+                            'value'   => '50ca93d04ab0c2de4772',
+                            'display' => 'Ingrid Smith',
+                            'type'    => 'User'
+                          },
+                          {
+                            'value'   => 'f648f8d5ea4e4cd38e9c',
+                            'display' => 'Fred Smith',
+                            'type'    => 'User'
+                          },
+                          {
+                            'value'   => 'a774d480e8112101375b',
+                            'display' => 'Taylor Smith',
+                            'type'    => 'User'
+                          }
+                        ]
+                      }.with_indifferent_case_insensitive_access()
+
+                      @instance.send(
+                        :from_patch_backend!,
+                        nature:        'remove',
+                        path:          path,
+                        value:         value,
+                        altering_hash: scim_hash
+                      )
+
+                      expect(scim_hash).to eql({
+                        'displayname' => 'Mock group',
+                        'members'     => [
+                          {
+                            'value'   => '50ca93d04ab0c2de4772',
+                            'display' => 'Ingrid Smith',
+                            'type'    => 'User'
+                          },
+                          {
+                            'value'   => 'a774d480e8112101375b',
+                            'display' => 'Taylor Smith',
+                            'type'    => 'User'
+                          }
+                        ]
+                      })
+                    end
+
+                    it 'removes multiple identified users' do
+                      path      = [ 'members' ]
+                      value     = [
+                        { '$ref' => nil, 'value' => 'f648f8d5ea4e4cd38e9c' },
+                        { '$ref' => nil, 'value' => '50ca93d04ab0c2de4772' }
+                      ]
+                      scim_hash = {
+                        'displayname' => 'Mock group',
+                        'members'     => [
+                          {
+                            'value'   => '50ca93d04ab0c2de4772',
+                            'display' => 'Ingrid Smith',
+                            'type'    => 'User'
+                          },
+                          {
+                            'value'   => 'f648f8d5ea4e4cd38e9c',
+                            'display' => 'Fred Smith',
+                            'type'    => 'User'
+                          },
+                          {
+                            'value'   => 'a774d480e8112101375b',
+                            'display' => 'Taylor Smith',
+                            'type'    => 'User'
+                          }
+                        ]
+                      }.with_indifferent_case_insensitive_access()
+
+                      @instance.send(
+                        :from_patch_backend!,
+                        nature:        'remove',
+                        path:          path,
+                        value:         value,
+                        altering_hash: scim_hash
+                      )
+
+                      expect(scim_hash).to eql({
+                        'displayname' => 'Mock group',
+                        'members'     => [
+                          {
+                            'value'   => 'a774d480e8112101375b',
+                            'display' => 'Taylor Smith',
+                            'type'    => 'User'
+                          }
+                        ]
+                      })
+                    end
+
+                    it 'removes all users individually without error' do
+                      path      = [ 'members' ]
+                      value     = [ { '$ref' => nil, 'value' => 'f648f8d5ea4e4cd38e9c' } ]
+                      scim_hash = {
+                        'displayname' => 'Mock group',
+                        'members'     => [
+                          {
+                            'value'   => 'f648f8d5ea4e4cd38e9c',
+                            'display' => 'Fred Smith',
+                            'type'    => 'User'
+                          }
+                        ]
+                      }.with_indifferent_case_insensitive_access()
+
+                      @instance.send(
+                        :from_patch_backend!,
+                        nature:        'remove',
+                        path:          path,
+                        value:         value,
+                        altering_hash: scim_hash
+                      )
+
+                      expect(scim_hash).to eql({
+                        'displayname' => 'Mock group',
+                        'members'     => []
+                      })
+                    end
+
+                    it 'can match on multiple attributes' do
+                      path      = [ 'members' ]
+                      value     = [ { '$ref' => nil, 'value' => 'f648f8d5ea4e4cd38e9c', 'type' => 'User' } ]
+                      scim_hash = {
+                        'displayname' => 'Mock group',
+                        'members'     => [
+                          {
+                            'value'   => 'f648f8d5ea4e4cd38e9c',
+                            'display' => 'Fred Smith',
+                            'type'    => 'User'
+                          }
+                        ]
+                      }.with_indifferent_case_insensitive_access()
+
+                      @instance.send(
+                        :from_patch_backend!,
+                        nature:        'remove',
+                        path:          path,
+                        value:         value,
+                        altering_hash: scim_hash
+                      )
+
+                      expect(scim_hash).to eql({
+                        'displayname' => 'Mock group',
+                        'members'     => []
+                      })
+                    end
+
+                    it 'ignores unrecognised users' do
+                      path      = [ 'members' ]
+                      value     = [ { '$ref' => nil, 'value' => '11b054a9c85216ed9356' } ]
+                      scim_hash = {
+                        'displayname' => 'Mock group',
+                        'members'     => [
+                          {
+                            'value'   => 'f648f8d5ea4e4cd38e9c',
+                            'display' => 'Fred Smith',
+                            'type'    => 'User'
+                          }
+                        ]
+                      }.with_indifferent_case_insensitive_access()
+
+                      @instance.send(
+                        :from_patch_backend!,
+                        nature:        'remove',
+                        path:          path,
+                        value:         value,
+                        altering_hash: scim_hash
+                      )
+
+                      # The 'value' mismatched, so the user was not removed.
+                      #
+                      expect(scim_hash).to eql({
+                        'displayname' => 'Mock group',
+                        'members'     => [
+                          {
+                            'value'   => 'f648f8d5ea4e4cd38e9c',
+                            'display' => 'Fred Smith',
+                            'type'    => 'User'
+                          }
+                        ]
+                      })
+                    end
+
+                    it 'ignores a mismatch on (for example) "type"' do
+                      path      = [ 'members' ]
+                      value     = [ { '$ref' => nil, 'value' => 'f648f8d5ea4e4cd38e9c', 'type' => 'Group' } ]
+                      scim_hash = {
+                        'displayname' => 'Mock group',
+                        'members'     => [
+                          {
+                            'value'   => 'f648f8d5ea4e4cd38e9c',
+                            'display' => 'Fred Smith',
+                            'type'    => 'User'
+                          }
+                        ]
+                      }.with_indifferent_case_insensitive_access()
+
+                      @instance.send(
+                        :from_patch_backend!,
+                        nature:        'remove',
+                        path:          path,
+                        value:         value,
+                        altering_hash: scim_hash
+                      )
+
+                      # Type 'Group' mismatches 'User', so the user was not
+                      # removed.
+                      #
+                      expect(scim_hash).to eql({
+                        'displayname' => 'Mock group',
+                        'members'     => [
+                          {
+                            'value'   => 'f648f8d5ea4e4cd38e9c',
+                            'display' => 'Fred Smith',
+                            'type'    => 'User'
+                          }
+                        ]
+                      })
+                    end
+
+                    it 'matches keys case-insensitive' do
+                      path      = [ 'members' ]
+                      value     = [ { '$ref' => nil, 'VALUe' => 'f648f8d5ea4e4cd38e9c' } ]
+                      scim_hash = {
+                        'displayname' => 'Mock group',
+                        'memBERS'     => [
+                          {
+                            'vaLUe'   => 'f648f8d5ea4e4cd38e9c',
+                            'display' => 'Fred Smith',
+                            'type'    => 'User'
+                          }
+                        ]
+                      }.with_indifferent_case_insensitive_access()
+
+                      @instance.send(
+                        :from_patch_backend!,
+                        nature:        'remove',
+                        path:          path,
+                        value:         value,
+                        altering_hash: scim_hash
+                      )
+
+                      expect(scim_hash).to eql({
+                        'displayname' => 'Mock group',
+                        'members'     => []
+                      })
+                    end
+
+                    it 'matches values case-sensitive' do
+                      path      = [ 'members' ]
+                      value     = [ { '$ref' => nil, 'value' => 'f648f8d5ea4e4cd38e9c', 'type' => 'USER' } ]
+                      scim_hash = {
+                        'displayname' => 'Mock group',
+                        'members'     => [
+                          {
+                            'value'   => 'f648f8d5ea4e4cd38e9c',
+                            'display' => 'Fred Smith',
+                            'type'    => 'User'
+                          }
+                        ]
+                      }.with_indifferent_case_insensitive_access()
+
+                      @instance.send(
+                        :from_patch_backend!,
+                        nature:        'remove',
+                        path:          path,
+                        value:         value,
+                        altering_hash: scim_hash
+                      )
+
+                      # USER mismatchs User, so the user was not removed.
+                      #
+                      expect(scim_hash).to eql({
+                        'displayname' => 'Mock group',
+                        'members'     => [
+                          {
+                            'value'   => 'f648f8d5ea4e4cd38e9c',
+                            'display' => 'Fred Smith',
+                            'type'    => 'User'
+                          }
+                        ]
+                      })
+                    end
+                  end # "context 'removing a user from a group' do"
+
+                  context 'generic use' do
+                    it 'removes matched items' do
+                      path      = [ 'emails' ]
+                      value     = [ { 'type' => 'work' } ]
+                      scim_hash = {
+                        'emails' => [
+                          {
+                            'type' => 'home',
+                            'value' => 'home@test.com'
+                          },
+                          {
+                            'type' => 'work',
+                            'value' => 'work@test.com'
+                          }
+                        ]
+                      }.with_indifferent_case_insensitive_access()
+
+                      @instance.send(
+                        :from_patch_backend!,
+                        nature:        'remove',
+                        path:          path,
+                        value:         value,
+                        altering_hash: scim_hash
+                      )
+
+                      expect(scim_hash).to eql({
+                        'emails' => [
+                          {
+                            'type' => 'home',
+                            'value' => 'home@test.com'
+                          }
+                        ]
+                      })
+                    end
+
+                    it 'ignores unmatched items' do
+                      path      = [ 'emails' ]
+                      value     = [ { 'type' => 'missing' } ]
+                      scim_hash = {
+                        'emails' => [
+                          {
+                            'type' => 'home',
+                            'value' => 'home@test.com'
+                          },
+                          {
+                            'type' => 'work',
+                            'value' => 'work@test.com'
+                          }
+                        ]
+                      }.with_indifferent_case_insensitive_access()
+
+                      @instance.send(
+                        :from_patch_backend!,
+                        nature:        'remove',
+                        path:          path,
+                        value:         value,
+                        altering_hash: scim_hash
+                      )
+
+                      expect(scim_hash).to eql({
+                        'emails' => [
+                          {
+                            'type' => 'home',
+                            'value' => 'home@test.com'
+                          },
+                          {
+                            'type' => 'work',
+                            'value' => 'work@test.com'
+                          }
+                        ]
+                      })
+                    end
+
+                    it 'compares string forms' do
+                      path      = [ 'test' ]
+                      value     = [
+                        { 'active' => true,    'value' => '12' },
+                        { 'active' => 'false', 'value' => 42   }
+                      ]
+                      scim_hash = {
+                        'test' => [
+                          {
+                            'active' => 'true',
+                            'value' => 12
+                          },
+                          {
+                            'active' => false,
+                            'value' => '42'
+                          }
+                        ]
+                      }.with_indifferent_case_insensitive_access()
+
+                      @instance.send(
+                        :from_patch_backend!,
+                        nature:        'remove',
+                        path:          path,
+                        value:         value,
+                        altering_hash: scim_hash
+                      )
+
+                      expect(scim_hash).to eql({'test' => []})
+                    end
+
+                    it 'handles a singular to-remove value rather than an array' do
+                      path      = [ 'emails' ]
+                      value     = { 'type' => 'work' }
+                      scim_hash = {
+                        'emails' => [
+                          {
+                            'type' => 'home',
+                            'value' => 'home@test.com'
+                          },
+                          {
+                            'type' => 'work',
+                            'value' => 'work@test.com'
+                          }
+                        ]
+                      }.with_indifferent_case_insensitive_access()
+
+                      @instance.send(
+                        :from_patch_backend!,
+                        nature:        'remove',
+                        path:          path,
+                        value:         value,
+                        altering_hash: scim_hash
+                      )
+
+                      expect(scim_hash).to eql({
+                        'emails' => [
+                          {
+                            'type' => 'home',
+                            'value' => 'home@test.com'
+                          }
+                        ]
+                      })
+                    end
+
+                    it 'handles simple values rather than object (Hash) values' do
+                      path      = [ 'test' ]
+                      value     = 42
+                      scim_hash = {
+                        'test' => [
+                          '21',
+                          '42',
+                          '15'
+                        ]
+                      }.with_indifferent_case_insensitive_access()
+
+                      @instance.send(
+                        :from_patch_backend!,
+                        nature:        'remove',
+                        path:          path,
+                        value:         value,
+                        altering_hash: scim_hash
+                      )
+
+                      expect(scim_hash).to eql({
+                        'test' => [
+                          '21',
+                          '15'
+                        ]
+                      })
+                    end
+                  end
+                end # "context 'Microsoft-style payload' do"
+
+                # https://help.salesforce.com/s/articleView?id=sf.identity_scim_manage_groups.htm&type=5
+                #
+                context 'Salesforce-style payload' do
+                  it 'removes identified user' do
+                    path      = [ 'members' ]
+                    value     = { 'members' => [ { '$ref' => nil, 'value' => 'f648f8d5ea4e4cd38e9c' } ] }
+                    scim_hash = {
+                      'displayname' => 'Mock group',
+                      'members'     => [
+                        {
+                          'value'   => '50ca93d04ab0c2de4772',
+                          'display' => 'Ingrid Smith',
+                          'type'    => 'User'
+                        },
+                        {
+                          'value'   => 'f648f8d5ea4e4cd38e9c',
+                          'display' => 'Fred Smith',
+                          'type'    => 'User'
+                        }
+                      ]
+                    }.with_indifferent_case_insensitive_access()
+
+                    @instance.send(
+                      :from_patch_backend!,
+                      nature:        'remove',
+                      path:          path,
+                      value:         value,
+                      altering_hash: scim_hash
+                    )
+
+                    expect(scim_hash).to eql({
+                      'displayname' => 'Mock group',
+                      'members'     => [
+                        {
+                          'value'   => '50ca93d04ab0c2de4772',
+                          'display' => 'Ingrid Smith',
+                          'type'    => 'User'
+                        }
+                      ]
+                    })
+                  end
+
+                  it 'matches the "members" key case-insensitive' do
+                    path      = [ 'members' ]
+                    value     = { 'MEMBERS' => [ { '$ref' => nil, 'value' => 'f648f8d5ea4e4cd38e9c' } ] }
+                    scim_hash = {
+                      'displayname' => 'Mock group',
+                      'members'     => [
+                        {
+                          'value'   => 'f648f8d5ea4e4cd38e9c',
+                          'display' => 'Fred Smith',
+                          'type'    => 'User'
+                        },
+                        {
+                          'value'   => 'a774d480e8112101375b',
+                          'display' => 'Taylor Smith',
+                          'type'    => 'User'
+                        }
+                      ]
+                    }.with_indifferent_case_insensitive_access()
+
+                    @instance.send(
+                      :from_patch_backend!,
+                      nature:        'remove',
+                      path:          path,
+                      value:         value,
+                      altering_hash: scim_hash
+                    )
+
+                    expect(scim_hash).to eql({
+                      'displayname' => 'Mock group',
+                      'members'     => [
+                        {
+                          'value'   => 'a774d480e8112101375b',
+                          'display' => 'Taylor Smith',
+                          'type'    => 'User'
+                        }
+                      ]
+                    })
+                  end
+
+                  it 'ignores unrecognised users' do
+                    path      = [ 'members' ]
+                    value     = { 'members' => [ { '$ref' => nil, 'value' => '11b054a9c85216ed9356' } ] }
+                    scim_hash = {
+                      'displayname' => 'Mock group',
+                      'members'     => [
+                        {
+                          'value'   => 'f648f8d5ea4e4cd38e9c',
+                          'display' => 'Fred Smith',
+                          'type'    => 'User'
+                        }
+                      ]
+                    }.with_indifferent_case_insensitive_access()
+
+                    @instance.send(
+                      :from_patch_backend!,
+                      nature:        'remove',
+                      path:          path,
+                      value:         value,
+                      altering_hash: scim_hash
+                    )
+
+                    # The 'value' mismatched, so the user was not removed.
+                    #
+                    expect(scim_hash).to eql({
+                      'displayname' => 'Mock group',
+                      'members'     => [
+                        {
+                          'value'   => 'f648f8d5ea4e4cd38e9c',
+                          'display' => 'Fred Smith',
+                          'type'    => 'User'
+                        }
+                      ]
+                    })
+                  end
+                end # "context 'Salesforce-style payload' do"
+              end # "context 'special cases' do"
             end # context 'when prior value already exists' do
 
             context 'when value is not present' do
@@ -1747,6 +2411,24 @@ RSpec.describe Scimitar::Resources::Mixin do
                 expect(scim_hash['emails'][0]['type' ]).to eql('work')
                 expect(scim_hash['emails'][0]['value']).to eql('work@test.com')
               end
+
+              context 'when prior value already exists, and no path' do
+                it 'simple value: overwrites' do
+                  path      = [ 'root' ]
+                  scim_hash = { 'root' => { 'userName' => 'bar', 'active' => true } }.with_indifferent_case_insensitive_access()
+
+                  @instance.send(
+                    :from_patch_backend!,
+                    nature:        'replace',
+                    path:          path,
+                    value:         { 'active' => false }.with_indifferent_case_insensitive_access(),
+                    altering_hash: scim_hash
+                  )
+
+                  expect(scim_hash['root']['userName']).to eql('bar')
+                  expect(scim_hash['root']['active']).to eql(false)
+                end
+              end
             end # context 'when value is not present' do
           end # "context 'replace' do"
 
@@ -1908,7 +2590,7 @@ RSpec.describe Scimitar::Resources::Mixin do
                 :from_patch_backend!,
                 nature:        'remove',
                 path:          ['complex[type eq "type1"]', 'data', 'nested[nature eq "nature2"]', 'info'],
-                value:         [{ 'deeper' => 'addition' }],
+                value:         nil,
                 altering_hash: scim_hash
               )
 
@@ -2003,6 +2685,14 @@ RSpec.describe Scimitar::Resources::Mixin do
       #
       context 'public interface' do
         shared_examples 'a patcher' do | force_upper_case: |
+          it 'gives the user a comprehensible error when operations are missing' do
+            patch = { 'schemas' => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'] }
+
+            expect do
+              @instance.from_scim_patch!(patch_hash: patch)
+            end.to raise_error Scimitar::InvalidSyntaxError, "Missing PATCH \"operations\""
+          end
+
           it 'which updates simple values' do
             @instance.update!(username: 'foo')
 
@@ -2043,6 +2733,38 @@ RSpec.describe Scimitar::Resources::Mixin do
 
             @instance.from_scim_patch!(patch_hash: patch)
             expect(@instance.first_name).to eql('Baz')
+          end
+
+          # Note odd ":" separating schema ID from first attribute, although
+          # the nature of JSON rendering / other payloads might lead you to
+          # expect a "." as with any other path component.
+          #
+          # Note the ":" separating the schema ID (URN) from the attribute.
+          # The nature of JSON rendering / other payloads might lead you to
+          # expect a "." as with any complex types, but that's not the case;
+          # see https://tools.ietf.org/html/rfc7644#section-3.10, or
+          # https://tools.ietf.org/html/rfc7644#section-3.5.2 of which in
+          # particular, https://tools.ietf.org/html/rfc7644#page-35.
+          #
+          it 'which updates attributes defined by extension schema' do
+            @instance.update!(department: 'SOMEDPT')
+
+            path = 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:department'
+            path = path.upcase if force_upper_case
+
+            patch = {
+              'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+              'Operations' => [
+                {
+                  'op'    => 'replace',
+                  'path'  => path,
+                  'value' => 'OTHERDPT'
+                }
+              ]
+            }
+
+            @instance.from_scim_patch!(patch_hash: patch)
+            expect(@instance.department).to eql('OTHERDPT')
           end
 
           it 'which updates with filter match' do

@@ -1,7 +1,6 @@
 require 'spec_helper'
 
 RSpec.describe Scimitar::Resources::Base do
-
   context '#valid?' do
     MyCustomSchema = Class.new(Scimitar::Schema::Base) do
       def self.id
@@ -21,6 +20,9 @@ RSpec.describe Scimitar::Resources::Base do
           ),
           Scimitar::Schema::Attribute.new(
             name: 'complexNames', complexType: Scimitar::ComplexTypes::Name, multiValued:true, required: false
+          ),
+          Scimitar::Schema::Attribute.new(
+            name: 'vdtpTestByEmail', complexType: Scimitar::ComplexTypes::Email, required: false
           )
         ]
       end
@@ -57,5 +59,28 @@ RSpec.describe Scimitar::Resources::Base do
       expect(resource.valid?).to be(false)
       expect(resource.errors.full_messages).to match_array(["Complexnames has to follow the complexType format.", "Complexnames familyname has the wrong type. It has to be a(n) string."])
     end
-  end
+
+    context 'configuration of required values in VDTP schema' do
+      around :each do | example |
+        original_configuration = Scimitar.engine_configuration.optional_value_fields_required
+        Scimitar::Schema::Email.instance_variable_set('@scim_attributes', nil)
+        example.run()
+      ensure
+        Scimitar.engine_configuration.optional_value_fields_required = original_configuration
+        Scimitar::Schema::Email.instance_variable_set('@scim_attributes', nil)
+      end
+
+      it 'requires a value by default' do
+        resource = MyCustomResource.new(vdtpTestByEmail: { value: nil }, enforce: false)
+        expect(resource.valid?).to be(false)
+        expect(resource.errors.full_messages).to match_array(['Vdtptestbyemail value is required'])
+      end
+
+      it 'can be configured for optional values' do
+        Scimitar.engine_configuration.optional_value_fields_required = false
+        resource = MyCustomResource.new(vdtpTestByEmail: { value: nil }, enforce: false)
+        expect(resource.valid?).to be(true)
+      end
+    end # "context 'configuration of required values in VDTP schema' do"
+  end # "context '#valid?' do"
 end

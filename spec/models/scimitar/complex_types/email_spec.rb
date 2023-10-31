@@ -18,6 +18,4 @@ RSpec.describe Scimitar::ComplexTypes::Email do
       expect(described_class.new(value: 'a@b.c').as_json).to eq('value' => 'a@b.c')
     end
   end
-
 end
-

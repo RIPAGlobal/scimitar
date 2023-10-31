@@ -220,13 +220,8 @@ module Scimitar
     # allow for different client searching "styles", given ambiguities in RFC
     # 7644 filter examples).
     #
-    # Each value is a Hash with Symbol keys ':column', naming just one simple
-    # column for a mapping; ':columns', with an Array of column names that you
-    # want to map using 'OR' for a single search on the corresponding SCIM
-    # attribute; or ':ignore' with value 'true', which means that a fitler on
-    # the matching attribute is ignored rather than resulting in an "invalid
-    # filter" exception - beware possibilities for surprised clients getting a
-    # broader result set than expected. Example:
+    # Each value is a hash of queryable SCIM attribute options, described
+    # below - for example:
     #
     #     def self.scim_queryable_attributes
     #       return {
@@ -234,9 +229,26 @@ module Scimitar
     #         'name.familyName' => { column: :last_name  },
     #         'emails'          => { columns: [ :work_email_address, :home_email_address ] },
     #         'emails.value'    => { columns: [ :work_email_address, :home_email_address ] },
-    #         'emails.type'     => { ignore: true }
+    #         'emails.type'     => { ignore: true },
+    #         'groups.value'    => { column: Group.arel_table[:id] }
     #       }
     #     end
+    #
+    # Column references can be either a Symbol representing a column within
+    # the resource model table, or an <tt>Arel::Attribute</tt> instance via
+    # e.g. <tt>MyModel.arel_table[:my_column]</tt>.
+    #
+    # === Queryable SCIM attribute options
+    #
+    # +:column+::  Just one simple column for a mapping.
+    #
+    # +:columns+:: An Array of columns that you want to map using 'OR' for a
+    #              single search of the corresponding entity.
+    #
+    # +:ignore+::  When set to +true+, the matching attribute is ignored rather
+    #              than resulting in an "invalid filter" exception. Beware
+    #              possibilities for surprised clients getting a broader result
+    #              set than expected, since a constraint may have been ignored.
     #
     # Filtering is currently limited and searching within e.g. arrays of data
     # is not supported; only simple top-level keys can be mapped.
@@ -406,8 +418,11 @@ module Scimitar
         def from_scim_patch!(patch_hash:)
           frozen_ci_patch_hash = patch_hash.with_indifferent_case_insensitive_access().freeze()
           ci_scim_hash         = self.to_scim(location: '(unused)').as_json().with_indifferent_case_insensitive_access()
+          operations           = frozen_ci_patch_hash['operations']
 
-          frozen_ci_patch_hash['operations'].each do |operation|
+          raise Scimitar::InvalidSyntaxError.new("Missing PATCH \"operations\"") unless operations
+
+          operations.each do |operation|
             nature   = operation['op'   ]&.downcase
             path_str = operation['path' ]
             value    = operation['value']
@@ -443,9 +458,30 @@ module Scimitar
               ci_scim_hash = { 'root' => ci_scim_hash }.with_indifferent_case_insensitive_access()
             end
 
+            # Handle extension schema. Contributed by @bettysteger and
+            # @MorrisFreeman via:
+            #
+            #   https://github.com/RIPAGlobal/scimitar/issues/48
+            #   https://github.com/RIPAGlobal/scimitar/pull/49
+            #
+            # Note the ":" separating the schema ID (URN) from the attribute.
+            # The nature of JSON rendering / other payloads might lead you to
+            # expect a "." as with any complex types, but that's not the case;
+            # see https://tools.ietf.org/html/rfc7644#section-3.10, or
+            # https://tools.ietf.org/html/rfc7644#section-3.5.2 of which in
+            # particular, https://tools.ietf.org/html/rfc7644#page-35.
+            #
+            paths = []
+            self.class.scim_resource_type.extended_schemas.each do |schema|
+              path_str.downcase.split(schema.id.downcase + ':').drop(1).each do |path|
+                paths += [schema.id] + path.split('.')
+              end
+            end
+            paths = path_str.split('.') if paths.empty?
+
             self.from_patch_backend!(
               nature:        nature,
-              path:          (path_str || '').split('.'),
+              path:          paths,
               value:         value,
               altering_hash: ci_scim_hash
             )
@@ -616,7 +652,19 @@ module Scimitar
                 attrs_map_or_leaf_value.each do | scim_attribute, sub_attrs_map_or_leaf_value |
                   next if scim_attribute&.to_s&.downcase == 'id' && path.empty?
 
-                  sub_scim_hash_or_leaf_value = scim_hash_or_leaf_value&.dig(scim_attribute.to_s)
+                  # Handle extension schema. Contributed by @bettysteger and
+                  # @MorrisFreeman via:
+                  #
+                  #   https://github.com/RIPAGlobal/scimitar/issues/48
+                  #   https://github.com/RIPAGlobal/scimitar/pull/49
+                  #
+                  attribute_tree = []
+                  resource_class.extended_schemas.each do |schema|
+                    attribute_tree << schema.id and break if schema.scim_attributes.any? { |attribute| attribute.name == scim_attribute.to_s }
+                  end
+                  attribute_tree << scim_attribute.to_s
+
+                  sub_scim_hash_or_leaf_value = scim_hash_or_leaf_value&.dig(*attribute_tree)
 
                   self.from_scim_backend!(
                     attrs_map_or_leaf_value: sub_attrs_map_or_leaf_value,
@@ -901,10 +949,86 @@ module Scimitar
                   else
                     altering_hash[path_component] = value
                   end
+
                 when 'replace'
-                  altering_hash[path_component] = value
+                  if path_component == 'root'
+                    altering_hash[path_component].merge!(value)
+                  else
+                    altering_hash[path_component] = value
+                  end
+
+                # The array check handles payloads seen from e.g. Microsoft for
+                # remove-user-from-group, where contrary to examples in the RFC
+                # which would imply "payload removes all users", there is the
+                # clear intent to remove just one.
+                #
+                # https://tools.ietf.org/html/rfc7644#section-3.5.2.2
+                # https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/use-scim-to-provision-users-and-groups#update-group-remove-members
+                #
+                # Since remove-all in the face of remove-one is destructive, we
+                # do a special check here to see if there's an array value for
+                # the array path that the payload yielded. If so, we can match
+                # each value against array items and remove just those items.
+                #
+                # There is an additional special case to handle a bad example
+                # from Salesforce:
+                #
+                #   https://help.salesforce.com/s/articleView?id=sf.identity_scim_manage_groups.htm&type=5
+                #
                 when 'remove'
-                  altering_hash.delete(path_component)
+                  if altering_hash[path_component].is_a?(Array) && value.present?
+
+                    # Handle bad Salesforce example. That might be simply a
+                    # documentation error, but just in case...
+                    #
+                    value = value.values.first if (
+                      path_component&.downcase == 'members' &&
+                      value.is_a?(Hash)                     &&
+                      value.keys.size == 1                  &&
+                      value.keys.first&.downcase == 'members'
+                    )
+
+                    # The Microsoft example provides an array of values, but we
+                    # may as well cope with a value specified 'flat'. Promote
+                    # such a thing to an Array to simplify the following code.
+                    #
+                    value = [value] unless value.is_a?(Array)
+
+                    # For each value item, delete matching array entries. The
+                    # concept of "matching" is:
+                    #
+                    # * For simple non-Hash values (if possible) just delete on
+                    #   an exact match
+                    #
+                    # * For Hash-based values, only delete if all 'patch' keys
+                    #   are present in the resource and all values thus match.
+                    #
+                    # Special case to ignore '$ref' from the Microsoft payload.
+                    #
+                    # Note coercion to strings to account for SCIM vs the usual
+                    # tricky case of underlying implementations with (say)
+                    # integer primary keys, which all end up as strings anyway.
+                    #
+                    value.each do | value_item |
+                      altering_hash[path_component].delete_if do | item |
+                        if item.is_a?(Hash) && value_item.is_a?(Hash)
+                          matched_all = true
+                          value_item.each do | value_key, value_value |
+                            next if value_key == '$ref'
+                            if ! item.key?(value_key) || item[value_key]&.to_s != value_value&.to_s
+                              matched_all = false
+                            end
+                          end
+                          matched_all
+                        else
+                          item&.to_s == value_item&.to_s
+                        end
+                      end
+                    end
+                  else
+                    altering_hash.delete(path_component)
+                  end
+
               end
             end
           end

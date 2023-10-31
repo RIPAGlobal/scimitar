@@ -1,11 +1,13 @@
 class MockUser < ActiveRecord::Base
 
+  self.primary_key = :primary_key
+
   # ===========================================================================
   # TEST ATTRIBUTES - see db/migrate/20210304014602_create_mock_users.rb etc.
   # ===========================================================================
 
   READWRITE_ATTRS = %w{
-    id
+    primary_key
     scim_uid
     username
     first_name
@@ -13,6 +15,9 @@ class MockUser < ActiveRecord::Base
     work_email_address
     home_email_address
     work_phone_number
+    organization
+    department
+    mock_groups
   }
 
   has_and_belongs_to_many :mock_groups
@@ -38,7 +43,7 @@ class MockUser < ActiveRecord::Base
 
   def self.scim_attributes_map
     return {
-      id:         :id,
+      id:         :primary_key,
       externalId: :scim_uid,
       userName:   :username,
       name:       {
@@ -82,7 +87,23 @@ class MockUser < ActiveRecord::Base
           }
         }
       ],
-      active: :is_active
+      active: :is_active,
+
+      # Custom extension schema - see configuration in
+      # "spec/apps/dummy/config/initializers/scimitar.rb".
+      #
+      organization: :organization,
+      department:   :department,
+      userGroups: [
+        {
+          list:      :mock_groups,
+          find_with: ->(value) { MockGroup.find(value["value"]) },
+          using: {
+            value:   :id,
+            display: :display_name
+          }
+        }
+      ]
     }
   end
 
@@ -92,11 +113,16 @@ class MockUser < ActiveRecord::Base
 
   def self.scim_queryable_attributes
     return {
-      'name.givenName'  => { column: :first_name },
-      'name.familyName' => { column: :last_name  },
-      'emails'          => { columns: [ :work_email_address, :home_email_address ] },
-      'emails.value'    => { columns: [ :work_email_address, :home_email_address ] },
-      'emails.type'     => { ignore: true } # We can't filter on that; it'll just search all e-mails
+      'id'                => { column: :primary_key },
+      'externalId'        => { column: :scim_uid },
+      'meta.lastModified' => { column: :updated_at },
+      'name.givenName'    => { column: :first_name },
+      'name.familyName'   => { column: :last_name  },
+      'groups'            => { column: MockGroup.arel_table[:id] },
+      'groups.value'      => { column: MockGroup.arel_table[:id] },
+      'emails'            => { columns: [ :work_email_address, :home_email_address ] },
+      'emails.value'      => { columns: [ :work_email_address, :home_email_address ] },
+      'emails.type'       => { ignore: true } # We can't filter on that; it'll just search all e-mails
     }
   end
 
