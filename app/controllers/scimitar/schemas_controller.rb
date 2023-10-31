@@ -4,6 +4,11 @@ module Scimitar
   class SchemasController < ApplicationController
     def index
       schemas = Scimitar::Engine.schemas
+
+      schemas.each do |schema|
+        schema.meta.location = scim_schemas_url(name: schema.id)
+      end
+
       schemas_by_id = schemas.reduce({}) do |hash, schema|
         hash[schema.id] = schema
         hash
