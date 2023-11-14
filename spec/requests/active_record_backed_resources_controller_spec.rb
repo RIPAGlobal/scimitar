@@ -5,8 +5,6 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
   before :each do
     allow_any_instance_of(Scimitar::ApplicationController).to receive(:authenticated?).and_return(true)
 
-    lmt = Time.parse("2023-01-09 14:25:00 +1300")
-
     # If a sort order is unspecified, the controller defaults to ID ascending.
     # With UUID based IDs, testing life is made easier by ensuring that the
     # creation order matches an ascending UUID sort order (which is what would
@@ -282,7 +280,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         it 'with minimal parameters' do
           mock_before = MockUser.all.to_a
 
-          attributes = { userName: '4' }  # Minimum required by schema
+          attributes = { userName: '4' } # Minimum required by schema
           attributes = spec_helper_hupcase(attributes) if force_upper_case
 
           expect_any_instance_of(MockUsersController).to receive(:create).once.and_call_original
@@ -337,7 +335,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           expect(response.status).to eql(201)
           result = JSON.parse(response.body)
 
-          expect(result['id']).to eql(new_mock.primary_key.to_s)
+          expect(result['id']).to eql(new_mock.id.to_s)
           expect(result['meta']['resourceType']).to eql('User')
           expect(new_mock.username).to eql('4')
           expect(new_mock.first_name).to eql('Given')
@@ -398,6 +396,22 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
       expect(result['scimType']).to eql('invalidValue')
       expect(result['detail']).to include('is reserved')
+    end
+
+    it 'invokes a block if given one' do
+      mock_before = MockUser.all.to_a
+      attributes = { userName: '5' } # Minimum required by schema
+
+      expect_any_instance_of(CustomSaveMockUsersController).to receive(:create).once.and_call_original
+      expect {
+        post "/CustomSaveUsers", params: attributes.merge(format: :scim)
+      }.to change { MockUser.count }.by(1)
+
+      mock_after = MockUser.all.to_a
+      new_mock = (mock_after - mock_before).first
+
+      expect(response.status).to eql(201)
+      expect(new_mock.username).to eql(CustomSaveMockUsersController::CUSTOM_SAVE_BLOCK_USERNAME_INDICATOR)
     end
   end # "context '#create' do"
 

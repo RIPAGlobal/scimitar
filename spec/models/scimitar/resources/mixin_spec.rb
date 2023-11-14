@@ -160,13 +160,14 @@ RSpec.describe Scimitar::Resources::Mixin do
 
     context '#to_scim' do
       context 'with a UUID, renamed primary key column' do
-        it 'compiles instance attribute values into a SCIM representation' do
+        it 'compiles instance attribute values into a SCIM representation, but omits do-not-return fields' do
           uuid                        = SecureRandom.uuid
 
           instance                    = MockUser.new
           instance.primary_key        = uuid
           instance.scim_uid           = 'AA02984'
           instance.username           = 'foo'
+          instance.password           = 'correcthorsebatterystaple'
           instance.first_name         = 'Foo'
           instance.last_name          = 'Bar'
           instance.work_email_address = 'foo.bar@test.com'
@@ -404,6 +405,7 @@ RSpec.describe Scimitar::Resources::Mixin do
           it 'ignoring read-only lists' do
             hash = {
               'userName'     => 'foo',
+              'password'     => 'staplebatteryhorsecorrect',
               'name'         => {'givenName' => 'Foo', 'familyName' => 'Bar'},
               'active'       => true,
               'emails'       => [{'type' => 'work',  'primary' => true,  'value' => 'foo.bar@test.com'}],
@@ -428,6 +430,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
             expect(instance.scim_uid          ).to eql('AA02984')
             expect(instance.username          ).to eql('foo')
+            expect(instance.password          ).to eql('staplebatteryhorsecorrect')
             expect(instance.first_name        ).to eql('Foo')
             expect(instance.last_name         ).to eql('Bar')
             expect(instance.work_email_address).to eql('foo.bar@test.com')

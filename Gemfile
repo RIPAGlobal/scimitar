@@ -5,4 +5,9 @@ source "https://rubygems.org"
 #
 gem 'sdoc', :git => 'https://github.com/pond/sdoc.git', :branch => 'master'
 
+group :test do
+  gem 'pry'
+  gem 'pry-nav'
+end
+
 gemspec

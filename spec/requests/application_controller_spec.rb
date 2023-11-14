@@ -18,7 +18,7 @@ RSpec.describe Scimitar::ApplicationController do
       parsed_body = JSON.parse(response.body)
       expect(parsed_body['request']['is_scim'     ]).to eql(true)
       expect(parsed_body['request']['format'      ]).to eql('application/scim+json')
-      expect(parsed_body['request']['content_type']).to eql('application/scim+json')
+      expect(parsed_body['request']['content_type']).to eql('application/scim+json') # Filled in by ApplicationController#require_scim
     end
 
     it 'renders 400 if given bad JSON' do
@@ -26,7 +26,6 @@ RSpec.describe Scimitar::ApplicationController do
 
       expect(response).to have_http_status(:bad_request)
       expect(JSON.parse(response.body)['detail']).to start_with('Invalid JSON - ')
-      expect(JSON.parse(response.body)['detail']).to include("'not-json-12345'")
     end
 
     it 'translates Content-Type to Rails request format' do

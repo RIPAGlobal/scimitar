@@ -1,5 +1,7 @@
 class MockUser < ActiveRecord::Base
 
+  self.primary_key = :primary_key
+
   # ===========================================================================
   # TEST ATTRIBUTES - see db/migrate/20210304014602_create_mock_users.rb etc.
   # ===========================================================================
@@ -8,6 +10,7 @@ class MockUser < ActiveRecord::Base
     primary_key
     scim_uid
     username
+    password
     first_name
     last_name
     work_email_address
@@ -44,6 +47,7 @@ class MockUser < ActiveRecord::Base
       id:         :primary_key,
       externalId: :scim_uid,
       userName:   :username,
+      password:   :password,
       name:       {
         givenName:  :first_name,
         familyName: :last_name

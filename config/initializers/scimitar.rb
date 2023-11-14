@@ -38,9 +38,10 @@ Rails.application.config.to_prepare do # (required for >= Rails 7 / Zeitwerk)
   Scimitar.engine_configuration = Scimitar::EngineConfiguration.new({
 
     # If you have filters you want to run for any Scimitar action/route, you
-    # can define them here. For example, you might use a before-action to set
-    # up some multi-tenancy related state, or skip Rails CSRF token
-    # verification. For example:
+    # can define them here. You can also override any shared controller methods
+    # here. For example, you might use a before-action to set up some
+    # multi-tenancy related state, skip Rails CSRF token verification, or
+    # customise how Scimitar generates URLs:
     #
     #     application_controller_mixin: Module.new do
     #       def self.included(base)
@@ -53,6 +54,10 @@ Rails.application.config.to_prepare do # (required for >= Rails 7 / Zeitwerk)
     #           skip_before_action    :verify_authenticity_token
     #           prepend_before_action :setup_some_kind_of_multi_tenancy_data
     #         end
+    #       end
+    #
+    #       def scim_schemas_url(options)
+    #         super(custom_param: 'value', **options)
     #       end
     #     end, # ...other configuration entries might follow...
 

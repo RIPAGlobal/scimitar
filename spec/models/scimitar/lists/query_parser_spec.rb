@@ -405,7 +405,7 @@ RSpec.describe Scimitar::Lists::QueryParser do
       query = @instance.to_activerecord_query(MockUser.all)
 
       expect(query.count).to eql(1)
-      expect(query.pluck(:primary_key)).to eql([user_1.id])
+      expect(query.pluck(:primary_key)).to eql([user_1.primary_key])
 
       @instance.parse('name.givenName sw J') # First name starts with 'J'
       query = @instance.to_activerecord_query(MockUser.all)

@@ -14,7 +14,10 @@ RSpec.describe Scimitar::Resources::Base do
           ),
           Scimitar::Schema::Attribute.new(
             name: 'names', multiValued: true, complexType: Scimitar::ComplexTypes::Name, required: false
-          )
+          ),
+          Scimitar::Schema::Attribute.new(
+            name: 'privateName', complexType: Scimitar::ComplexTypes::Name, required: false, returned: false
+          ),
         ]
       end
     end
@@ -30,6 +33,10 @@ RSpec.describe Scimitar::Resources::Base do
             name: {
               givenName:  'John',
               familyName: 'Smith'
+            },
+            privateName: {
+              givenName:  'Alt John',
+              familyName: 'Alt Smith'
             }
           }
 
@@ -39,6 +46,9 @@ RSpec.describe Scimitar::Resources::Base do
           expect(resource.name.is_a?(Scimitar::ComplexTypes::Name)).to be(true)
           expect(resource.name.givenName).to eql('John')
           expect(resource.name.familyName).to eql('Smith')
+          expect(resource.privateName.is_a?(Scimitar::ComplexTypes::Name)).to be(true)
+          expect(resource.privateName.givenName).to eql('Alt John')
+          expect(resource.privateName.familyName).to eql('Alt Smith')
         end
 
         it 'which builds an array of nested resources' do
@@ -101,14 +111,38 @@ RSpec.describe Scimitar::Resources::Base do
     context '#as_json' do
       it 'renders the json with the resourceType' do
         resource = CustomResourse.new(name: {
-          givenName: 'John',
+          givenName:  'John',
           familyName: 'Smith'
         })
 
         result = resource.as_json
-        expect(result['schemas']).to eql(['custom-id'])
+
+        expect(result['schemas']             ).to eql(['custom-id'])
         expect(result['meta']['resourceType']).to eql('CustomResourse')
-        expect(result['errors']).to be_nil
+        expect(result['errors']              ).to be_nil
+      end
+
+      it 'excludes attributes that are flagged as do-not-return' do
+        resource = CustomResourse.new(
+          name: {
+            givenName:  'John',
+            familyName: 'Smith'
+          },
+          privateName: {
+            givenName:  'Alt John',
+            familyName: 'Alt Smith'
+          }
+        )
+
+        result = resource.as_json
+
+        expect(result['schemas']             ).to eql(['custom-id'])
+        expect(result['meta']['resourceType']).to eql('CustomResourse')
+        expect(result['errors']              ).to be_nil
+        expect(result['name']                ).to be_present
+        expect(result['name']['givenName']   ).to eql('John')
+        expect(result['name']['familyName']  ).to eql('Smith')
+        expect(result['privateName']         ).to be_present
       end
     end # "context '#as_json' do"
 
