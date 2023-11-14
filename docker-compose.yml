@@ -1,0 +1,26 @@
+version: '2.3'
+services:
+  postgresql:
+    image: postgres:15
+    ports:
+      - 5432
+    environment:
+      - POSTGRES_PASSWORD=Sup3rSecr1tPasw8rd
+      - POSTGRES_USER=postgres
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgresql:/var/lib/postgresql/data
+
+  test:
+    build: ./
+    volumes:
+      - .:/app
+    depends_on:
+      - postgresql
+    command: 'bin/test'
+    environment:
+      - RAILS_ENV=test
+      - DATABASE_URL=postgresql://postgres:Sup3rSecr1tPasw8rd@postgresql:5432/scimitar-test
+
+volumes:
+  postgresql:
