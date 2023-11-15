@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.email       = ['dev@ripaglobal.com']
   s.license     = 'MIT'
 
-  s.files       = Dir['{app,config,db,lib}/**/*', 'MIT-LICENSE', 'Rakefile', 'README.rdoc']
+  s.files       = Dir['{app,config,db,lib}/**/*', 'LICENSE.txt', 'Rakefile', 'README.md']
   s.test_files  = Dir.glob('spec/**/*.rb')
   s.homepage    = 'https://www.ripaglobal.com/'
 
