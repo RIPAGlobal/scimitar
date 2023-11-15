@@ -124,8 +124,13 @@ module Scimitar
         #
         # https://stackoverflow.com/questions/10239970/what-is-the-delimiter-for-www-authenticate-for-multiple-schemes
         #
-        response.set_header('WWW_AUTHENTICATE', 'Basic' ) if Scimitar.engine_configuration.basic_authenticator.present?
-        response.set_header('WWW_AUTHENTICATE', 'Bearer') if Scimitar.engine_configuration.token_authenticator.present?
+        response.set_header('WWW-Authenticate', 'Basic' ) if Scimitar.engine_configuration.basic_authenticator.present?
+        response.set_header('WWW-Authenticate', 'Bearer') if Scimitar.engine_configuration.token_authenticator.present?
+
+        # No matter what a caller might request via headers, the only content
+        # type we can ever respond with is JSON-for-SCIM.
+        #
+        response.set_header('Content-Type', "#{Mime::Type.lookup_by_extension(:scim)}; charset=utf-8")
       end
 
       def authenticate
