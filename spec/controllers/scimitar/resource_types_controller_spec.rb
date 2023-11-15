@@ -9,8 +9,8 @@ RSpec.describe Scimitar::ResourceTypesController do
     it 'renders the resource type for user' do
       get :index, format: :scim
       response_hash = JSON.parse(response.body)
-      expected_response = [ Scimitar::Resources::User.resource_type(scim_resource_type_url(name: 'User')),
-                            Scimitar::Resources::Group.resource_type(scim_resource_type_url(name: 'Group'))
+      expected_response = [ Scimitar::Resources::User.resource_type(scim_resource_type_url(name: 'User', test: 1)),
+                            Scimitar::Resources::Group.resource_type(scim_resource_type_url(name: 'Group', test: 1))
       ].to_json
 
       response_hash = JSON.parse(response.body)

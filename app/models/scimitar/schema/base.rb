@@ -13,7 +13,7 @@ module Scimitar
 
       # Converts the schema to its json representation that will be returned by /SCHEMAS end-point of a SCIM service provider.
       def as_json(options = {})
-        @meta.location = Scimitar::Engine.routes.url_helpers.scim_schemas_path(name: id)
+        @meta.location ||= Scimitar::Engine.routes.url_helpers.scim_schemas_path(name: id)
         original = super
         original.merge('attributes' => original.delete('scim_attributes'))
       end
@@ -26,7 +26,9 @@ module Scimitar
       #
       def self.valid?(resource)
         cloned_scim_attributes.each do |scim_attribute|
-          resource.add_errors_from_hash(scim_attribute.errors.to_hash) unless scim_attribute.valid?(resource.send(scim_attribute.name))
+          unless scim_attribute.valid?(resource.send(scim_attribute.name))
+            resource.add_errors_from_hash(errors_hash: scim_attribute.errors.to_hash)
+          end
         end
       end
 

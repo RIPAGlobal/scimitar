@@ -1,6 +1,7 @@
 require 'spec_helper'
 
 RSpec.describe Scimitar::SchemasController do
+  routes { Scimitar::Engine.routes }
 
   before(:each) { allow(controller).to receive(:authenticated?).and_return(true) }
 
@@ -24,6 +25,13 @@ RSpec.describe Scimitar::SchemasController do
       expect(response).to be_ok
       parsed_body = JSON.parse(response.body)
       expect(parsed_body['name']).to eql('User')
+    end
+
+    it 'includes the controller customized schema location' do
+      get :index, params: { name: Scimitar::Schema::User.id, format: :scim }
+      expect(response).to be_ok
+      parsed_body = JSON.parse(response.body)
+      expect(parsed_body.dig('meta', 'location')).to eq scim_schemas_url(name: Scimitar::Schema::User.id, test: 1)
     end
 
     it 'returns only the Group schema when its id is provided' do
