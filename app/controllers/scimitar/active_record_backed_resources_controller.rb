@@ -158,8 +158,8 @@ module Scimitar
       # If you just let this superclass handle things, it'll call the standard
       # +#save!+ method on the record. If you pass a block, then this block is
       # invoked and passed the ActiveRecord model instance to be saved. You can
-      # then do things like calling a different method, using a service object of
-      # some kind, perform audit-related operations and so-on.
+      # then do things like calling a different method, using a service object
+      # of some kind, perform audit-related operations and so-on.
       #
       # The return value is not used internally, making life easier for
       # overriding subclasses to "do the right thing" / avoid mistakes (instead
@@ -177,7 +177,8 @@ module Scimitar
         handle_invalid_record(exception.record)
       end
 
-      # Deal with validation errors by responding with an appropriate SCIM error.
+      # Deal with validation errors by responding with an appropriate SCIM
+      # error.
       #
       # +record+:: The record with validation errors.
       #

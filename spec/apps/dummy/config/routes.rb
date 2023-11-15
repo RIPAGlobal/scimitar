@@ -23,8 +23,8 @@ Rails.application.routes.draw do
 
   # For testing blocks passed to ActiveRecordBackedResourcesController#save!
   #
-  post 'CustomSaveUsers', to: 'custom_save_mock_users#create'
-  get 'CustomSaveUsers/:id', to: 'custom_save_mock_users#show'
+  post 'CustomSaveUsers',     to: 'custom_save_mock_users#create'
+  get  'CustomSaveUsers/:id', to: 'custom_save_mock_users#show'
 
   # For testing environment inside Scimitar::ApplicationController subclasses.
   #
