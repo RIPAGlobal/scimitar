@@ -1,6 +1,6 @@
 # 2.6.1 (2023-11-15)
 
-* Always returns `Content-Type` header of `application/scim+json; charset=utf-8` for any response, since that's the only format the gem can ever answer with. Fixes [#59](https://github.com/RIPAGlobal/scimitar/issues/59).
+* Always returns a `Content-Type` header with value `application/scim+json; charset=utf-8` in any response, since that's the only format the gem can write. Fixes [#59](https://github.com/RIPAGlobal/scimitar/issues/59).
 * Uses the more common header name form of `WWW-Authenticate` rather than the Rack-like `WWW_AUTHENTICATE` in responses.
 
 # 2.6.0 (2023-11-14)
