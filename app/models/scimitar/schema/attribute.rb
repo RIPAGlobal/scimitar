@@ -105,9 +105,9 @@ module Scimitar
 
       def simple_type?(value)
         (type == 'string' && value.is_a?(String)) ||
-          (type == 'boolean' && (value.is_a?(TrueClass) || value.is_a?(FalseClass))) ||
-          (type == 'integer' && (value.is_a?(Integer))) ||
-          (type == 'dateTime' && valid_date_time?(value))
+        (type == 'boolean' && (value.is_a?(TrueClass) || value.is_a?(FalseClass))) ||
+        (type == 'integer' && (value.is_a?(Integer))) ||
+        (type == 'dateTime' && valid_date_time?(value))
       end
 
       def valid_date_time?(value)

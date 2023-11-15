@@ -625,18 +625,20 @@ bundle install
 
 ### Tests
 
-For testing, two main options are available.
-The first option is running the project locally. This is also the recommended way, as running the tests on a variety of setups and platforms increases the chance of finding platform- or setup-specific bugs.
-The second option is utilising the existing Docker Compose setup provided in the project. You can use this if getting the project to work locally is hard or not feasible.
+For testing, two main options are available:
+
+* The first option is running the project locally. This is also the recommended way, as running the tests on a variety of setups and platforms increases he chance of finding platform-specific or setup-specific bugs.
+* The second option is utilising the existing Docker Compose setup provided in the project. You can use this if getting the project to work locally is hard or not feasible.
 
 #### Testing on your machine
+
 You will need to have PostgreSQL running. This database is chosen for tests to prove case-insensitive behaviour via detection of ILIKE in generated queries. Using SQLite would have resulted in a more conceptually self-contained test suite, but SQLite is case-insensitive by default and uses "LIKE" either way, making it hard to "see" if the query system is doing the right thing.
 
 After `bundle install` and with PostgreSQL up, set up the test database with:
 
 ```shell
 pushd spec/apps/dummy
-RAILS_ENV=test bundle exec rake db:drop db:create db:migrate
+RAILS_ENV=test bundle exec bin/rails db:drop db:create db:migrate
 popd
 ```
 
@@ -650,13 +652,13 @@ You can get an idea of arising test coverage by opening `coverage/index.html` in
 
 #### Testing with Docker (Compose)
 
-In order to be able to utilise the Docker Compose, you will need to have Docker installed, with the Compose plugin. For an easy install of Docker, with a GUI and the Compose plugin preinstalled, please refer to [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+In order to be able to utilise the Docker Compose setup, you will need to have Docker installed with the Compose plugin. For an easy installation of Docker (with a GUI and the Compose plugin preinstalled) please see [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
-In order to set up the image, simply run `docker compose build` in a terminal of your choice, in the root of this project. This will download the required image and install the required libraries. After this is complete, running the tests is as easy as running the command `docker compose up test`.
+In order to configure the Docker image, run `docker compose build` in a terminal of your choice, in the root of this project. This will download the required image and install the required libraries. After this is complete, running the tests is as easy as running the command `docker compose up test`.
 
-As said in the previous section, test coverage may be analysed using `coverage/index.html` after running the project.
+As mentioned in the previous section, test coverage may be analysed using `coverage/index.html` after running the project.
 
-You can also open a raw terminal in this test container by running `docker run --rm test sh`. For more Compose commands, please refer to [the docker compose reference manual](https://docs.docker.com/compose/reference/).
+You can also open a raw terminal in this test container by running `docker run --rm test sh`. For more Compose commands, please refer to [the Docker Compose reference manual](https://docs.docker.com/compose/reference/).
 
 ### Internal documentation
 

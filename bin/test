@@ -4,7 +4,7 @@ set -e
 # go to dummy app (where the bundle and rake files are)
 cd ./spec/apps/dummy
 echo "==  Creating fresh database...  =="
-bundle exec rake db:reset
+RAILS_ENV=test bundle exec bin/rails db:drop db:create db:migrate
 cd ../../.. # nagivate back to root of project
 
 echo "==  Running tests...  =="

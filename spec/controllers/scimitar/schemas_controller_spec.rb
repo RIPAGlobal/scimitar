@@ -27,7 +27,7 @@ RSpec.describe Scimitar::SchemasController do
       expect(parsed_body['name']).to eql('User')
     end
 
-    it 'includes the controller customized schema location' do
+    it 'includes the controller customised schema location' do
       get :index, params: { name: Scimitar::Schema::User.id, format: :scim }
       expect(response).to be_ok
       parsed_body = JSON.parse(response.body)
