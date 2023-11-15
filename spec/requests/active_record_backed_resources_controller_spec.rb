@@ -26,13 +26,17 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
   context '#index' do
     context 'with no items' do
-      it 'returns empty list' do
+      before :each do
         MockUser.delete_all
+      end
 
+      it 'returns empty list' do
         expect_any_instance_of(MockUsersController).to receive(:index).once.and_call_original
         get '/Users', params: { format: :scim }
 
-        expect(response.status).to eql(200)
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
         result = JSON.parse(response.body)
 
         expect(result['totalResults']).to eql(0)
@@ -46,7 +50,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         it 'returns all items' do
           get '/Users', params: { format: :scim }
 
-          expect(response.status).to eql(200)
+          expect(response.status                 ).to eql(200)
+          expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
           result = JSON.parse(response.body)
 
           expect(result['totalResults']).to eql(3)
@@ -64,7 +70,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         it 'returns all items' do
           get '/Groups', params: { format: :scim }
 
-          expect(response.status).to eql(200)
+          expect(response.status                 ).to eql(200)
+          expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
           result = JSON.parse(response.body)
 
           expect(result['totalResults']).to eql(3)
@@ -84,7 +92,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           filter: 'name.givenName eq "FOO" and name.familyName pr and emails ne "home_1@test.com"'
         }
 
-        expect(response.status).to eql(200)
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
         result = JSON.parse(response.body)
 
         expect(result['totalResults']).to eql(1)
@@ -103,7 +113,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           filter: 'name.GIVENNAME eq "Foo" and name.Familyname pr and emails ne "home_1@test.com"'
         }
 
-        expect(response.status).to eql(200)
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
         result = JSON.parse(response.body)
 
         expect(result['totalResults']).to eql(1)
@@ -126,7 +138,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
             filter: "id eq \"#{@u3.primary_key}\""
           }
 
-          expect(response.status).to eql(200)
+          expect(response.status                 ).to eql(200)
+          expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
           result = JSON.parse(response.body)
 
           expect(result['totalResults']).to eql(1)
@@ -145,7 +159,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
             filter: "externalID eq \"#{@u2.scim_uid}\""
           }
 
-          expect(response.status).to eql(200)
+          expect(response.status                 ).to eql(200)
+          expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
           result = JSON.parse(response.body)
 
           expect(result['totalResults']).to eql(1)
@@ -164,7 +180,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
             filter: "Meta.LastModified eq \"#{@u3.updated_at}\""
           }
 
-          expect(response.status).to eql(200)
+          expect(response.status                 ).to eql(200)
+          expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
           result = JSON.parse(response.body)
 
           expect(result['totalResults']).to eql(1)
@@ -184,7 +202,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           count:  2
         }
 
-        expect(response.status).to eql(200)
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
         result = JSON.parse(response.body)
 
         expect(result['totalResults']).to eql(3)
@@ -203,7 +223,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           startIndex: 2
         }
 
-        expect(response.status).to eql(200)
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
         result = JSON.parse(response.body)
 
         expect(result['totalResults']).to eql(3)
@@ -224,8 +246,11 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           filter: 'name.givenName'
         }
 
-        expect(response.status).to eql(400)
+        expect(response.status                 ).to eql(400)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
         result = JSON.parse(response.body)
+
         expect(result['scimType']).to eql('invalidFilter')
       end
     end # "context 'with bad calls' do"
@@ -239,7 +264,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         expect_any_instance_of(MockUsersController).to receive(:show).once.and_call_original
         get "/Users/#{@u2.primary_key}", params: { format: :scim }
 
-        expect(response.status).to eql(200)
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
         result = JSON.parse(response.body)
 
         expect(result['id']).to eql(@u2.primary_key.to_s)
@@ -254,7 +281,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         expect_any_instance_of(MockGroupsController).to receive(:show).once.and_call_original
         get "/Groups/#{@g2.id}", params: { format: :scim }
 
-        expect(response.status).to eql(200)
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
         result = JSON.parse(response.body)
 
         expect(result['id']).to eql(@g2.id.to_s) # Note - ID was converted String; not Integer
@@ -266,8 +295,11 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
     it 'renders 404' do
       get '/Users/xyz', params: { format: :scim }
 
-      expect(response.status).to eql(404)
+      expect(response.status                 ).to eql(404)
+      expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
       result = JSON.parse(response.body)
+
       expect(result['status']).to eql('404')
     end
   end # "context '#show' do"
@@ -291,7 +323,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           mock_after = MockUser.all.to_a
           new_mock = (mock_after - mock_before).first
 
-          expect(response.status).to eql(201)
+          expect(response.status                 ).to eql(201)
+          expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
           result = JSON.parse(response.body)
 
           expect(result['id']).to eql(new_mock.primary_key.to_s)
@@ -332,7 +366,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           mock_after = MockUser.all.to_a
           new_mock = (mock_after - mock_before).first
 
-          expect(response.status).to eql(201)
+          expect(response.status                 ).to eql(201)
+          expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
           result = JSON.parse(response.body)
 
           expect(result['id']).to eql(new_mock.id.to_s)
@@ -363,8 +399,11 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         }
       }.to_not change { MockUser.count }
 
-      expect(response.status).to eql(409)
+      expect(response.status                 ).to eql(409)
+      expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
       result = JSON.parse(response.body)
+
       expect(result['scimType']).to eql('uniqueness')
       expect(result['detail']).to include('already been taken')
     end
@@ -377,8 +416,11 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         }
       }.to_not change { MockUser.count }
 
-      expect(response.status).to eql(400)
+      expect(response.status                 ).to eql(400)
+      expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
       result = JSON.parse(response.body)
+
       expect(result['scimType']).to eql('invalidValue')
       expect(result['detail']).to include('is required')
     end
@@ -391,7 +433,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         }
       }.to_not change { MockUser.count }
 
-      expect(response.status).to eql(400)
+      expect(response.status                 ).to eql(400)
+      expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
       result = JSON.parse(response.body)
 
       expect(result['scimType']).to eql('invalidValue')
@@ -410,7 +454,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
       mock_after = MockUser.all.to_a
       new_mock = (mock_after - mock_before).first
 
-      expect(response.status).to eql(201)
+      expect(response.status                 ).to eql(201)
+      expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
       expect(new_mock.username).to eql(CustomSaveMockUsersController::CUSTOM_SAVE_BLOCK_USERNAME_INDICATOR)
     end
   end # "context '#create' do"
@@ -428,7 +474,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           put "/Users/#{@u2.primary_key}", params: attributes.merge(format: :scim)
         }.to_not change { MockUser.count }
 
-        expect(response.status).to eql(200)
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
         result = JSON.parse(response.body)
 
         expect(result['id']).to eql(@u2.primary_key.to_s)
@@ -459,8 +507,11 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         }
       }.to_not change { MockUser.count }
 
-      expect(response.status).to eql(400)
+      expect(response.status                 ).to eql(400)
+      expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
       result = JSON.parse(response.body)
+
       expect(result['scimType']).to eql('invalidValue')
       expect(result['detail']).to include('is required')
 
@@ -480,7 +531,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         }
       }.to_not change { MockUser.count }
 
-      expect(response.status).to eql(400)
+      expect(response.status                 ).to eql(400)
+      expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
       result = JSON.parse(response.body)
 
       expect(result['scimType']).to eql('invalidValue')
@@ -502,8 +555,11 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         }
       }.to_not change { MockUser.count }
 
-      expect(response.status).to eql(404)
+      expect(response.status                 ).to eql(404)
+      expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
       result = JSON.parse(response.body)
+
       expect(result['status']).to eql('404')
     end
   end # "context '#replace' do"
@@ -535,7 +591,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
         }.to_not change { MockUser.count }
 
-        expect(response.status).to eql(200)
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
         result = JSON.parse(response.body)
 
         expect(result['id']).to eql(@u2.primary_key.to_s)
@@ -572,7 +630,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
             patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
           }.to_not change { MockUser.count }
 
-          expect(response.status).to eql(200)
+          expect(response.status                 ).to eql(200)
+          expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
           result = JSON.parse(response.body)
 
           expect(result['id']).to eql(@u2.primary_key.to_s)
@@ -604,7 +664,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
             patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
           }.to_not change { MockUser.count }
 
-          expect(response.status).to eql(200)
+          expect(response.status                 ).to eql(200)
+          expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
           result = JSON.parse(response.body)
 
           expect(result['id']).to eql(@u2.primary_key.to_s)
@@ -636,7 +698,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
             patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
           }.to_not change { MockUser.count }
 
-          expect(response.status).to eql(200)
+          expect(response.status                 ).to eql(200)
+          expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
           result = JSON.parse(response.body)
 
           expect(result['id']).to eql(@u2.primary_key.to_s)
@@ -675,7 +739,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         }
       }.to_not change { MockUser.count }
 
-      expect(response.status).to eql(400)
+      expect(response.status                 ).to eql(400)
+      expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
       result = JSON.parse(response.body)
 
       expect(result['scimType']).to eql('invalidValue')
@@ -703,8 +769,11 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         }
       }.to_not change { MockUser.count }
 
-      expect(response.status).to eql(404)
+      expect(response.status                 ).to eql(404)
+      expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
       result = JSON.parse(response.body)
+
       expect(result['status']).to eql('404')
     end
 
@@ -741,7 +810,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
         get "/Groups/#{@g1.id}", params: { format: :scim }
 
-        expect(response.status).to eql(200)
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
         result = JSON.parse(response.body)
 
         expect(result['members']).to be_empty
@@ -768,7 +839,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
           get "/Groups/#{@g1.id}", params: { format: :scim }
 
-          expect(response.status).to eql(200)
+          expect(response.status                 ).to eql(200)
+          expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
           result = JSON.parse(response.body)
 
           expect(result['members'].map { |m| m['value'] }.sort()).to eql(expected_remaining_user_ids)
@@ -879,8 +952,11 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         delete '/Users/xyz', params: { format: :scim }
       }.to_not change { MockUser.count }
 
-      expect(response.status).to eql(404)
+      expect(response.status                 ).to eql(404)
+      expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
       result = JSON.parse(response.body)
+
       expect(result['status']).to eql('404')
     end
   end # "context '#destroy' do"

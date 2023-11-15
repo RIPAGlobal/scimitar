@@ -24,7 +24,7 @@ RSpec.describe Scimitar::ApplicationController do
       get :index, params: { format: :scim }
       expect(response).to be_ok
       expect(JSON.parse(response.body)).to eql({ 'message' => 'cool, cool!' })
-      expect(response.headers['WWW_AUTHENTICATE']).to eql('Basic')
+      expect(response.headers['WWW-Authenticate']).to eql('Basic')
     end
 
     it 'renders failure with bad password' do
@@ -84,7 +84,7 @@ RSpec.describe Scimitar::ApplicationController do
       get :index, params: { format: :scim }
       expect(response).to be_ok
       expect(JSON.parse(response.body)).to eql({ 'message' => 'cool, cool!' })
-      expect(response.headers['WWW_AUTHENTICATE']).to eql('Bearer')
+      expect(response.headers['WWW-Authenticate']).to eql('Bearer')
     end
 
     it 'renders failure with bad token' do
