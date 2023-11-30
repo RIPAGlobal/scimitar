@@ -27,6 +27,10 @@ Rails.application.config.to_prepare do
       def scim_resource_type_url(options)
         super(test: 1, **options)
       end
+
+      def valid_token
+        'A'
+      end
     end
 
   })
