@@ -30,11 +30,12 @@ RSpec.configure do | config |
   config.disable_monkey_patching!
   config.infer_spec_type_from_file_location!
   config.filter_rails_from_backtrace!
+  config.raise_errors_for_deprecations!
 
   config.color                      = true
   config.tty                        = true
   config.order                      = :random
-  config.fixture_path               = "#{::Rails.root}/spec/fixtures"
+  config.fixture_paths              = ["#{::Rails.root}/spec/fixtures"]
   config.use_transactional_fixtures = true
 
   Kernel.srand config.seed
