@@ -60,12 +60,20 @@ module Scimitar
 
     # POST (create)
     #
-    def create
+    # Calls #save! on the new record if no block is given, else invokes the
+    # block, passing it the new ActiveRecord model instance to be saved. It
+    # is up to the block to make any further changes and persist the record.
+    #
+    # Blocks are invoked from within a wrapping database transaction.
+    # ActiveRecord::RecordInvalid exceptions are handled for you, rendering
+    # an appropriate SCIM error.
+    #
+    def create(&block)
       super do |scim_resource|
         self.storage_class().transaction do
           record = self.storage_class().new
           record.from_scim!(scim_hash: scim_resource.as_json())
-          self.save!(record)
+          self.save!(record, &block)
           record_to_scim(record)
         end
       end
@@ -73,12 +81,16 @@ module Scimitar
 
     # PUT (replace)
     #
-    def replace
+    # Calls #save! on the updated record if no block is given, else invokes the
+    # block, passing the updated record which the block must persist, with the
+    # same rules as for #create.
+    #
+    def replace(&block)
       super do |record_id, scim_resource|
         self.storage_class().transaction do
           record = self.find_record(record_id)
           record.from_scim!(scim_hash: scim_resource.as_json())
-          self.save!(record)
+          self.save!(record, &block)
           record_to_scim(record)
         end
       end
@@ -86,12 +98,16 @@ module Scimitar
 
     # PATCH (update)
     #
-    def update
+    # Calls #save! on the updated record if no block is given, else invokes the
+    # block, passing the updated record which the block must persist, with the
+    # same rules as for #create.
+    #
+    def update(&block)
       super do |record_id, patch_hash|
         self.storage_class().transaction do
           record = self.find_record(record_id)
           record.from_scim_patch!(patch_hash: patch_hash)
-          self.save!(record)
+          self.save!(record, &block)
           record_to_scim(record)
         end
       end
