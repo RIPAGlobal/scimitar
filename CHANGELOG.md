@@ -1,3 +1,8 @@
+# 2.7.0 (2024-01-11)
+
+* Bump local development Ruby to v3.3.0, including it in the test matrix and in effect creating "official" support for that Ruby version.
+* Allow a block to be passed to `Scimitar::ActiveRecordBackedResourcesController#create`, `#update` and `#replace`. This behaves in a manner analogous to passing a block to `Scimitar::ActiveRecordBackedResourcesController#destroy`, wherein the block implementation becomes responsible for destroying the record the block is given; in the case of `#create`, `#update` and `#replace`, the block is passed the new or updated record and is responsible for persisting it.
+
 # 2.6.1 (2023-11-15)
 
 * Always returns a `Content-Type` header with value `application/scim+json; charset=utf-8` in any response, since that's the only format the gem can write. Fixes [#59](https://github.com/RIPAGlobal/scimitar/issues/59).
