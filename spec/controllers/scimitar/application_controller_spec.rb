@@ -108,14 +108,9 @@ RSpec.describe Scimitar::ApplicationController do
   end
 
   context 'authenticator evaluated within controller context' do
-    before do
-      Scimitar.engine_configuration = Scimitar::EngineConfiguration.new(
-        token_authenticator: Proc.new do | token, options |
-          token == valid_token
-        end
-      )
-    end
 
+    # Define a controller with a custom instance method 'valid_token'.
+    #
     controller do
       def index
         render json: { 'message' => 'cool, cool!' }, format: :scim
@@ -124,6 +119,17 @@ RSpec.describe Scimitar::ApplicationController do
       def valid_token
         'B'
       end
+    end
+
+    # Call the above controller method from the token authenticator Proc,
+    # proving that it was executed in the controller's context.
+    #
+    before do
+      Scimitar.engine_configuration = Scimitar::EngineConfiguration.new(
+        token_authenticator: Proc.new do | token, options |
+          token == self.valid_token()
+        end
+      )
     end
 
     it 'renders success when valid creds are given' do
