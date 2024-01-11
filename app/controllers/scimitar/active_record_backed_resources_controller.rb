@@ -150,6 +150,16 @@ module Scimitar
         raise NotImplementedError
       end
 
+      # Return an Array of exceptions that #save! can rescue and handle with a
+      # SCIM error automatically.
+      #
+      def scimitar_rescuable_exceptions
+        [
+          ActiveRecord::RecordInvalid,
+          ActiveRecord::RecordNotSaved
+        ]
+      end
+
       # Find a record by ID. Subclasses can override this if they need special
       # lookup behaviour.
       #
@@ -189,7 +199,7 @@ module Scimitar
         else
           record.save!
         end
-      rescue ActiveRecord::RecordInvalid => exception
+      rescue *scimitar_rescuable_exceptions => exception
         handle_invalid_record(exception.record)
       end
 
