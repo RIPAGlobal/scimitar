@@ -13,9 +13,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
     lmt = Time.parse("2023-01-09 14:25:00 +1300")
     ids = 3.times.map { SecureRandom.uuid }.sort()
 
-    @u1 = MockUser.create(primary_key: ids.shift(), username: '1', first_name: 'Foo', last_name: 'Ark', home_email_address: 'home_1@test.com', scim_uid: '001', created_at: lmt, updated_at: lmt + 1)
-    @u2 = MockUser.create(primary_key: ids.shift(), username: '2', first_name: 'Foo', last_name: 'Bar', home_email_address: 'home_2@test.com', scim_uid: '002', created_at: lmt, updated_at: lmt + 2)
-    @u3 = MockUser.create(primary_key: ids.shift(), username: '3', first_name: 'Foo',                   home_email_address: 'home_3@test.com', scim_uid: '003', created_at: lmt, updated_at: lmt + 3)
+    @u1 = MockUser.create!(primary_key: ids.shift(), username: '1', first_name: 'Foo', last_name: 'Ark', home_email_address: 'home_1@test.com', scim_uid: '001', created_at: lmt, updated_at: lmt + 1)
+    @u2 = MockUser.create!(primary_key: ids.shift(), username: '2', first_name: 'Foo', last_name: 'Bar', home_email_address: 'home_2@test.com', scim_uid: '002', created_at: lmt, updated_at: lmt + 2)
+    @u3 = MockUser.create!(primary_key: ids.shift(), username: '3', first_name: 'Foo',                   home_email_address: 'home_3@test.com', scim_uid: '003', created_at: lmt, updated_at: lmt + 3)
 
     @g1 = MockGroup.create!(display_name: 'Group 1')
     @g2 = MockGroup.create!(display_name: 'Group 2')
@@ -442,23 +442,75 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
       expect(result['detail']).to include('is reserved')
     end
 
-    it 'invokes a block if given one' do
-      mock_before = MockUser.all.to_a
-      attributes = { userName: '5' } # Minimum required by schema
+    context 'with a block' do
+      it 'invokes the block' do
+        mock_before = MockUser.all.to_a
 
-      expect_any_instance_of(CustomSaveMockUsersController).to receive(:create).once.and_call_original
-      expect {
-        post "/CustomSaveUsers", params: attributes.merge(format: :scim)
-      }.to change { MockUser.count }.by(1)
+        expect_any_instance_of(CustomCreateMockUsersController).to receive(:create).once.and_call_original
+        expect {
+          post "/CustomCreateUsers", params: {
+            format:   :scim,
+            userName: '4' # Minimum required by schema
+          }
+        }.to change { MockUser.count }.by(1)
 
-      mock_after = MockUser.all.to_a
-      new_mock = (mock_after - mock_before).first
+        mock_after = MockUser.all.to_a
+        new_mock = (mock_after - mock_before).first
 
-      expect(response.status                 ).to eql(201)
-      expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+        expect(response.status                 ).to eql(201)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
 
-      expect(new_mock.username).to eql(CustomSaveMockUsersController::CUSTOM_SAVE_BLOCK_USERNAME_INDICATOR)
-    end
+        result = JSON.parse(response.body)
+
+        expect(result['id']).to eql(new_mock.id.to_s)
+        expect(result['meta']['resourceType']).to eql('User')
+        expect(new_mock.first_name).to eql(CustomCreateMockUsersController::OVERRIDDEN_NAME)
+      end
+
+      it 'returns 409 for duplicates (by Rails validation)' do
+        existing_user = MockUser.create!(
+          username:           '4',
+          first_name:         'Will Be Overridden',
+          last_name:          'Baz',
+          home_email_address: 'random@test.com',
+          scim_uid:           '999'
+        )
+
+        expect_any_instance_of(CustomCreateMockUsersController).to receive(:create).once.and_call_original
+        expect {
+          post "/CustomCreateUsers", params: {
+            format:   :scim,
+            userName: '4' # Already exists
+          }
+        }.to_not change { MockUser.count }
+
+        expect(response.status                 ).to eql(409)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+        result = JSON.parse(response.body)
+
+        expect(result['scimType']).to eql('uniqueness')
+        expect(result['detail']).to include('already been taken')
+      end
+
+      it 'notes Rails validation failures' do
+        expect_any_instance_of(CustomCreateMockUsersController).to receive(:create).once.and_call_original
+        expect {
+          post "/CustomCreateUsers", params: {
+            format:   :scim,
+            userName: MockUser::INVALID_USERNAME
+          }
+        }.to_not change { MockUser.count }
+
+        expect(response.status                 ).to eql(400)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+        result = JSON.parse(response.body)
+
+        expect(result['scimType']).to eql('invalidValue')
+        expect(result['detail']).to include('is reserved')
+      end
+    end # "context 'with a block' do"
   end # "context '#create' do"
 
   # ===========================================================================
@@ -525,7 +577,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
     it 'notes Rails validation failures' do
       expect {
-        post "/Users", params: {
+        put "/Users/#{@u2.primary_key}", params: {
           format: :scim,
           userName: MockUser::INVALID_USERNAME
         }
@@ -562,6 +614,58 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
       expect(result['status']).to eql('404')
     end
+
+    context 'with a block' do
+      it 'invokes the block' do
+        attributes = { userName: '4' }  # Minimum required by schema
+
+        expect_any_instance_of(CustomReplaceMockUsersController).to receive(:replace).once.and_call_original
+        expect {
+          put "/CustomReplaceUsers/#{@u2.primary_key}", params: {
+            format:   :scim,
+            userName: '4'
+          }
+        }.to_not change { MockUser.count }
+
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+        result = JSON.parse(response.body)
+
+        expect(result['id']).to eql(@u2.primary_key.to_s)
+        expect(result['meta']['resourceType']).to eql('User')
+
+        @u2.reload
+
+        expect(@u2.username  ).to eql('4')
+        expect(@u2.first_name).to eql(CustomReplaceMockUsersController::OVERRIDDEN_NAME)
+      end
+
+      it 'notes Rails validation failures' do
+        expect_any_instance_of(CustomReplaceMockUsersController).to receive(:replace).once.and_call_original
+        expect {
+          put "/CustomReplaceUsers/#{@u2.primary_key}", params: {
+            format:   :scim,
+            userName: MockUser::INVALID_USERNAME
+          }
+        }.to_not change { MockUser.count }
+
+        expect(response.status                 ).to eql(400)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+        result = JSON.parse(response.body)
+
+        expect(result['scimType']).to eql('invalidValue')
+        expect(result['detail']).to include('is reserved')
+
+        @u2.reload
+
+        expect(@u2.username).to eql('2')
+        expect(@u2.first_name).to eql('Foo')
+        expect(@u2.last_name).to eql('Bar')
+        expect(@u2.home_email_address).to eql('home_2@test.com')
+      end
+    end # "context 'with a block' do"
   end # "context '#replace' do"
 
   # ===========================================================================
@@ -916,12 +1020,104 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         it_behaves_like 'a user remover'
       end # context 'and using a Salesforce variant payload' do
     end # "context 'when removing users from groups' do"
+
+    context 'with a block' do
+      it 'invokes the block' do
+        payload = {
+          format: :scim,
+          Operations: [
+            {
+              op: 'add',
+              path: 'userName',
+              value: '4'
+            },
+            {
+              op: 'replace',
+              path: 'emails[type eq "work"]',
+              value: { type: 'work', value: 'work_4@test.com' }
+            }
+          ]
+        }
+
+        expect_any_instance_of(CustomUpdateMockUsersController).to receive(:update).once.and_call_original
+        expect {
+          patch "/CustomUpdateUsers/#{@u2.primary_key}", params: payload
+        }.to_not change { MockUser.count }
+
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+        result = JSON.parse(response.body)
+
+        expect(result['id']).to eql(@u2.primary_key.to_s)
+        expect(result['meta']['resourceType']).to eql('User')
+
+        @u2.reload
+
+        expect(@u2.username          ).to eql('4')
+        expect(@u2.first_name        ).to eql(CustomUpdateMockUsersController::OVERRIDDEN_NAME)
+        expect(@u2.work_email_address).to eql('work_4@test.com')
+      end
+
+      it 'notes Rails validation failures' do
+        expect_any_instance_of(CustomUpdateMockUsersController).to receive(:update).once.and_call_original
+        expect {
+          patch "/CustomUpdateUsers/#{@u2.primary_key}", params: {
+            format: :scim,
+            Operations: [
+              {
+                op: 'add',
+                path: 'userName',
+                value: MockUser::INVALID_USERNAME
+              }
+            ]
+          }
+        }.to_not change { MockUser.count }
+
+        expect(response.status                 ).to eql(400)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+        result = JSON.parse(response.body)
+
+        expect(result['scimType']).to eql('invalidValue')
+        expect(result['detail']).to include('is reserved')
+
+        @u2.reload
+
+        expect(@u2.username).to eql('2')
+        expect(@u2.first_name).to eql('Foo')
+        expect(@u2.last_name).to eql('Bar')
+        expect(@u2.home_email_address).to eql('home_2@test.com')
+      end
+    end # "context 'with a block' do"
   end # "context '#update' do"
 
   # ===========================================================================
 
+  context 'overriding #save!' do
+    it 'invokes a block if given one' do
+      mock_before = MockUser.all.to_a
+      attributes = { userName: '5' } # Minimum required by schema
+
+      expect_any_instance_of(CustomSaveMockUsersController).to receive(:create).once.and_call_original
+      expect {
+        post "/CustomSaveUsers", params: attributes.merge(format: :scim)
+      }.to change { MockUser.count }.by(1)
+
+      mock_after = MockUser.all.to_a
+      new_mock = (mock_after - mock_before).first
+
+      expect(response.status                 ).to eql(201)
+      expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+      expect(new_mock.username).to eql(CustomSaveMockUsersController::CUSTOM_SAVE_BLOCK_USERNAME_INDICATOR)
+    end
+  end # "context 'overriding #save!' do
+
+  # ===========================================================================
+
   context '#destroy' do
-    it 'deletes an item if given no blok' do
+    it 'deletes an item if given no block' do
       expect_any_instance_of(MockUsersController).to receive(:destroy).once.and_call_original
       expect_any_instance_of(MockUser).to receive(:destroy!).once.and_call_original
       expect {

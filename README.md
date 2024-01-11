@@ -262,6 +262,45 @@ end
 
 All data-layer actions are taken via `#find` or `#save!`, with exceptions such as `ActiveRecord::RecordNotFound`, `ActiveRecord::RecordInvalid` or generalised SCIM exceptions handled by various superclasses. For a real Rails example of this, see the [test suite's controllers](https://github.com/RIPAGlobal/scimitar/tree/main/spec/apps/dummy/app/controllers) which are invoked via its [routing declarations](https://github.com/RIPAGlobal/scimitar/blob/main/spec/apps/dummy/config/routes.rb).
 
+##### Overriding controller methods
+
+You can overwrite write-based controller methods `#create`, `#update`, `#replace` and `destroy` in your controller subclass, should you wish, wherein a call to `super` is passed a block. The block is invoked with the instance of a new unsaved record for `#create`, the updated record that needs to have its changes saved for `#update` and `#replace` and the record that should be destroyed for `#destroy`. This allows you to do things like applying business logic, default values, extra request-derived data and so-forth before then calling `record.save!`, or using some different method other than `record.destroy!` to discard a record (e.g. you might be using soft-delete, or want to skip all callbacks for some reason via `record.delete`).
+
+* The `#destroy` method just calls `record.destroy!` unless a block is given, with nothing much else to say about it.
+
+* The other methods all establish a database transaction and call through to the _controller's_ protected `#save!` method, passing it the record; it is _this_ method which then either calls `record.save!` or invokes a block. Using the exception-throwing versions of persistence methods is recommended, as there is exception handling within the controller's implementation which rescues things like `ActiveRecord::RecordInvalid` and builds an appropriate SCIM error response when they occur.
+
+* If you want to override saving behaviour for both new and modified records, overriding `#save!` in your controller subclass, rather than overriding all of `#create`, `#update` and `#replace`, is likely to be the better choice.
+
+* See also the [RDoc output for `Scimitar::ActiveRecordBackedResourcesController`](https://www.rubydoc.info/github/RIPAGlobal/scimitar/main/Scimitar/ActiveRecordBackedResourcesController).
+
+Example:
+
+```ruby
+module Scim
+  class UsersController < Scimitar::ActiveRecordBackedResourcesController
+
+  # Create all new records with some special internal field set to a value
+  # determined by a bespoke-to-your-application mechanism.
+  #
+  def create
+    super do | user |
+      user.some_special_on_creation_field = method_that_calculates_value()
+      user.save!
+    end
+  end
+
+  # Use #discard! rather than #destroy! as an example of soft-delete via the
+  # 'discard' gem - https://rubygems.org/gems/discard.
+  #
+  def destroy
+    super do | user |
+      user.discard!
+    end
+  end
+end
+```
+
 #### Queries & Optimisations
 
 The scope can be optimised to eager load the data exposed by the SCIM interface, i.e.:
