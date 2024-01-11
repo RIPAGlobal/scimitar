@@ -199,7 +199,7 @@ module Scimitar
         else
           record.save!
         end
-      rescue *scimitar_rescuable_exceptions => exception
+      rescue *self.scimitar_rescuable_exceptions() => exception
         handle_invalid_record(exception.record)
       end
 
