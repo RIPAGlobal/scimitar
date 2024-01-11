@@ -8,6 +8,6 @@ module Scimitar
   # Date for VERSION. If this changes, be sure to re-run "bundle install"
   # or "bundle update".
   #
-  DATE = '2024-01-11'
+  DATE = '2024-01-12'
 
 end
