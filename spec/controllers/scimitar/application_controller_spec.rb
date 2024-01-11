@@ -120,10 +120,14 @@ RSpec.describe Scimitar::ApplicationController do
       def index
         render json: { 'message' => 'cool, cool!' }, format: :scim
       end
+
+      def valid_token
+        'B'
+      end
     end
 
     it 'renders success when valid creds are given' do
-      request.env['HTTP_AUTHORIZATION'] = 'Bearer A'
+      request.env['HTTP_AUTHORIZATION'] = 'Bearer B'
 
       get :index, params: { format: :scim }
       expect(response).to be_ok

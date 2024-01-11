@@ -38,6 +38,13 @@ RSpec.configure do | config |
   config.use_transactional_fixtures = true
 
   Kernel.srand config.seed
+
+  config.around :each do | example |
+    original_engine_configuration = Scimitar.instance_variable_get('@engine_configuration')
+    example.run()
+  ensure
+    Scimitar.instance_variable_set('@engine_configuration', original_engine_configuration)
+  end
 end
 
 # ============================================================================
