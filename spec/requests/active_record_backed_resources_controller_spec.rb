@@ -1144,12 +1144,21 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           post "/Users", params: { format: :scim, userName: SecureRandom.uuid }
         }.to_not change { MockUser.count }
 
-        expect(response.status                 ).to eql(400)
+        expected_status, expected_prefix = if exception_class == ActiveRecord::RecordNotUnique
+          [409, 'Operation failed due to a uniqueness constraint: ']
+        else
+          [400, 'Operation failed since record has become invalid: ']
+        end
+
+        expect(response.status                 ).to eql(expected_status)
         expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
 
         result = JSON.parse(response.body)
 
-        expect(result['detail']).to eql('Invalid request') # Check basic SCIM error rendering - good enough given other tests elsewhere
+        # Check basic SCIM error rendering - good enough given other tests
+        # elsewhere. Exact message varies by exception.
+        #
+        expect(result['detail']).to start_with(expected_prefix)
       end
     end
 
@@ -1171,7 +1180,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
       result = JSON.parse(response.body)
 
-      expect(result['detail']).to eql('Invalid request')
+      expect(result['detail']).to start_with('Operation failed since record has become invalid: ')
     end
 
     it 'reports other exceptions as 500s' do

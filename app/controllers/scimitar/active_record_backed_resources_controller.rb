@@ -156,7 +156,8 @@ module Scimitar
       def scimitar_rescuable_exceptions
         [
           ActiveRecord::RecordInvalid,
-          ActiveRecord::RecordNotSaved
+          ActiveRecord::RecordNotSaved,
+          ActiveRecord::RecordNotUnique,
         ]
       end
 
@@ -200,16 +201,24 @@ module Scimitar
           record.save!
         end
       rescue *self.scimitar_rescuable_exceptions() => exception
-        handle_invalid_record(exception.record)
+        handle_on_save_exception(record, exception)
       end
 
-      # Deal with validation errors by responding with an appropriate SCIM
-      # error.
+      # Deal with exceptions related to errors upon saving, by responding with
+      # an appropriate SCIM error. This is most effective if the record has
+      # validation errors defined, but falls back to the provided exception's
+      # message otherwise.
       #
-      # +record+:: The record with validation errors.
+      # +record+::    The record that provoked the exception. Mandatory.
+      # +exception+:: The exception that was raised. If omitted, a default of
+      #               'Unknown', in English with no I18n, is used.
       #
-      def handle_invalid_record(record)
-        joined_errors = record.errors.full_messages.join('; ')
+      def handle_on_save_exception(record, exception = RuntimeError.new('Unknown'))
+        details = if record.errors.present?
+          record.errors.full_messages.join('; ')
+        else
+          exception.message
+        end
 
         # https://tools.ietf.org/html/rfc7644#page-12
         #
@@ -219,14 +228,14 @@ module Scimitar
         #   status code 409 (Conflict) with a "scimType" error code of
         #   "uniqueness"
         #
-        if record.errors.any? { | e | e.type == :taken }
+        if exception.is_a?(ActiveRecord::RecordNotUnique) || record.errors.any? { | e | e.type == :taken }
           raise Scimitar::ErrorResponse.new(
             status:   409,
             scimType: 'uniqueness',
-            detail:   joined_errors
+            detail:   "Operation failed due to a uniqueness constraint: #{details}"
           )
         else
-          raise Scimitar::ResourceInvalidError.new(joined_errors)
+          raise Scimitar::ResourceInvalidError.new(details)
         end
       end
 
