@@ -8,6 +8,7 @@ Fixes:
 
 * Fix for Microsoft SCIM Validator; pathless `replace` operations can use dot-path notation in the `value` section, via [69](https://github.com/RIPAGlobal/scimitar/pull/69) - thanks to `@wooly`
 * Basic and token authentication blocks now operate in the context of the application's controller, via [88](https://github.com/RIPAGlobal/scimitar/pull/88) - thanks to `@tejanium`
+* Exception handling for records during saving is improved and extensible, via [91](https://github.com/RIPAGlobal/scimitar/pull/91)
 
 Maintenance:
 
