@@ -315,7 +315,12 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           attributes = { userName: '4' } # Minimum required by schema
           attributes = spec_helper_hupcase(attributes) if force_upper_case
 
+          # Prove that certain known pathways are called; can then unit test
+          # those if need be and be sure that this covers #create actions.
+          #
           expect_any_instance_of(MockUsersController).to receive(:create).once.and_call_original
+          expect_any_instance_of(MockUsersController).to receive(:save! ).once.and_call_original
+
           expect {
             post "/Users", params: attributes.merge(format: :scim)
           }.to change { MockUser.count }.by(1)
@@ -521,7 +526,11 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         attributes = { userName: '4' }  # Minimum required by schema
         attributes = spec_helper_hupcase(attributes) if force_upper_case
 
+        # Prove that certain known pathways are called; can then unit test
+        # those if need be and be sure that this covers #replace actions.
+        #
         expect_any_instance_of(MockUsersController).to receive(:replace).once.and_call_original
+        expect_any_instance_of(MockUsersController).to receive(:save! ).once.and_call_original
         expect {
           put "/Users/#{@u2.primary_key}", params: attributes.merge(format: :scim)
         }.to_not change { MockUser.count }
@@ -690,7 +699,12 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
         payload = spec_helper_hupcase(payload) if force_upper_case
 
+        # Prove that certain known pathways are called; can then unit test
+        # those if need be and be sure that this covers #update actions.
+        #
         expect_any_instance_of(MockUsersController).to receive(:update).once.and_call_original
+        expect_any_instance_of(MockUsersController).to receive(:save! ).once.and_call_original
+
         expect {
           patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
         }.to_not change { MockUser.count }
@@ -1093,6 +1107,10 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
   end # "context '#update' do"
 
   # ===========================================================================
+  # In-passing parts of tests above show that #create, #replace and #update all
+  # route through #save!, so now add some unit tests for that and for exception
+  # handling overrides invoked via #save!.
+  # ===========================================================================
 
   context 'overriding #save!' do
     it 'invokes a block if given one' do
@@ -1113,6 +1131,76 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
       expect(new_mock.username).to eql(CustomSaveMockUsersController::CUSTOM_SAVE_BLOCK_USERNAME_INDICATOR)
     end
   end # "context 'overriding #save!' do
+
+  context 'custom on-save exceptions' do
+    MockUsersController.new.send(:scimitar_rescuable_exceptions).each do | exception_class |
+      it "handles out-of-box exception #{exception_class}" do
+        expect_any_instance_of(MockUsersController).to receive(:create).once.and_call_original
+        expect_any_instance_of(MockUsersController).to receive(:save! ).once.and_call_original
+
+        expect_any_instance_of(MockUser).to receive(:save!).once { raise exception_class }
+
+        expect {
+          post "/Users", params: { format: :scim, userName: SecureRandom.uuid }
+        }.to_not change { MockUser.count }
+
+        expected_status, expected_prefix = if exception_class == ActiveRecord::RecordNotUnique
+          [409, 'Operation failed due to a uniqueness constraint: ']
+        else
+          [400, 'Operation failed since record has become invalid: ']
+        end
+
+        expect(response.status                 ).to eql(expected_status)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+        result = JSON.parse(response.body)
+
+        # Check basic SCIM error rendering - good enough given other tests
+        # elsewhere. Exact message varies by exception.
+        #
+        expect(result['detail']).to start_with(expected_prefix)
+      end
+    end
+
+    it 'handles custom exceptions' do
+      exception_class = RuntimeError # (for testing only; usually, this would provoke a 500 response)
+
+      expect_any_instance_of(MockUsersController).to receive(:create).once.and_call_original
+      expect_any_instance_of(MockUsersController).to receive(:save! ).once.and_call_original
+
+      expect_any_instance_of(MockUsersController).to receive(:scimitar_rescuable_exceptions).once { [ exception_class ] }
+      expect_any_instance_of(MockUser           ).to receive(:save!                        ).once { raise exception_class }
+
+      expect {
+        post "/Users", params: { format: :scim, userName: SecureRandom.uuid }
+      }.to_not change { MockUser.count }
+
+      expect(response.status                 ).to eql(400)
+      expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+      result = JSON.parse(response.body)
+
+      expect(result['detail']).to start_with('Operation failed since record has become invalid: ')
+    end
+
+    it 'reports other exceptions as 500s' do
+      expect_any_instance_of(MockUsersController).to receive(:create).once.and_call_original
+      expect_any_instance_of(MockUsersController).to receive(:save! ).once.and_call_original
+
+      expect_any_instance_of(MockUser).to receive(:save!).once { raise RuntimeError }
+
+      expect {
+        post "/Users", params: { format: :scim, userName: SecureRandom.uuid }
+      }.to_not change { MockUser.count }
+
+      expect(response.status                 ).to eql(500)
+      expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+      result = JSON.parse(response.body)
+
+      expect(result['detail']).to eql('RuntimeError')
+    end
+  end
 
   # ===========================================================================
 

@@ -268,11 +268,11 @@ You can overwrite write-based controller methods `#create`, `#update`, `#replace
 
 * The `#destroy` method just calls `record.destroy!` unless a block is given, with nothing much else to say about it.
 
-* The other methods all establish a database transaction and call through to the _controller's_ protected `#save!` method, passing it the record; it is _this_ method which then either calls `record.save!` or invokes a block. Using the exception-throwing versions of persistence methods is recommended, as there is exception handling within the controller's implementation which rescues things like `ActiveRecord::RecordInvalid` and builds an appropriate SCIM error response when they occur.
+* The other methods all establish a database transaction and call through to the _controller's_ protected `#save!` method, passing it the record; it is _this_ method which then either calls `record.save!` or invokes a block. Using the exception-throwing versions of persistence methods is recommended, as there is exception handling within the controller's implementation which rescues things like `ActiveRecord::RecordInvalid` and builds an appropriate SCIM error response when they occur. You can change the list of exceptions handled in this way by overriding protected method `#scimitar_rescuable_exceptions'.
 
 * If you want to override saving behaviour for both new and modified records, overriding `#save!` in your controller subclass, rather than overriding all of `#create`, `#update` and `#replace`, is likely to be the better choice.
 
-* See also the [RDoc output for `Scimitar::ActiveRecordBackedResourcesController`](https://www.rubydoc.info/github/RIPAGlobal/scimitar/main/Scimitar/ActiveRecordBackedResourcesController).
+* For more information, see the [RDoc output for `Scimitar::ActiveRecordBackedResourcesController`](https://www.rubydoc.info/github/RIPAGlobal/scimitar/main/Scimitar/ActiveRecordBackedResourcesController).
 
 Example:
 
