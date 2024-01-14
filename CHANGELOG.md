@@ -1,5 +1,10 @@
 # 2.7.0 (2024-01-12)
 
+Warning:
+
+* The default `type` value of `work` in the `address` complex type has been removed, in line with all other comparable complex types, via [87](https://github.com/RIPAGlobal/scimitar/issues/87) / [92](https://github.com/RIPAGlobal/scimitar/pull/92) - thanks to `@s-andringa`.
+* **This is unlikely to break client code but there is a *small* chance of issues if you relied upon the default**. Please check your implementation if at all concerned. It doesn't seem risky enough to force a major version bump to comply with semantic versioning.
+
 Features:
 
 * Allow a block to be passed to `Scimitar::ActiveRecordBackedResourcesController#create`, `#update` and `#replace`. This behaves in a manner analogous to passing a block to `Scimitar::ActiveRecordBackedResourcesController#destroy`, wherein the block implementation becomes responsible for destroying the record the block is given; in the case of `#create`, `#update` and `#replace`, the block is passed the new or updated record and is responsible for persisting it.
