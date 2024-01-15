@@ -952,7 +952,10 @@ module Scimitar
 
                 when 'replace'
                   if path_component == 'root'
-                    altering_hash[path_component].merge!(value)
+                    dot_pathed_value = value.inject({}) do |hash, (k, v)|
+                      hash.deep_merge!(::Scimitar::Support::Utilities.dot_path(k.split('.'), v))
+                    end
+                    altering_hash[path_component].deep_merge!(dot_pathed_value)
                   else
                     altering_hash[path_component] = value
                   end

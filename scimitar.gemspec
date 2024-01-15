@@ -22,12 +22,13 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = '>= 2.7.0'
 
-  s.add_dependency 'rails', '~> 6.0'
+  s.add_dependency 'rails',    '~> 6.0'
+  s.add_dependency 'nokogiri', '= 1.15.5' # 1.16 and later require Ruby >= 3
 
-  s.add_development_dependency 'rake',           '~> 13.0'
-  s.add_development_dependency 'pg',             '~>  1.2'
-  s.add_development_dependency 'simplecov-rcov', '~>  0.2'
-  s.add_development_dependency 'rdoc',           '~>  6.3'
+  s.add_development_dependency 'rake',           '~> 13.1'
+  s.add_development_dependency 'pg',             '~>  1.5'
+  s.add_development_dependency 'simplecov-rcov', '~>  0.3'
+  s.add_development_dependency 'rdoc',           '~>  6.6'
   s.add_development_dependency 'rspec-rails',    '~>  5.0'
   s.add_development_dependency 'byebug',         '~> 11.1'
   s.add_development_dependency 'doggo',          '~>  1.2'

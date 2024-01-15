@@ -30,6 +30,7 @@ RSpec.configure do | config |
   config.disable_monkey_patching!
   config.infer_spec_type_from_file_location!
   config.filter_rails_from_backtrace!
+  config.raise_errors_for_deprecations!
 
   config.color                      = true
   config.tty                        = true
@@ -38,6 +39,13 @@ RSpec.configure do | config |
   config.use_transactional_fixtures = true
 
   Kernel.srand config.seed
+
+  config.around :each do | example |
+    original_engine_configuration = Scimitar.instance_variable_get('@engine_configuration')
+    example.run()
+  ensure
+    Scimitar.instance_variable_set('@engine_configuration', original_engine_configuration)
+  end
 end
 
 # ============================================================================

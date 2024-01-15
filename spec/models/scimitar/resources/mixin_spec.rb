@@ -2717,6 +2717,28 @@ RSpec.describe Scimitar::Resources::Mixin do
             expect(@instance.username).to eql('1234')
           end
 
+          it 'which updates nested values using root syntax' do
+            @instance.update!(first_name: 'Foo', last_name: 'Bar')
+
+            path = 'name.givenName'
+            path = path.upcase if force_upper_case
+
+            patch = {
+              'schemas'    => ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+              'Operations' => [
+                {
+                  'op'    => 'replace',
+                  'value' => {
+                    path => 'Baz'
+                  }
+                }
+              ]
+            }
+
+            @instance.from_scim_patch!(patch_hash: patch)
+            expect(@instance.first_name).to eql('Baz')
+          end
+
           it 'which updates nested values' do
             @instance.update!(first_name: 'Foo', last_name: 'Bar')
 

@@ -60,12 +60,20 @@ module Scimitar
 
     # POST (create)
     #
-    def create
+    # Calls #save! on the new record if no block is given, else invokes the
+    # block, passing it the new ActiveRecord model instance to be saved. It
+    # is up to the block to make any further changes and persist the record.
+    #
+    # Blocks are invoked from within a wrapping database transaction.
+    # ActiveRecord::RecordInvalid exceptions are handled for you, rendering
+    # an appropriate SCIM error.
+    #
+    def create(&block)
       super do |scim_resource|
         self.storage_class().transaction do
           record = self.storage_class().new
           record.from_scim!(scim_hash: scim_resource.as_json())
-          self.save!(record)
+          self.save!(record, &block)
           record_to_scim(record)
         end
       end
@@ -73,12 +81,16 @@ module Scimitar
 
     # PUT (replace)
     #
-    def replace
+    # Calls #save! on the updated record if no block is given, else invokes the
+    # block, passing the updated record which the block must persist, with the
+    # same rules as for #create.
+    #
+    def replace(&block)
       super do |record_id, scim_resource|
         self.storage_class().transaction do
           record = self.find_record(record_id)
           record.from_scim!(scim_hash: scim_resource.as_json())
-          self.save!(record)
+          self.save!(record, &block)
           record_to_scim(record)
         end
       end
@@ -86,12 +98,16 @@ module Scimitar
 
     # PATCH (update)
     #
-    def update
+    # Calls #save! on the updated record if no block is given, else invokes the
+    # block, passing the updated record which the block must persist, with the
+    # same rules as for #create.
+    #
+    def update(&block)
       super do |record_id, patch_hash|
         self.storage_class().transaction do
           record = self.find_record(record_id)
           record.from_scim_patch!(patch_hash: patch_hash)
-          self.save!(record)
+          self.save!(record, &block)
           record_to_scim(record)
         end
       end
@@ -134,6 +150,17 @@ module Scimitar
         raise NotImplementedError
       end
 
+      # Return an Array of exceptions that #save! can rescue and handle with a
+      # SCIM error automatically.
+      #
+      def scimitar_rescuable_exceptions
+        [
+          ActiveRecord::RecordInvalid,
+          ActiveRecord::RecordNotSaved,
+          ActiveRecord::RecordNotUnique,
+        ]
+      end
+
       # Find a record by ID. Subclasses can override this if they need special
       # lookup behaviour.
       #
@@ -173,17 +200,25 @@ module Scimitar
         else
           record.save!
         end
-      rescue ActiveRecord::RecordInvalid => exception
-        handle_invalid_record(exception.record)
+      rescue *self.scimitar_rescuable_exceptions() => exception
+        handle_on_save_exception(record, exception)
       end
 
-      # Deal with validation errors by responding with an appropriate SCIM
-      # error.
+      # Deal with exceptions related to errors upon saving, by responding with
+      # an appropriate SCIM error. This is most effective if the record has
+      # validation errors defined, but falls back to the provided exception's
+      # message otherwise.
       #
-      # +record+:: The record with validation errors.
+      # +record+::    The record that provoked the exception. Mandatory.
+      # +exception+:: The exception that was raised. If omitted, a default of
+      #               'Unknown', in English with no I18n, is used.
       #
-      def handle_invalid_record(record)
-        joined_errors = record.errors.full_messages.join('; ')
+      def handle_on_save_exception(record, exception = RuntimeError.new('Unknown'))
+        details = if record.errors.present?
+          record.errors.full_messages.join('; ')
+        else
+          exception.message
+        end
 
         # https://tools.ietf.org/html/rfc7644#page-12
         #
@@ -193,14 +228,14 @@ module Scimitar
         #   status code 409 (Conflict) with a "scimType" error code of
         #   "uniqueness"
         #
-        if record.errors.any? { | e | e.type == :taken }
+        if exception.is_a?(ActiveRecord::RecordNotUnique) || record.errors.any? { | e | e.type == :taken }
           raise Scimitar::ErrorResponse.new(
             status:   409,
             scimType: 'uniqueness',
-            detail:   joined_errors
+            detail:   "Operation failed due to a uniqueness constraint: #{details}"
           )
         else
-          raise Scimitar::ResourceInvalidError.new(joined_errors)
+          raise Scimitar::ResourceInvalidError.new(details)
         end
       end
 

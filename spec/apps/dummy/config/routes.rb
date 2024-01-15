@@ -17,9 +17,21 @@ Rails.application.routes.draw do
   get    'Groups/:id', to: 'mock_groups#show'
   patch  'Groups/:id', to: 'mock_groups#update'
 
-  # For testing blocks passed to ActiveRecordBackedResourcesController#destroy
+  # For testing blocks passed to ActiveRecordBackedResourcesController#create,
+  # #update, #replace and #destroy.
   #
+  post   'CustomCreateUsers',      to: 'custom_create_mock_users#create'
+  patch  'CustomUpdateUsers/:id',  to: 'custom_update_mock_users#update'
+  put    'CustomReplaceUsers/:id', to: 'custom_replace_mock_users#replace'
   delete 'CustomDestroyUsers/:id', to: 'custom_destroy_mock_users#destroy'
+
+  # Needed because the auto-render of most of the above includes a 'url_for'
+  # call for a 'show' action, so we must include routes (implemented in the
+  # base class) for the "show" endpoint.
+  #
+  get  'CustomCreateUsers/:id',  to: 'custom_create_mock_users#show'
+  get  'CustomUpdateUsers/:id',  to: 'custom_update_mock_users#show'
+  get  'CustomReplaceUsers/:id', to: 'custom_replace_mock_users#show'
 
   # For testing blocks passed to ActiveRecordBackedResourcesController#save!
   #
