@@ -264,7 +264,7 @@ All data-layer actions are taken via `#find` or `#save!`, with exceptions such a
 
 ##### Overriding controller methods
 
-You can overwrite write-based controller methods `#create`, `#update`, `#replace` and `destroy` in your controller subclass, should you wish, wherein a call to `super` is passed a block. The block is invoked with the instance of a new unsaved record for `#create`, the updated record that needs to have its changes saved for `#update` and `#replace` and the record that should be destroyed for `#destroy`. This allows you to do things like applying business logic, default values, extra request-derived data and so-forth before then calling `record.save!`, or using some different method other than `record.destroy!` to discard a record (e.g. you might be using soft-delete, or want to skip all callbacks for some reason via `record.delete`).
+You can overwrite write-based controller methods `#create`, `#update`, `#replace` and `#destroy` in your controller subclass, should you wish, wherein a call to `super` is passed a block. The block is invoked with the instance of a new unsaved record for `#create`, the updated record that needs to have its changes saved for `#update` and `#replace` and the record that should be destroyed for `#destroy`. This allows you to do things like applying business logic, default values, extra request-derived data and so-forth before then calling `record.save!`, or using some different method other than `record.destroy!` to discard a record (e.g. you might be using soft-delete, or want to skip all callbacks for some reason via `record.delete`).
 
 * The `#destroy` method just calls `record.destroy!` unless a block is given, with nothing much else to say about it.
 
