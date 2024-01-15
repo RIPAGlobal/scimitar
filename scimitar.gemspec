@@ -18,7 +18,7 @@ Gem::Specification.new do |s|
   s.metadata['homepage_uri'   ] = s.homepage
   s.metadata['source_code_uri'] = 'https://github.com/RIPAGlobal/scimitar/'
   s.metadata['bug_tracker_uri'] = 'https://github.com/RIPAGlobal/scimitar/issues/'
-  s.metadata['changelog_uri'  ] = 'https://github.com/RIPAGlobal/scimitar/blob/master/CHANGELOG.md'
+  s.metadata['changelog_uri'  ] = 'https://github.com/RIPAGlobal/scimitar/blob/v1/CHANGELOG.md'
 
   s.required_ruby_version = '>= 2.7.0'
 
