@@ -36,6 +36,7 @@ jobs:
       with:
         ruby-version: ${{ matrix.ruby }}
         bundler-cache: true
+        rubygems: 3.4.22
 
     - name: Install PostgreSQL client
       run: |
