@@ -23,7 +23,7 @@ Gem::Specification.new do |s|
   s.required_ruby_version = '>= 2.7.0'
 
   s.add_dependency 'rails',    '~> 6.0'
-  s.add_dependency 'nokogiri', '= 1.14.5' # 1.15.x won't build due to Psych issues; 1.16 and later require Ruby >= 3
+  s.add_dependency 'nokogiri', '= 1.15.5' # 1.16 and later require Ruby >= 3
 
   s.add_development_dependency 'rake',           '~> 13.1'
   s.add_development_dependency 'pg',             '~>  1.5'
