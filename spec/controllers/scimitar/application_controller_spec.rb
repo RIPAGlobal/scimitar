@@ -107,6 +107,60 @@ RSpec.describe Scimitar::ApplicationController do
     end
   end
 
+  context 'authenticator evaluated within controller context' do
+
+    # Define a controller with a custom instance method 'valid_token'.
+    #
+    controller do
+      def index
+        render json: { 'message' => 'cool, cool!' }, format: :scim
+      end
+
+      def valid_token
+        'B'
+      end
+    end
+
+    # Call the above controller method from the token authenticator Proc,
+    # proving that it was executed in the controller's context.
+    #
+    before do
+      Scimitar.engine_configuration = Scimitar::EngineConfiguration.new(
+        token_authenticator: Proc.new do | token, options |
+          token == self.valid_token()
+        end
+      )
+    end
+
+    it 'renders success when valid creds are given' do
+      request.env['HTTP_AUTHORIZATION'] = 'Bearer B'
+
+      get :index, params: { format: :scim }
+      expect(response).to be_ok
+      expect(JSON.parse(response.body)).to eql({ 'message' => 'cool, cool!' })
+      expect(response.headers['WWW-Authenticate']).to eql('Bearer')
+    end
+
+    it 'renders failure with bad token' do
+      request.env['HTTP_AUTHORIZATION'] = 'Bearer Invalid'
+
+      get :index, params: { format: :scim }
+      expect(response).not_to be_ok
+    end
+
+    it 'renders failure with blank token' do
+      request.env['HTTP_AUTHORIZATION'] = 'Bearer'
+
+      get :index, params: { format: :scim }
+      expect(response).not_to be_ok
+    end
+
+    it 'renders failure with missing header' do
+      get :index, params: { format: :scim }
+      expect(response).not_to be_ok
+    end
+  end
+
   context 'authenticated' do
     controller do
       rescue_from StandardError, with: :handle_resource_not_found
