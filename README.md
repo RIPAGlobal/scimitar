@@ -264,15 +264,15 @@ All data-layer actions are taken via `#find` or `#save!`, with exceptions such a
 
 ##### Overriding controller methods
 
-You can overwrite write-based controller methods `#create`, `#update`, `#replace` and `destroy` in your controller subclass, should you wish, wherein a all to `super` is passed a block. The block is invoked with the instance of a new unsaved record for `#create`, the updated record that needs to have ts changes saved for `#update` and `#replace` and the record that should be destroyed for `#destroy`. This allows you to do things like applying usiness logic, default values, extra request-derived data and so-forth before then calling `record.save!`, or using some different method other than record.destroy!` to discard a record (e.g. you might be using soft-delete, or want to skip all callbacks for some reason via `record.delete`).
+You can overwrite write-based controller methods `#create`, `#update`, `#replace` and `#destroy` in your controller subclass, should you wish, wherein a call to `super` is passed a block. The block is invoked with the instance of a new unsaved record for `#create`, the updated record that needs to have its changes saved for `#update` and `#replace` and the record that should be destroyed for `#destroy`. This allows you to do things like applying business logic, default values, extra request-derived data and so-forth before then calling `record.save!`, or using some different method other than `record.destroy!` to discard a record (e.g. you might be using soft-delete, or want to skip all callbacks for some reason via `record.delete`).
 
 * The `#destroy` method just calls `record.destroy!` unless a block is given, with nothing much else to say about it.
 
-* The other methods all establish a database transaction and call through to the _controller's_ protected `#save!` method, passing it the record; it is this_ method which then either calls `record.save!` or invokes a block. Using the exception-throwing versions of persistence methods is recommended, as here is exception handling within the controller's implementation which rescues things like `ActiveRecord::RecordInvalid` and builds an appropriate CIM error response when they occur. You can change the list of exceptions handled in this way by overriding protected method #scimitar_rescuable_exceptions'.
+* The other methods all establish a database transaction and call through to the _controller's_ protected `#save!` method, passing it the record; it is _this_ method which then either calls `record.save!` or invokes a block. Using the exception-throwing versions of persistence methods is recommended, as there is exception handling within the controller's implementation which rescues things like `ActiveRecord::RecordInvalid` and builds an appropriate SCIM error response when they occur. You can change the list of exceptions handled in this way by overriding protected method `#scimitar_rescuable_exceptions'.
 
-* If you want to override saving behaviour for both new and modified records, overriding `#save!` in your controller subclass, rather than overriding ll of `#create`, `#update` and `#replace`, is likely to be the better choice.
+* If you want to override saving behaviour for both new and modified records, overriding `#save!` in your controller subclass, rather than overriding all of `#create`, `#update` and `#replace`, is likely to be the better choice.
 
-* For more information, see the [RDoc output for `Scimitar::ActiveRecordBackedResourcesController`](https://www.rubydoc.nfo/github/RIPAGlobal/scimitar/main/Scimitar/ActiveRecordBackedResourcesController).
+* For more information, see the [RDoc output for `Scimitar::ActiveRecordBackedResourcesController`](https://www.rubydoc.info/github/RIPAGlobal/scimitar/main/Scimitar/ActiveRecordBackedResourcesController).
 
 Example:
 
