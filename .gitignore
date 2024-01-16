@@ -5,6 +5,8 @@ _site
 .DS_Store
 .byebug_history
 
+Gemfile.lock
+
 coverage/
 docs/
 
