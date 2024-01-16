@@ -1,3 +1,7 @@
+# 1.8.1 (2024-01-16)
+
+* Some dependency chain gems have stopped supporting Ruby 2.7, so a `Gemfile.lock` for local development generated under Ruby 3 does not work under Ruby 2.7. Solved by removing `Gemfile.lock` entirely, so that an errant Nokogiri lock in `scimitar.gemspec` used previously as a workaround could also be removed.
+
 # 1.8.0 (2024-01-15)
 
 Warning:
