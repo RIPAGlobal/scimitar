@@ -416,6 +416,17 @@ module Scimitar
         # Call ONLY for PATCH. For POST and PUT, see #from_scim!.
         #
         def from_scim_patch!(patch_hash:)
+          ci_scim_hash = self.scim_hash_from_patch(patch_hash:)
+
+          self.from_scim!(scim_hash: ci_scim_hash)
+          return self
+        end
+
+        def scim_resource_from_patch(patch_hash:)
+          self.class.scim_resource_type.new(self.scim_hash_from_patch(patch_hash:))
+        end
+
+        def scim_hash_from_patch(patch_hash:)
           frozen_ci_patch_hash = patch_hash.with_indifferent_case_insensitive_access().freeze()
           ci_scim_hash         = self.to_scim(location: '(unused)').as_json().with_indifferent_case_insensitive_access()
           operations           = frozen_ci_patch_hash['operations']
@@ -491,8 +502,7 @@ module Scimitar
             end
           end
 
-          self.from_scim!(scim_hash: ci_scim_hash)
-          return self
+          ci_scim_hash
         end
 
         private # (...but note that we're inside "included do" within a mixin)
