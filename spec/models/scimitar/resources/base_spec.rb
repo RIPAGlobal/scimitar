@@ -27,6 +27,14 @@ RSpec.describe Scimitar::Resources::Base do
     end
 
     context '#initialize' do
+      it 'accepts nil for non-required attributes' do
+        resource = CustomResourse.new(name: nil, names: nil, privateName: nil)
+
+        expect(resource.name).to be_nil
+        expect(resource.names).to be_nil
+        expect(resource.privateName).to be_nil
+      end
+
       shared_examples 'an initializer' do | force_upper_case: |
         it 'which builds the nested type' do
           attributes = {
