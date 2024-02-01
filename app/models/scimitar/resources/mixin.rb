@@ -342,10 +342,10 @@ module Scimitar
         #              not the remote SCIM client's external IDs. #url_for is a
         #              good way to generate this.
         #
-        def to_scim(location:)
+        def to_scim(location:, attributes: [])
           map             = self.class.scim_attributes_map()
           timestamps_map  = self.class.scim_timestamps_map() if self.class.respond_to?(:scim_timestamps_map)
-          attrs_hash      = self.to_scim_backend(data_source: self, attrs_map_or_leaf_value: map)
+          attrs_hash      = self.to_scim_backend(data_source: self, attrs_map_or_leaf_value: map, attributes: attributes)
           resource        = self.class.scim_resource_type().new(attrs_hash)
           meta_attrs_hash = { location: location }
 
@@ -512,11 +512,14 @@ module Scimitar
           # +attrs_map_or_leaf_value+:: The attribute map. At the top level,
           #                             this is from ::scim_attributes_map.
           #
-          def to_scim_backend(data_source:, attrs_map_or_leaf_value:)
+          def to_scim_backend(data_source:, attrs_map_or_leaf_value:, attributes:, path: nil)
+            return unless path.nil? || attributes.empty? || attributes.any? { |att| path.start_with?(att) || att.start_with?(path) }
+
             case attrs_map_or_leaf_value
               when Hash # Expected at top-level of any map, or nested within
                 attrs_map_or_leaf_value.each.with_object({}) do |(key, value), hash|
-                  hash[key] = to_scim_backend(data_source: data_source, attrs_map_or_leaf_value: value)
+                  nested_path = [path, key].compact.join(".")
+                  hash[key] = to_scim_backend(data_source: data_source, attrs_map_or_leaf_value: value, attributes: attributes, path: nested_path)
                 end.compact
 
               when Array # Static or dynamic mapping against lists in data source
@@ -527,14 +530,14 @@ module Scimitar
 
                   elsif value.key?(:match) # Static map
                     static_hash = { value[:match] => value[:with] }
-                    static_hash.merge!(to_scim_backend(data_source: data_source, attrs_map_or_leaf_value: value[:using]))
+                    static_hash.merge!(to_scim_backend(data_source: data_source, attrs_map_or_leaf_value: value[:using], attributes: attributes, path: path))
                     static_hash
 
                   elsif value.key?(:list) # Dynamic mapping of each complex list item
                     built_dynamic_list = true
                     list = data_source.public_send(value[:list])
                     list.map do |list_entry|
-                      to_scim_backend(data_source: list_entry, attrs_map_or_leaf_value: value[:using])
+                      to_scim_backend(data_source: list_entry, attrs_map_or_leaf_value: value[:using], attributes: attributes, path: path)
                     end
 
                   else # Unknown type, just treat as flat values
