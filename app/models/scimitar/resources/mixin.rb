@@ -517,7 +517,7 @@ module Scimitar
               when Hash # Expected at top-level of any map, or nested within
                 attrs_map_or_leaf_value.each.with_object({}) do |(key, value), hash|
                   hash[key] = to_scim_backend(data_source: data_source, attrs_map_or_leaf_value: value)
-                end
+                end.compact
 
               when Array # Static or dynamic mapping against lists in data source
                 built_dynamic_list = false

@@ -190,7 +190,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             'userName'    => 'foo',
             'name'        => {'givenName'=>'Foo', 'familyName'=>'Bar'},
             'active'      => true,
-            'emails'      => [{'type'=>'work', 'primary'=>true, 'value'=>'foo.bar@test.com'}, {"primary"=>false, "type"=>"home", "value"=>nil}],
+            'emails'      => [{'type'=>'work', 'primary'=>true, 'value'=>'foo.bar@test.com'}, {"primary"=>false, "type"=>"home"}],
             'phoneNumbers'=> [{'type'=>'work', 'primary'=>false, 'value'=>'+642201234567'}],
             'id'          => uuid,
             'externalId'  => 'AA02984',
@@ -200,7 +200,6 @@ RSpec.describe Scimitar::Resources::Mixin do
 
             'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
               'organization' => 'SOMEORG',
-              'department'   => nil
             }
           })
         end
