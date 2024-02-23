@@ -14,7 +14,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
     ids = 3.times.map { SecureRandom.uuid }.sort()
 
     @u1 = MockUser.create!(primary_key: ids.shift(), username: '1', first_name: 'Foo', last_name: 'Ark', home_email_address: 'home_1@test.com', scim_uid: '001', created_at: lmt, updated_at: lmt + 1)
-    @u2 = MockUser.create!(primary_key: ids.shift(), username: '2', first_name: 'Foo', last_name: 'Bar', home_email_address: 'home_2@test.com', scim_uid: '002', created_at: lmt, updated_at: lmt + 2)
+    @u2 = MockUser.create!(primary_key: ids.shift(), username: '2', first_name: 'Foo', last_name: 'Bar', home_email_address: 'home_2@test.com', scim_uid: '002', created_at: lmt, updated_at: lmt + 2, password: "secret")
     @u3 = MockUser.create!(primary_key: ids.shift(), username: '3', first_name: 'Foo',                   home_email_address: 'home_3@test.com', scim_uid: '003', created_at: lmt, updated_at: lmt + 3)
 
     @g1 = MockGroup.create!(display_name: 'Group 1')
@@ -720,6 +720,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         @u2.reload
 
         expect(@u2.username).to eql('4')
+        expect(@u2.password).to eql('secret')
         expect(@u2.first_name).to eql('Foo')
         expect(@u2.last_name).to eql('Bar')
         expect(@u2.home_email_address).to eql('home_2@test.com')
