@@ -139,23 +139,13 @@ module Scimitar
 
       def as_json(options = {})
         self.meta = Meta.new unless self.meta && self.meta.is_a?(Meta)
-        self.meta.resourceType = self.class.resource_type_id
-
-        non_returnable_attributes = self.class
-          .schemas
-          .flat_map(&:scim_attributes)
-          .filter_map { |attribute| attribute.name if attribute.returned == 'never' }
-
-        non_returnable_attributes << 'errors'
-
-        original_hash = super(options).except(*non_returnable_attributes)
+        meta.resourceType = self.class.resource_type_id
+        original_hash = super(options).except('errors')
         original_hash.merge!('schemas' => self.class.schemas.map(&:id))
-
         self.class.extended_schemas.each do |extension_schema|
           extension_attributes = extension_schema.scim_attributes.map(&:name)
           original_hash.merge!(extension_schema.id => original_hash.extract!(*extension_attributes))
         end
-
         original_hash
       end
 
