@@ -138,19 +138,19 @@ RSpec.describe Scimitar::Resources::Mixin do
 
     context '#scim_mutable_attributes' do
       it 'self-compiles mutable attributes and exposes them as an instance method' do
-        readwrite_attrs = MockUser::READWRITE_ATTRS.map(&:to_sym)
-        readwrite_attrs.delete(:id) # Should never be offered as writable in SCIM
+        write_attrs = MockUser::WRITE_ATTRS.map(&:to_sym)
+        write_attrs.delete(:id) # Should never be offered as writable in SCIM
 
         result = MockUser.new.scim_mutable_attributes()
-        expect(result).to match_array(readwrite_attrs)
+        expect(result).to match_array(write_attrs)
       end
 
       it 'includes read-write dynamic list attributes' do
-        readwrite_attrs = MockGroup::READWRITE_ATTRS.map(&:to_sym)
-        readwrite_attrs.delete(:id) # Should never be offered as writable in SCIM
+        write_attrs = MockGroup::WRITE_ATTRS.map(&:to_sym)
+        write_attrs.delete(:id) # Should never be offered as writable in SCIM
 
         result = MockGroup.new.scim_mutable_attributes()
-        expect(result).to match_array(readwrite_attrs)
+        expect(result).to match_array(write_attrs)
       end
     end # "context '#scim_mutable_attributes' do"
 

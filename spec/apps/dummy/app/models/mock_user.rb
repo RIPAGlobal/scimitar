@@ -6,7 +6,7 @@ class MockUser < ActiveRecord::Base
   # TEST ATTRIBUTES - see db/migrate/20210304014602_create_mock_users.rb etc.
   # ===========================================================================
 
-  READWRITE_ATTRS = %w{
+  WRITE_ATTRS = %w{
     primary_key
     scim_uid
     username
@@ -18,6 +18,7 @@ class MockUser < ActiveRecord::Base
     organization
     department
     mock_groups
+    password
   }
 
   has_and_belongs_to_many :mock_groups

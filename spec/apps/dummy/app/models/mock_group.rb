@@ -4,7 +4,7 @@ class MockGroup < ActiveRecord::Base
   # TEST ATTRIBUTES - see db/migrate/20210308020313_create_mock_groups.rb etc.
   # ===========================================================================
 
-  READWRITE_ATTRS = %w{
+  WRITE_ATTRS = %w{
     id
     scim_uid
     display_name
