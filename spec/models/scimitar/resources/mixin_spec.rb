@@ -173,6 +173,7 @@ RSpec.describe Scimitar::Resources::Mixin do
           instance.home_email_address = nil
           instance.work_phone_number  = '+642201234567'
           instance.organization       = 'SOMEORG'
+          instance.password           = 'top-secret'
 
           g1 = MockGroup.create!(display_name: 'Group 1')
           g2 = MockGroup.create!(display_name: 'Group 2')
@@ -193,6 +194,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             'phoneNumbers'=> [{'type'=>'work', 'primary'=>false, 'value'=>'+642201234567'}],
             'id'          => uuid,
             'externalId'  => 'AA02984',
+            'password'    => 'top-secret',
             'groups'      => [{'display'=>g1.display_name, 'value'=>g1.id.to_s}, {'display'=>g3.display_name, 'value'=>g3.id.to_s}],
             'meta'        => {'location'=>"https://test.com/mock_users/#{uuid}", 'resourceType'=>'User'},
             'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
