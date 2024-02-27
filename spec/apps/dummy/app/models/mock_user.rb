@@ -52,6 +52,7 @@ class MockUser < ActiveRecord::Base
         givenName:  :first_name,
         familyName: :last_name
       },
+      password: :password,
       emails: [
         {
           match: 'type',
