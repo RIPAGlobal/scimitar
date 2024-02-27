@@ -12,6 +12,7 @@ class CreateMockUsers < ActiveRecord::Migration[6.1]
       t.text :work_email_address
       t.text :home_email_address
       t.text :work_phone_number
+      t.text :password
 
       # Support the custom extension schema - see configuration in
       # "spec/apps/dummy/config/initializers/scimitar.rb".
