@@ -1,5 +1,3 @@
-require_dependency "scimitar/application_controller"
-
 module Scimitar
 
   # An ActiveRecord-centric subclass of Scimitar::ResourcesController. See that
