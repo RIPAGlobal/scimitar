@@ -17,7 +17,7 @@ module Scimitar
   #
   class ActiveRecordBackedResourcesController < ResourcesController
 
-    rescue_from ActiveRecord::RecordNotFound, with: :handle_resource_not_found # See Scimitar::ApplicationController
+    rescue_from 'ActiveRecord::RecordNotFound', with: :handle_resource_not_found # See Scimitar::ApplicationController
 
     before_action :obtain_id_column_name_from_attribute_map
 
