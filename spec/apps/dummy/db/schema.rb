@@ -30,8 +30,8 @@ ActiveRecord::Schema.define(version: 2021_03_08_044214) do
   end
 
   create_table "mock_users", primary_key: "primary_key", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
     t.text "scim_uid"
     t.text "username"
     t.text "password"
