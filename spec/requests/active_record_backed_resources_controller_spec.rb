@@ -511,6 +511,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
 
         result = JSON.parse(response.body)
+
         expect(result['scimType']).to eql('invalidValue')
         expect(result['detail']).to include('is reserved')
       end
@@ -530,7 +531,6 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         #
         expect_any_instance_of(MockUsersController).to receive(:replace).once.and_call_original
         expect_any_instance_of(MockUsersController).to receive(:save! ).once.and_call_original
-
         expect {
           put "/Users/#{@u2.primary_key}", params: attributes.merge(format: :scim)
         }.to_not change { MockUser.count }
