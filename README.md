@@ -244,8 +244,6 @@ If you use ActiveRecord, your controllers can potentially be extremely simple by
 module Scim
   class UsersController < Scimitar::ActiveRecordBackedResourcesController
 
-    skip_before_action :verify_authenticity_token
-
     protected
 
       def storage_class
