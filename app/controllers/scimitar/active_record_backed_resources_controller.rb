@@ -174,7 +174,10 @@ module Scimitar
       # representation, with a "show" location specified via #url_for.
       #
       def record_to_scim(record)
-        record.to_scim(location: url_for(action: :show, id: record.send(@id_column)))
+        record.to_scim(
+          location: url_for(action: :show, id: record.send(@id_column)),
+          attributes: params.fetch(:attributes, "").split(",")
+        )
       end
 
       # Save a record, dealing with validation exceptions by raising SCIM
