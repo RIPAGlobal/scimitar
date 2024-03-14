@@ -345,6 +345,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
           attributes = {
             userName: '4',
+            password: 'correcthorsebatterystaple',
             name: {
               givenName: 'Given',
               familyName: 'Family'
@@ -379,6 +380,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           expect(result['id']).to eql(new_mock.id.to_s)
           expect(result['meta']['resourceType']).to eql('User')
           expect(new_mock.username).to eql('4')
+          expect(new_mock.password).to eql('correcthorsebatterystaple')
           expect(new_mock.first_name).to eql('Given')
           expect(new_mock.last_name).to eql('Family')
           expect(new_mock.home_email_address).to eql('home_4@test.com')

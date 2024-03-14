@@ -335,7 +335,8 @@ module Scimitar
           @scim_queryable_attributes ||= self.class.scim_queryable_attributes()
         end
 
-        # Render self as a SCIM object using ::scim_attributes_map.
+        # Render self as a SCIM object using ::scim_attributes_map. Fields that
+        # are marked as "returned: false" are excluded.
         #
         # +location+:: The location (HTTP(S) full URI) of this resource, in the
         #              domain of the object including this mixin - "your" IDs,
@@ -345,8 +346,14 @@ module Scimitar
         def to_scim(location:)
           map             = self.class.scim_attributes_map()
           timestamps_map  = self.class.scim_timestamps_map() if self.class.respond_to?(:scim_timestamps_map)
-          attrs_hash      = self.to_scim_backend(data_source: self, attrs_map_or_leaf_value: map)
-          resource        = self.class.scim_resource_type().new(attrs_hash)
+          resource_class  = self.class.scim_resource_type()
+          non_returnable  = resource_class
+            .schemas
+            .flat_map(&:scim_attributes)
+            .filter_map { |attribute| attribute.name.to_sym if attribute.returned == 'never' }
+
+          attrs_hash      = self.to_scim_backend(data_source: self, attrs_map_or_leaf_value: map).except(*non_returnable)
+          resource        = resource_class.new(attrs_hash)
           meta_attrs_hash = { location: location }
 
           meta_attrs_hash[:created     ] = self.send(timestamps_map[:created     ])&.iso8601(0) if timestamps_map&.key?(:created)
