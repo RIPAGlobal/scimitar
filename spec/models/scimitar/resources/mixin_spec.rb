@@ -81,6 +81,102 @@ RSpec.describe Scimitar::Resources::Mixin do
     include Scimitar::Resources::Mixin
   end
 
+  # A simple schema containing two attributes that looks very like complex
+  # type "name", except shorter and with "familyName" never returned.
+  #
+  NestedReturnedNeverTestNameSchema = Class.new(Scimitar::Schema::Base) do
+    def self.id
+      'nested-returned-never-name-id'
+    end
+
+    def self.scim_attributes
+      @scim_attributes ||= [
+        Scimitar::Schema::Attribute.new(name: 'familyName', type: 'string', required: true, returned: 'never'),
+        Scimitar::Schema::Attribute.new(name: 'givenName',  type: 'string', required: true)
+      ]
+    end
+  end
+
+  # A complex type that uses the above schema, giving us the ability to define
+  # an attribute using this complex type, with therefore the *nested* attribute
+  # "familyName" being never returned.
+  #
+  NestedReturnedNeverTestNameType = Class.new(Scimitar::ComplexTypes::Base) do
+    set_schema NestedReturnedNeverTestNameSchema
+  end
+
+  # A test schema that uses the above type, the standard name type (but that
+  # *entire* top-level attribute is never returned) and a simple String item.
+  #
+  NestedReturnedNeverTestSchema = Class.new(Scimitar::Schema::Base) do
+    def self.id
+      'nested-returned-never-id'
+    end
+
+    def self.scim_attributes
+      [
+        Scimitar::Schema::Attribute.new(
+          name: 'name', complexType: NestedReturnedNeverTestNameType
+        ),
+        Scimitar::Schema::Attribute.new(
+          name: 'privateName', complexType: Scimitar::ComplexTypes::Name, returned: 'never'
+        ),
+        Scimitar::Schema::Attribute.new(
+          name: 'simpleName',  type: 'string'
+        )
+      ]
+    end
+  end
+
+  # Define a resource that is based upon the above schema.
+  #
+  NestedReturnedNeverTestResourse = Class.new(Scimitar::Resources::Base) do
+    set_schema NestedReturnedNeverTestSchema
+  end
+
+  # Create a testable model that is our internal representation of the above
+  # resource.
+  #
+  class NestedReturnedNeverTest
+    include ActiveModel::Model
+
+    def self.scim_resource_type
+      return NestedReturnedNeverTestResourse
+    end
+
+    attr_accessor :given_name,
+                  :last_name,
+                  :private_given_name,
+                  :private_last_name,
+                  :simple_name
+
+    def self.scim_attributes_map
+      return {
+        name: {
+          givenName:  :given_name,
+          familyName: :last_name
+        },
+
+        privateName: {
+          givenName:  :private_given_name,
+          familyName: :private_last_name
+        },
+
+        simpleName: :simple_name
+      }
+    end
+
+    def self.scim_mutable_attributes
+      return nil
+    end
+
+    def self.scim_queryable_attributes
+      return nil
+    end
+
+    include Scimitar::Resources::Mixin
+  end
+
   # ===========================================================================
   # Errant class definitions
   # ===========================================================================
@@ -361,6 +457,30 @@ RSpec.describe Scimitar::Resources::Mixin do
           end
         end # "context 'using dynamic lists' do"
       end # "context 'with arrays' do"
+
+      context 'with "returned: \'never\' fields' do
+        it 'hides appropriate top-level and nested attributes' do
+          instance = NestedReturnedNeverTest.new(
+            given_name:          'One',
+            last_name:           'Two',
+            private_given_name:  'Three',
+            private_last_name:   'Four',
+            simple_name:         'Five'
+          )
+
+          scim = instance.to_scim(location: 'https://test.com/never_retutrned_test')
+          json = scim.to_json()
+          hash = JSON.parse(json)
+
+          expect(hash).to eql({
+            'name'       => { 'givenName' => 'One' },
+            'simpleName' => 'Five',
+
+            'meta'    => {'location'=>'https://test.com/never_retutrned_test', 'resourceType'=>'NestedReturnedNeverTestResourse'},
+            'schemas' => ['nested-returned-never-id']
+          })
+        end
+      end # "context 'with "returned: \'never\' fields' do"
 
       context 'with bad definitions' do
         it 'complains about non-Hash entries in mapping Arrays' do

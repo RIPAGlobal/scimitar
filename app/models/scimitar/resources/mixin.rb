@@ -345,15 +345,10 @@ module Scimitar
         #
         def to_scim(location:)
           map             = self.class.scim_attributes_map()
+          resource_type   = self.class.scim_resource_type()
           timestamps_map  = self.class.scim_timestamps_map() if self.class.respond_to?(:scim_timestamps_map)
-          resource_class  = self.class.scim_resource_type()
-          non_returnable  = resource_class
-            .schemas
-            .flat_map(&:scim_attributes)
-            .filter_map { |attribute| attribute.name.to_sym if attribute.returned == 'never' }
-
-          attrs_hash      = self.to_scim_backend(data_source: self, attrs_map_or_leaf_value: map).except(*non_returnable)
-          resource        = resource_class.new(attrs_hash)
+          attrs_hash      = self.to_scim_backend(data_source: self, resource_type: resource_type, attrs_map_or_leaf_value: map)
+          resource        = resource_type.new(attrs_hash)
           meta_attrs_hash = { location: location }
 
           meta_attrs_hash[:created     ] = self.send(timestamps_map[:created     ])&.iso8601(0) if timestamps_map&.key?(:created)
@@ -516,14 +511,48 @@ module Scimitar
           #                             this is "self" (an instance of the
           #                             class mixing in this module).
           #
+          # +resource_type+::           The resource type carrying the schemas
+          #                             describing the SCIM object. If at the
+          #                             top level when +data_source+ is +self+,
+          #                             this would be sent as
+          #                             <tt>self.class.scim_resource_type()</tt>.
+          #
           # +attrs_map_or_leaf_value+:: The attribute map. At the top level,
           #                             this is from ::scim_attributes_map.
           #
-          def to_scim_backend(data_source:, attrs_map_or_leaf_value:)
+          # Internal recursive calls also send:
+          #
+          # +attribute_path+::          Array of path components to the
+          #                             attribute, which can be found through
+          #                             +resource_type+ so that things like the
+          #                             "+returned+" state can be checked.
+          #
+          def to_scim_backend(
+            data_source:,
+            resource_type:,
+            attrs_map_or_leaf_value:,
+            attribute_path: []
+          )
+
+            # On assumption of a top-level attributes list, the 'return never'
+            # state is only checked on the recursive call from a Hash type. The
+            # other handled types are assumed to only happen when called
+            # recursively, so no need to check as no such call is made for a
+            # 'return never' attribute.
+            #
             case attrs_map_or_leaf_value
               when Hash # Expected at top-level of any map, or nested within
                 attrs_map_or_leaf_value.each.with_object({}) do |(key, value), hash|
-                  hash[key] = to_scim_backend(data_source: data_source, attrs_map_or_leaf_value: value)
+                  nested_attribute_path = attribute_path + [key]
+
+                  if resource_type.find_attribute(*nested_attribute_path)&.returned != "never"
+                    hash[key] = to_scim_backend(
+                      data_source:             data_source,
+                      resource_type:           resource_type,
+                      attribute_path:          nested_attribute_path,
+                      attrs_map_or_leaf_value: value
+                    )
+                  end
                 end
 
               when Array # Static or dynamic mapping against lists in data source
@@ -534,14 +563,26 @@ module Scimitar
 
                   elsif value.key?(:match) # Static map
                     static_hash = { value[:match] => value[:with] }
-                    static_hash.merge!(to_scim_backend(data_source: data_source, attrs_map_or_leaf_value: value[:using]))
+                    static_hash.merge!(
+                      to_scim_backend(
+                        data_source:             data_source,
+                        resource_type:           resource_type,
+                        attribute_path:          attribute_path,
+                        attrs_map_or_leaf_value: value[:using]
+                      )
+                    )
                     static_hash
 
                   elsif value.key?(:list) # Dynamic mapping of each complex list item
                     built_dynamic_list = true
                     list = data_source.public_send(value[:list])
                     list.map do |list_entry|
-                      to_scim_backend(data_source: list_entry, attrs_map_or_leaf_value: value[:using])
+                      to_scim_backend(
+                        data_source:             list_entry,
+                        resource_type:           resource_type,
+                        attribute_path:          attribute_path,
+                        attrs_map_or_leaf_value: value[:using]
+                      )
                     end
 
                   else # Unknown type, just treat as flat values
