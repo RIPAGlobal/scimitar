@@ -145,7 +145,7 @@ module Scimitar
       #
       # ...so all fields, even those marked "returned: false", are included.
       # Use Scimitar::Resources::Mixin::to_scim to obtain a SCIM object with
-      # returnable fields omitted, rendering *that* as JSON via #to_json.
+      # non-returnable fields omitted, rendering *that* as JSON via #to_json.
       #
       def as_json(options = {})
         self.meta = Meta.new unless self.meta && self.meta.is_a?(Meta)

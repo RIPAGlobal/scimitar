@@ -364,16 +364,36 @@ module Scimitar
         #
         # Call ONLY for POST or PUT. For PATCH, see #from_scim_patch!.
         #
-        # +scim_hash+:: A Hash that's the result of parsing a JSON payload
-        #               from an inbound POST or PUT request.
+        # Mandatory named parameters:
+        #
+        # +scim_hash+::     A Hash that's the result of parsing a JSON payload
+        #                   from an inbound POST or PUT request.
+        #
+        # Optional named parameters:
+        #
+        # +with_clearing+:: According to RFC 7644 section 3.5.1, PUT operations
+        #                   MAY default or clear any attribute missing from
+        #                   +scim_hash+ as this is deemed "not asserted by the
+        #                   client" (see
+        #                   https://tools.ietf.org/html/rfc7644#section-3.5.1).
+        #                   This parameter controls such behaviour. It defaults
+        #                   to +true+, so clearing is applied - single value
+        #                   attributes are set to +nil+ and arrays are emptied.
+        #                   If +false+, an unusual <b>preservation</b> mode is
+        #                   applied -
         #
         # Returns 'self', for convenience of e.g. chaining other methods.
         #
-        def from_scim!(scim_hash:)
+        def from_scim!(scim_hash:, with_clearing: true)
           scim_hash.freeze()
           map = self.class.scim_attributes_map().freeze()
 
-          self.from_scim_backend!(attrs_map_or_leaf_value: map, scim_hash_or_leaf_value: scim_hash)
+          self.from_scim_backend!(
+            attrs_map_or_leaf_value: map,
+            scim_hash_or_leaf_value: scim_hash,
+            with_clearing:           with_clearing
+          )
+
           return self
         end
 
@@ -408,7 +428,7 @@ module Scimitar
         #
         def from_scim_patch!(patch_hash:)
           frozen_ci_patch_hash = patch_hash.with_indifferent_case_insensitive_access().freeze()
-          ci_scim_hash         = self.to_scim_for_patch_op().as_json().with_indifferent_case_insensitive_access()
+          ci_scim_hash         = self.to_scim(location: '(unused)').as_json().with_indifferent_case_insensitive_access()
           operations           = frozen_ci_patch_hash['operations']
 
           raise Scimitar::InvalidSyntaxError.new("Missing PATCH \"operations\"") unless operations
@@ -474,7 +494,8 @@ module Scimitar
               nature:        nature,
               path:          paths,
               value:         value,
-              altering_hash: ci_scim_hash
+              altering_hash: ci_scim_hash,
+              with_attr_map: self.class.scim_attributes_map()
             )
 
             if extract_root
@@ -482,7 +503,7 @@ module Scimitar
             end
           end
 
-          self.from_scim!(scim_hash: ci_scim_hash)
+          self.from_scim!(scim_hash: ci_scim_hash, with_clearing: false)
           return self
         end
 
@@ -716,6 +737,15 @@ module Scimitar
           #                             read as input source material (left
           #                             hand side of the ASCII art diagram).
           #
+          # +with_clearing+::           If +true+, attributes absent in
+          #                             +scim_hash_or_leaf_value+ but present
+          #                             in +attrs_map_or_leaf_value+ will be
+          #                             cleared (+nil+ or empty array), for PUT
+          #                             ("replace") semantics. If +false+, such
+          #                             missing attribute values are left
+          #                             untouched - whatever mapped value is in
+          #                             +self+ is preserved.
+          #
           # +path+::                    Array of SCIM attribute names giving a
           #                             path into the SCIM schema where
           #                             iteration has reached. Used to find the
@@ -725,6 +755,7 @@ module Scimitar
           def from_scim_backend!(
             attrs_map_or_leaf_value:,
             scim_hash_or_leaf_value:,
+            with_clearing:,
             path: []
           )
             scim_hash_or_leaf_value = scim_hash_or_leaf_value.with_indifferent_case_insensitive_access() if scim_hash_or_leaf_value.is_a?(Hash)
@@ -755,13 +786,29 @@ module Scimitar
                   end
                   attribute_tree << scim_attribute.to_s
 
-                  sub_scim_hash_or_leaf_value = scim_hash_or_leaf_value&.dig(*attribute_tree)
+                  continue_processing = if with_clearing
+                    true
+                  else
+                    most_of_attribute_tree = attribute_tree[...-1]
+                    last_attribute_in_tree = attribute_tree.last
 
-                  self.from_scim_backend!(
-                    attrs_map_or_leaf_value: sub_attrs_map_or_leaf_value,
-                    scim_hash_or_leaf_value: sub_scim_hash_or_leaf_value, # May be 'nil'
-                    path:                    path + [scim_attribute]
-                  )
+                    if most_of_attribute_tree.empty?
+                      scim_hash_or_leaf_value&.key?(last_attribute_in_tree)
+                    else
+                      scim_hash_or_leaf_value&.dig(*most_of_attribute_tree)&.key?(last_attribute_in_tree)
+                    end
+                  end
+
+                  if continue_processing
+                    sub_scim_hash_or_leaf_value = scim_hash_or_leaf_value&.dig(*attribute_tree)
+
+                    self.from_scim_backend!(
+                      attrs_map_or_leaf_value: sub_attrs_map_or_leaf_value,
+                      scim_hash_or_leaf_value: sub_scim_hash_or_leaf_value, # May be 'nil'
+                      with_clearing:           with_clearing,
+                      path:                    path + [scim_attribute]
+                    )
+                  end
                 end
 
               when Array # Static or dynamic maps
@@ -783,6 +830,7 @@ module Scimitar
                     self.from_scim_backend!(
                       attrs_map_or_leaf_value: sub_attrs_map,
                       scim_hash_or_leaf_value: found_source_list_entry, # May be 'nil'
+                      with_clearing:           with_clearing,
                       path:                    path
                     )
 
@@ -838,7 +886,9 @@ module Scimitar
           # +path+::          Operation path, as a series of array entries (so
           #                   an inbound dot-separated path string would first
           #                   be split into an array by the caller). For
-          #                   internal recursive calls, this will
+          #                   internal recursive calls, this will be a subset
+          #                   of array entries from an index somewhere into the
+          #                   top-level array, through to its end.
           #
           # +value+::         The value to apply at the attribute(s) identified
           #                   by +path+. Ignored for 'remove' operations.
@@ -854,7 +904,7 @@ module Scimitar
           # own wrapping Hash with a single key addressing the SCIM object of
           # interest and supply this key as the sole array entry in +path+.
           #
-          def from_patch_backend!(nature:, path:, value:, altering_hash:)
+          def from_patch_backend!(nature:, path:, value:, altering_hash:, with_attr_map:)
             raise 'Case sensitivity violation' unless altering_hash.is_a?(Scimitar::Support::HashWithIndifferentCaseInsensitiveAccess)
 
             # These all throw exceptions if data is not as expected / required,
@@ -865,14 +915,16 @@ module Scimitar
                 nature:        nature,
                 path:          path,
                 value:         value,
-                altering_hash: altering_hash
+                altering_hash: altering_hash,
+                with_attr_map: with_attr_map
               )
             else
               from_patch_backend_traverse!(
                 nature:        nature,
                 path:          path,
                 value:         value,
-                altering_hash: altering_hash
+                altering_hash: altering_hash,
+                with_attr_map: with_attr_map
               )
             end
 
@@ -892,7 +944,7 @@ module Scimitar
           #
           # Happily throws exceptions if data is not as expected / required.
           #
-          def from_patch_backend_traverse!(nature:, path:, value:, altering_hash:)
+          def from_patch_backend_traverse!(nature:, path:, value:, altering_hash:, with_attr_map:)
             raise 'Case sensitivity violation' unless altering_hash.is_a?(Scimitar::Support::HashWithIndifferentCaseInsensitiveAccess)
 
             path_component, filter = extract_filter_from(path_component: path.first)
@@ -940,9 +992,10 @@ module Scimitar
             found_data_for_recursion.each do | found_data |
               self.from_patch_backend!(
                 nature:        nature,
-                path:          path[1..-1],
+                path:          path[1..],
                 value:         value,
-                altering_hash: found_data
+                altering_hash: found_data,
+                with_attr_map: with_attr_map[path.first.to_sym]
               )
             end
           end
@@ -957,7 +1010,7 @@ module Scimitar
           #
           # Happily throws exceptions if data is not as expected / required.
           #
-          def from_patch_backend_apply!(nature:, path:, value:, altering_hash:)
+          def from_patch_backend_apply!(nature:, path:, value:, altering_hash:, with_attr_map:)
             raise 'Case sensitivity violation' unless altering_hash.is_a?(Scimitar::Support::HashWithIndifferentCaseInsensitiveAccess)
 
             path_component, filter = extract_filter_from(path_component: path.first)
@@ -987,11 +1040,87 @@ module Scimitar
 
                 case nature
                   when 'remove'
-                    current_data_at_path[matched_index] = nil
-                    compact_after = true
+                    handled        = false
+                    attr_map_path  = path[..-2] + [path_component]
+                    attr_map_entry = with_attr_map.dig(*attr_map_path.map(&:to_sym))
+
+                    if attr_map_entry.is_a?(Array) # Array mapping
+                      attr_map_entry.each do | static_or_dynamic_mapping |
+                        next unless static_or_dynamic_mapping.key?(:match) # Static Array mapping
+
+                        attr_to_match  = static_or_dynamic_mapping[:match].to_s
+                        value_to_match = static_or_dynamic_mapping[:with]
+                        sub_attrs_map  = static_or_dynamic_mapping[:using]
+
+                        # If this mapping refers to the matched data at hand,
+                        # then we can process it further (see later below.
+                        #
+                        found = matched_hash[attr_to_match] == value_to_match
+
+                        # Not found? No static map match perhaps; this could be
+                        # because a filter worked on a value which is fixed in
+                        # the static map. For example, a filter might check for
+                        # emails with "primary true", and the emergence of the
+                        # value for "primary" might not be in the data model -
+                        # it could be a constant declared in the 'using' part
+                        # of a static map. Ugh! Check for that.
+                        #
+                        unless found
+                          sub_attrs_map.each do | scim_attr, model_attr_or_constant |
+
+                            # Only want constants such as 'true' or 'false'.
+                            #
+                            next if model_attr_or_constant.is_a?(Symbol)
+
+                            # Does the static value match in the source data?
+                            # E.g. a SCIM attribute :primary with value 'true'.
+                            #
+                            if matched_hash[scim_attr] == model_attr_or_constant
+                              found = true
+                              break
+                            end
+                          end
+                        end
+
+                        # Found? Run through the mapped attributes. Anything
+                        # that has an associated model attribute - i.e. some
+                        # properly that is expected to be written into the
+                        # local data model in response to that SCIM attribute
+                        # being changed - then the way to remove the data at
+                        # the identified SCIM attribute path is to set that
+                        # value in "altering_hash" (of which "matched_hash"
+                        # is a by-reference component) to "nil".
+                        #
+                        if found
+                          sub_attrs_map.each do | scim_attr, model_attr_or_constant |
+
+                            # Only process attribute names, not constants.
+                            #
+                            next unless model_attr_or_constant.is_a?(Symbol)
+
+                            matched_hash[scim_attr] = nil
+                            handled                 = true
+                          end
+                        end
+                      end
+                    end
+
+                    # For dynamic arrays or other value types, we assume that
+                    # just clearing the item from the array or setting its SCIM
+                    # attribute to "nil" will result in an appropriate update
+                    # to the local data model (e.g. by a change in an Rails
+                    # associated collection or clearing a local model attribute
+                    # directly to "nil").
+                    #
+                    if handled == false
+                      current_data_at_path[matched_index] = nil
+                      compact_after = true
+                    end
+
                   when 'replace'
                     matched_hash.reject! { true }
                     matched_hash.merge!(value)
+
                 end
               end
 
@@ -1034,7 +1163,8 @@ module Scimitar
                         nature:        nature,
                         path:          path + [key],
                         value:         value[key],
-                        altering_hash: altering_hash
+                        altering_hash: altering_hash,
+                        with_attr_map: with_attr_map
                       )
                     end
                   else
@@ -1046,6 +1176,7 @@ module Scimitar
                     dot_pathed_value = value.inject({}) do |hash, (k, v)|
                       hash.deep_merge!(::Scimitar::Support::Utilities.dot_path(k.split('.'), v))
                     end
+
                     altering_hash[path_component].deep_merge!(dot_pathed_value)
                   else
                     altering_hash[path_component] = value
@@ -1104,8 +1235,8 @@ module Scimitar
                     # integer primary keys, which all end up as strings anyway.
                     #
                     value.each do | value_item |
-                      altering_hash[path_component].delete_if do | item |
-                        if item.is_a?(Hash) && value_item.is_a?(Hash)
+                      altering_hash[path_component].map! do | item |
+                        item_is_matched = if item.is_a?(Hash) && value_item.is_a?(Hash)
                           matched_all = true
                           value_item.each do | value_key, value_value |
                             next if value_key == '$ref'
@@ -1117,10 +1248,98 @@ module Scimitar
                         else
                           item&.to_s == value_item&.to_s
                         end
+
+                        if item_is_matched
+                          handled        = false
+                          attr_map_path  = path[..-2] + [path_component]
+                          attr_map_entry = with_attr_map.dig(*attr_map_path.map(&:to_sym))
+
+                          attr_map_entry.each do | static_or_dynamic_mapping |
+                            next unless static_or_dynamic_mapping.key?(:match) # Static Array mapping
+
+                            attr_to_match  = static_or_dynamic_mapping[:match].to_s
+                            value_to_match = static_or_dynamic_mapping[:with]
+                            sub_attrs_map  = static_or_dynamic_mapping[:using]
+
+                            # Match? Run through the mapped attributes. Anything
+                            # that has an associated model attribute - i.e. some
+                            # properly that is expected to be written into the
+                            # local data model in response to that SCIM attribute
+                            # being changed - then the way to remove the data at
+                            # the identified SCIM attribute path is to set that
+                            # value in "altering_hash" (of which "matched_hash"
+                            # is a by-reference component) to "nil".
+                            #
+                            if item[attr_to_match] == value_to_match
+                              sub_attrs_map.each do | scim_attr, model_attr_or_constant |
+
+                                # Only process attribute names, not constants.
+                                #
+                                next unless model_attr_or_constant.is_a?(Symbol)
+
+                                item[scim_attr] = nil
+                                handled         = true
+                              end
+                            end
+                          end
+
+                          if handled == false
+                            nil
+                          else
+                            item
+                          end
+                        else
+                          item
+                        end
+                      end
+
+                      altering_hash[path_component].compact!
+                    end
+
+                  elsif altering_hash[path_component].is_a?(Array)
+                    handled        = false
+                    attr_map_path  = path[..-2] + [path_component]
+                    attr_map_entry = with_attr_map.dig(*attr_map_path.map(&:to_sym))
+
+                    if attr_map_entry.is_a?(Array) # Array mapping
+                      altering_hash[path_component].each do | data_to_check |
+                        attr_map_entry.each do | static_or_dynamic_mapping |
+                          next unless static_or_dynamic_mapping.key?(:match) # Static Array mapping
+
+                          attr_to_match  = static_or_dynamic_mapping[:match].to_s
+                          value_to_match = static_or_dynamic_mapping[:with]
+                          sub_attrs_map  = static_or_dynamic_mapping[:using]
+
+                          # Match? Run through the mapped attributes. Anything
+                          # that has an associated model attribute - i.e. some
+                          # properly that is expected to be written into the
+                          # local data model in response to that SCIM attribute
+                          # being changed - then the way to remove the data at
+                          # the identified SCIM attribute path is to set that
+                          # value in "altering_hash" (of which "matched_hash"
+                          # is a by-reference component) to "nil".
+                          #
+                          if data_to_check[attr_to_match] == value_to_match
+                            sub_attrs_map.each do | scim_attr, model_attr_or_constant |
+
+                              # Only process attribute names, not constants.
+                              #
+                              next unless model_attr_or_constant.is_a?(Symbol)
+
+                              data_to_check[scim_attr] = nil
+                              handled                  = true
+                            end
+                          end
+                        end
                       end
                     end
+
+                    if handled == false
+                      altering_hash[path_component] = []
+                    end
+
                   else
-                    altering_hash.delete(path_component)
+                    altering_hash[path_component] = nil
                   end
 
               end
