@@ -59,6 +59,36 @@ module Scimitar
     # e.g. if you did hash['User'] = 23, then hash['USER'] = 42, the result
     # would be {"User" => 42}.
     #
+    # It's important to remember that Hash#merge is shallow and replaces values
+    # found at existing keys in the target ("this") hash with values in the
+    # inbound Hash. If that new value that is itself a Hash, this *replaces*
+    # the value. For example:
+    #
+    # * Original: <tt>'Foo' => { 'Bar' => 42 }</tt>
+    # * Merge:    <tt>'FOO' => { 'BAR' => 24 }</tt>
+    #
+    # ...results in "this" target hash's key +Foo+ being addressed in the merge
+    # by inbound key +FOO+, so the case doesn't change. But the value for +Foo+
+    # is _replaced_ by the merging-in Hash completely:
+    #
+    # * Result: <tt>'Foo' => { 'BAR' => 24 }</tt>
+    #
+    # ...and of course we might've replaced with a totally different type, such
+    # as +true+:
+    #
+    # * Original: <tt>'Foo' => { 'Bar' => 42 }</tt>
+    # * Merge:    <tt>'FOO' => true</tt>
+    # * Result:   <tt>'Foo' => true</tt>
+    #
+    # If you're intending to merge nested Hashes, then use ActiveSupport's
+    # #deep_merge or an equivalent. This will have the expected outcome, where
+    # the hash with 'BAR' is _merged_ into the existing value and, therefore,
+    # the original 'Bar' key case is preserved:
+    #
+    # * Original:   <tt>'Foo' => { 'Bar' => 42 }</tt>
+    # * Deep merge: <tt>'FOO' => { 'BAR' => 24 }</tt>
+    # * Result:     <tt>'Foo' => { 'Baf' => 24 }</tt>
+    #
     class HashWithIndifferentCaseInsensitiveAccess < ActiveSupport::HashWithIndifferentAccess
       def with_indifferent_case_insensitive_access
         self
@@ -79,12 +109,13 @@ module Scimitar
           '@scimitar_hash_with_indifferent_case_insensitive_access_key_map',
           @scimitar_hash_with_indifferent_case_insensitive_access_key_map
         )
+
+        return duplicate
       end
 
       # Override the individual key writer.
       #
       def []=(key, value)
-
         string_key      = scimitar_hash_with_indifferent_case_insensitive_access_string(key)
         indifferent_key = scimitar_hash_with_indifferent_case_insensitive_access_downcase(string_key)
         converted_value = convert_value(value, conversion: :assignment)
