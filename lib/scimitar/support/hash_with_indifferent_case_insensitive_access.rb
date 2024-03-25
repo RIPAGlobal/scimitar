@@ -87,7 +87,7 @@ module Scimitar
     #
     # * Original:   <tt>'Foo' => { 'Bar' => 42 }</tt>
     # * Deep merge: <tt>'FOO' => { 'BAR' => 24 }</tt>
-    # * Result:     <tt>'Foo' => { 'Baf' => 24 }</tt>
+    # * Result:     <tt>'Foo' => { 'Bar' => 24 }</tt>
     #
     class HashWithIndifferentCaseInsensitiveAccess < ActiveSupport::HashWithIndifferentAccess
       def with_indifferent_case_insensitive_access
