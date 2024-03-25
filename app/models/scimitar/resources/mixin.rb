@@ -990,12 +990,23 @@ module Scimitar
             end
 
             found_data_for_recursion.each do | found_data |
+              attr_map = with_attr_map[path_component.to_sym]
+
+              # Static array mappings need us to find the right map entry that
+              # corresponds to the SCIM data at hand and recurse back into the
+              # patch engine with the ":using" attribute map data.
+              #
+              if attr_map.is_a?(Array)
+                array_attr_map = find_matching_static_attr_map(data: found_data, with_attr_map: attr_map)
+                attr_map       = array_attr_map unless array_attr_map.nil?
+              end
+
               self.from_patch_backend!(
                 nature:        nature,
                 path:          path[1..],
                 value:         value,
                 altering_hash: found_data,
-                with_attr_map: with_attr_map[path.first.to_sym]
+                with_attr_map: attr_map
               )
             end
           end
@@ -1044,65 +1055,26 @@ module Scimitar
                     attr_map_path  = path[..-2] + [path_component]
                     attr_map_entry = with_attr_map.dig(*attr_map_path.map(&:to_sym))
 
-                    if attr_map_entry.is_a?(Array) # Array mapping
-                      attr_map_entry.each do | static_or_dynamic_mapping |
-                        next unless static_or_dynamic_mapping.key?(:match) # Static Array mapping
+                    # Deal with arrays specially; static maps require specific
+                    # treatment, but dynamic or actual array values do not.
+                    #
+                    if attr_map_entry.is_a?(Array)
+                      array_attr_map = find_matching_static_attr_map(
+                        data:          matched_hash,
+                        with_attr_map: attr_map_entry
+                      )
 
-                        attr_to_match  = static_or_dynamic_mapping[:match].to_s
-                        value_to_match = static_or_dynamic_mapping[:with]
-                        sub_attrs_map  = static_or_dynamic_mapping[:using]
-
-                        # If this mapping refers to the matched data at hand,
-                        # then we can process it further (see later below.
-                        #
-                        found = matched_hash[attr_to_match] == value_to_match
-
-                        # Not found? No static map match perhaps; this could be
-                        # because a filter worked on a value which is fixed in
-                        # the static map. For example, a filter might check for
-                        # emails with "primary true", and the emergence of the
-                        # value for "primary" might not be in the data model -
-                        # it could be a constant declared in the 'using' part
-                        # of a static map. Ugh! Check for that.
-                        #
-                        unless found
-                          sub_attrs_map.each do | scim_attr, model_attr_or_constant |
-
-                            # Only want constants such as 'true' or 'false'.
-                            #
-                            next if model_attr_or_constant.is_a?(Symbol)
-
-                            # Does the static value match in the source data?
-                            # E.g. a SCIM attribute :primary with value 'true'.
-                            #
-                            if matched_hash[scim_attr] == model_attr_or_constant
-                              found = true
-                              break
-                            end
-                          end
-                        end
-
-                        # Found? Run through the mapped attributes. Anything
-                        # that has an associated model attribute - i.e. some
-                        # properly that is expected to be written into the
-                        # local data model in response to that SCIM attribute
-                        # being changed - then the way to remove the data at
-                        # the identified SCIM attribute path is to set that
-                        # value in "altering_hash" (of which "matched_hash"
-                        # is a by-reference component) to "nil".
-                        #
-                        if found
-                          sub_attrs_map.each do | scim_attr, model_attr_or_constant |
-
-                            # Only process attribute names, not constants.
-                            #
-                            next unless model_attr_or_constant.is_a?(Symbol)
-
-                            matched_hash[scim_attr] = nil
-                            handled                 = true
-                          end
-                        end
-                      end
+                      # Found? Run through the mapped attributes. Anything that
+                      # has an associated model attribute (i.e. some property
+                      # that must be to be written into local data in response
+                      # to the SCIM attribute being changed) is 'removed' by
+                      # setting the corresponding value in "altering_hash" (of
+                      # which "matched_hash" referenced fragment) to "nil".
+                      #
+                      handled = clear_data_for_removal!(
+                        altering_hash: matched_hash,
+                        with_attr_map: array_attr_map
+                      )
                     end
 
                     # For dynamic arrays or other value types, we assume that
@@ -1253,41 +1225,17 @@ module Scimitar
                           handled        = false
                           attr_map_path  = path[..-2] + [path_component]
                           attr_map_entry = with_attr_map.dig(*attr_map_path.map(&:to_sym))
+                          array_attr_map = find_matching_static_attr_map(
+                            data:          item,
+                            with_attr_map: attr_map_entry
+                          )
 
-                          attr_map_entry.each do | static_or_dynamic_mapping |
-                            next unless static_or_dynamic_mapping.key?(:match) # Static Array mapping
+                          handled = clear_data_for_removal!(
+                            altering_hash: item,
+                            with_attr_map: array_attr_map
+                          )
 
-                            attr_to_match  = static_or_dynamic_mapping[:match].to_s
-                            value_to_match = static_or_dynamic_mapping[:with]
-                            sub_attrs_map  = static_or_dynamic_mapping[:using]
-
-                            # Match? Run through the mapped attributes. Anything
-                            # that has an associated model attribute - i.e. some
-                            # properly that is expected to be written into the
-                            # local data model in response to that SCIM attribute
-                            # being changed - then the way to remove the data at
-                            # the identified SCIM attribute path is to set that
-                            # value in "altering_hash" (of which "matched_hash"
-                            # is a by-reference component) to "nil".
-                            #
-                            if item[attr_to_match] == value_to_match
-                              sub_attrs_map.each do | scim_attr, model_attr_or_constant |
-
-                                # Only process attribute names, not constants.
-                                #
-                                next unless model_attr_or_constant.is_a?(Symbol)
-
-                                item[scim_attr] = nil
-                                handled         = true
-                              end
-                            end
-                          end
-
-                          if handled == false
-                            nil
-                          else
-                            item
-                          end
+                          handled ? item : nil
                         else
                           item
                         end
@@ -1303,34 +1251,15 @@ module Scimitar
 
                     if attr_map_entry.is_a?(Array) # Array mapping
                       altering_hash[path_component].each do | data_to_check |
-                        attr_map_entry.each do | static_or_dynamic_mapping |
-                          next unless static_or_dynamic_mapping.key?(:match) # Static Array mapping
+                        array_attr_map = find_matching_static_attr_map(
+                          data:          data_to_check,
+                          with_attr_map: attr_map_entry
+                        )
 
-                          attr_to_match  = static_or_dynamic_mapping[:match].to_s
-                          value_to_match = static_or_dynamic_mapping[:with]
-                          sub_attrs_map  = static_or_dynamic_mapping[:using]
-
-                          # Match? Run through the mapped attributes. Anything
-                          # that has an associated model attribute - i.e. some
-                          # properly that is expected to be written into the
-                          # local data model in response to that SCIM attribute
-                          # being changed - then the way to remove the data at
-                          # the identified SCIM attribute path is to set that
-                          # value in "altering_hash" (of which "matched_hash"
-                          # is a by-reference component) to "nil".
-                          #
-                          if data_to_check[attr_to_match] == value_to_match
-                            sub_attrs_map.each do | scim_attr, model_attr_or_constant |
-
-                              # Only process attribute names, not constants.
-                              #
-                              next unless model_attr_or_constant.is_a?(Symbol)
-
-                              data_to_check[scim_attr] = nil
-                              handled                  = true
-                            end
-                          end
-                        end
+                        handled = clear_data_for_removal!(
+                          altering_hash: data_to_check,
+                          with_attr_map: array_attr_map
+                        )
                       end
                     end
 
@@ -1416,6 +1345,177 @@ module Scimitar
 
               yield(hash, index) if matched
             end
+          end
+
+          # Static attribute maps are used where SCIM attributes include some
+          # kind of array, but it's not an arbitrary collection (dynamic maps
+          # handle those). Instead, specific matched values inside the SCIM
+          # data are mapped to specific attributes in the local data model.
+          #
+          # A typical example is for e-mails, where the SCIM "type" field in an
+          # array of e-mail addresses might get mapped to detect specific types
+          # of address such as "work" and "home", which happen to be stored
+          # locally in dedicated attributes (e.g. "work_email_address").
+          #
+          # During certain processing operations we end up with a set of data
+          # sent in from some SCIM operation and need to make modifications
+          # (e.g. for a PATCH) that require the attribute map corresponding to
+          # each part of the inbound SCIM data to be known. That's where this
+          # method comes in. Usually, it's not hard to traverse a path of SCIM
+          # data and dig a corresponding path through the attribute map Hash,
+          # except for static arrays. There, we need to know which of the
+          # static map entries matches a piece of SCIM data *from entries* in
+          # the array of SCIM data corresponding to the static map.
+          #
+          # Call here with a piece of SCIM data from an array, along with an
+          # attribute map fragment that must be the Array containing mappings.
+          # Static mapping entries from this are compared with the data and if
+          # a match is found, the sub-attribute map from the static entry's
+          # <tt>:using</tt> key is returned; else +nil+.
+          #
+          # Named parameters are:
+          #
+          # +data+::          A SCIM data entry from a SCIM data array which is
+          #                   mapped via the data given in the +with_attr_map+
+          #                   parameter.
+          #
+          # +with_attr_map+:: The attributes map fragment which must be an
+          #                   Array of mappings for the corresponding array
+          #                   in the SCIM data from which +data+ was drawn.
+          #
+          # For example, if SCIM data consisted of:
+          #
+          #     {
+          #       'emails' => [
+          #         {
+          #           'type' => 'work',
+          #           'value' => 'work_1@test.com'
+          #         },
+          #         {
+          #           'type' => 'work',
+          #           'value' => 'work_2@test.com'
+          #         }
+          #       ]
+          #     }
+          #
+          # ...which was mapped to the local data model using the following
+          # attribute map:
+          #
+          #     {
+          #       emails: [
+          #         { match: 'type', with: 'home', using: { value: :home_email } },
+          #         { match: 'type', with: 'work', using: { value: :work_email } },
+          #       ]
+          #     }
+          #
+          # ...then when it came to processing the SCIM 'emails' entry, one of
+          # the array _entries_ therein would be passed in +data+, while the
+          # attribute map's <tt>:emails</tt> key's value (the _array_ of map
+          # data) would be given in <tt>:with_attr_map</tt>. The first SCIM
+          # array entry matches +work+ so the <tt>:using</tt> part of the map
+          # for that match would be returned:
+          #
+          #     { value: :work_email }
+          #
+          # If there was a SCIM entry with a type of something unrecognised,
+          # such as 'holday', then +nil+ would be returned since there is no
+          # matching attribute map entry.
+          #
+          # Note that the <tt>:with_attr_map</tt> array can contain dynamic
+          # mappings or even be just a simple fixed array - only things that
+          # "look like" static mapping entries are processed (i.e. Hashes with
+          # a Symbol key of <tt>:match</tt> present), with the rest ignored.
+          #
+          def find_matching_static_attr_map(data:, with_attr_map:)
+            matched_map = with_attr_map.find do | static_or_dynamic_mapping |
+
+              # Only interested in Static Array mappings.
+              #
+              if static_or_dynamic_mapping.is_a?(Hash) && static_or_dynamic_mapping.key?(:match)
+
+                attr_to_match  = static_or_dynamic_mapping[:match].to_s
+                value_to_match = static_or_dynamic_mapping[:with]
+                sub_attrs_map  = static_or_dynamic_mapping[:using]
+
+                # If this mapping refers to the matched data at hand,
+                # then we can process it further (see later below.
+                #
+                found = data[attr_to_match] == value_to_match
+
+                # Not found? No static map match perhaps; this could be
+                # because a filter worked on a value which is fixed in
+                # the static map. For example, a filter might check for
+                # emails with "primary true", and the emergence of the
+                # value for "primary" might not be in the data model -
+                # it could be a constant declared in the 'using' part
+                # of a static map. Ugh! Check for that.
+                #
+                unless found
+                  sub_attrs_map.each do | scim_attr, model_attr_or_constant |
+
+                    # Only want constants such as 'true' or 'false'.
+                    #
+                    next if model_attr_or_constant.is_a?(Symbol)
+
+                    # Does the static value match in the source data?
+                    # E.g. a SCIM attribute :primary with value 'true'.
+                    #
+                    if data[scim_attr] == model_attr_or_constant
+                      found = true
+                      break
+                    end
+                  end
+                end
+
+                found
+              else
+                false
+              end
+            end
+
+            return matched_map&.dig(:using)
+          end
+
+          # Related to #find_matching_static_attr_map - often, the reason to
+          # find a static array entry related to some inbound SCIM data is for
+          # a removal operation, where the way to "remove" the data in the
+          # local data model is to set an attribute to "nil". This means you
+          # need to know if there is an attribute writer related to the SCIM
+          # data being removed - and #find_matching_static_attr_map helps.
+          #
+          # With that done, you can call here with the hash data to be changed
+          # and fragment of attribute map that #find_matching_static_attr_map
+          # (or something like it) found.
+          #
+          # +altering_hash+:: The fragment of SCIM data that might be updated
+          #                   with +nil+ to ultimately lead to an atttribute
+          #                   writer identified through +with_attr_map+ being
+          #                   called with that value. This is often the same
+          #                   that was passed in the +data+ attribute in a
+          #                   in a prior #find_matching_static_attr_map call.
+          #
+          # +with_attr_map::  The map fragment that corresponds exactly to the
+          #                   +altering_hash+ data - e.g. the return value of a
+          #                   prior #find_matching_static_attr_map call.
+          #
+          # Update +altering_hash+ in place if the map finds a relevant local
+          # data model attribute and returns +true+. If no changes are made,
+          # returns +false+.
+          #
+          def clear_data_for_removal!(altering_hash:, with_attr_map:)
+            handled = false
+
+            with_attr_map&.each do | scim_attr, model_attr_or_constant |
+
+              # Only process attribute names, not constants.
+              #
+              next unless model_attr_or_constant.is_a?(Symbol)
+
+              altering_hash[scim_attr] = nil
+              handled                  = true
+            end
+
+            return handled
           end
 
       end # "included do"
