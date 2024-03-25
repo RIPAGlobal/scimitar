@@ -344,7 +344,18 @@ module Scimitar
         #              good way to generate this.
         #
         def to_scim(location:)
-          return self.to_scim_for_returning(location: location)
+          map             = self.class.scim_attributes_map()
+          resource_type   = self.class.scim_resource_type()
+          timestamps_map  = self.class.scim_timestamps_map() if self.class.respond_to?(:scim_timestamps_map)
+          attrs_hash      = self.to_scim_backend(data_source: self, resource_type: resource_type, attrs_map_or_leaf_value: map)
+          resource        = resource_type.new(attrs_hash)
+          meta_attrs_hash = { location: location }
+
+          meta_attrs_hash[:created     ] = self.send(timestamps_map[:created     ])&.iso8601(0) if timestamps_map&.key?(:created)
+          meta_attrs_hash[:lastModified] = self.send(timestamps_map[:lastModified])&.iso8601(0) if timestamps_map&.key?(:lastModified)
+
+          resource.meta = Meta.new(meta_attrs_hash)
+          return resource
         end
 
         # Update self from a SCIM object using ::scim_attributes_map. This does
@@ -509,51 +520,6 @@ module Scimitar
 
         private # (...but note that we're inside "included do" within a mixin)
 
-          # Internal back-end for the public #to_scim method. Calls the SCIM
-          # generator in "omit <tt>returned: 'never'</tt> attributes" mode.
-          #
-          # Parameters are the same as for #to_scim.
-          #
-          def to_scim_for_returning(location:)
-            return self.to_scim_common(location: location, include_all: false)
-          end
-
-          # Internal back-end used by public method #from_scim_patch!. Calls
-          # the SCIM generator in "include even <tt>returned: 'never'</tt>
-          # attributes" mode.
-          #
-          def to_scim_for_patch_op
-            return self.to_scim_common(location: '(unused)', include_all: true)
-          end
-
-          # Internal general purpose SCIM representation generator. Gem client
-          # code should call the public #to_scim method only.
-          #
-          # +location+::    The location (HTTP(S) full URI) of this resource,
-          #                 in the domain of the object including this mixin -
-          #                 "your" IDs, not the remote SCIM client's external
-          #                 IDs. #url_for is a good way to generate this.
-          #
-          # +include_all+:: Normally, this is omitted (default +false+) but if
-          #                 passed as +true+, *all* attributes are included in
-          #                 the returned representation, even if defined in
-          #                 schema as <tt>returned: 'never'</tt>.
-          #
-          def to_scim_common(location:, include_all:)
-            map             = self.class.scim_attributes_map()
-            resource_type   = self.class.scim_resource_type()
-            timestamps_map  = self.class.scim_timestamps_map() if self.class.respond_to?(:scim_timestamps_map)
-            attrs_hash      = self.to_scim_backend(data_source: self, resource_type: resource_type, attrs_map_or_leaf_value: map, include_all: include_all)
-            resource        = resource_type.new(attrs_hash)
-            meta_attrs_hash = { location: location }
-
-            meta_attrs_hash[:created     ] = self.send(timestamps_map[:created     ])&.iso8601(0) if timestamps_map&.key?(:created)
-            meta_attrs_hash[:lastModified] = self.send(timestamps_map[:lastModified])&.iso8601(0) if timestamps_map&.key?(:lastModified)
-
-            resource.meta = Meta.new(meta_attrs_hash)
-            return resource
-          end
-
           # A recursive method that takes a Hash mapping SCIM attributes to the
           # mixing in class's attributes and via ::scim_attributes_map replaces
           # symbols in the schema with the corresponding value from the user.
@@ -575,11 +541,6 @@ module Scimitar
           # +attrs_map_or_leaf_value+:: The attribute map. At the top level,
           #                             this is from ::scim_attributes_map.
           #
-          # +include_all+::             If +false+, <tt>returned: 'never'</tt>
-          #                             in schema is obeyed. If +true+, this is
-          #                             overridden and *all* attributes are
-          #                             included in the representation.
-          #
           # Internal recursive calls also send:
           #
           # +attribute_path+::          Array of path components to the
@@ -591,7 +552,6 @@ module Scimitar
             data_source:,
             resource_type:,
             attrs_map_or_leaf_value:,
-            include_all:,
             attribute_path: []
           )
 
@@ -606,12 +566,11 @@ module Scimitar
                 attrs_map_or_leaf_value.each.with_object({}) do |(key, value), hash|
                   nested_attribute_path = attribute_path + [key]
 
-                  if include_all || resource_type.find_attribute(*nested_attribute_path)&.returned != "never"
+                  if resource_type.find_attribute(*nested_attribute_path)&.returned != "never"
                     hash[key] = to_scim_backend(
                       data_source:             data_source,
                       resource_type:           resource_type,
                       attribute_path:          nested_attribute_path,
-                      include_all:             include_all,
                       attrs_map_or_leaf_value: value
                     )
                   end
@@ -630,7 +589,6 @@ module Scimitar
                         data_source:             data_source,
                         resource_type:           resource_type,
                         attribute_path:          attribute_path,
-                        include_all:             include_all,
                         attrs_map_or_leaf_value: value[:using]
                       )
                     )
@@ -644,7 +602,6 @@ module Scimitar
                         data_source:             list_entry,
                         resource_type:           resource_type,
                         attribute_path:          attribute_path,
-                        include_all:             include_all,
                         attrs_map_or_leaf_value: value[:using]
                       )
                     end
