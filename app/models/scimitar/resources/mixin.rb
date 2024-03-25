@@ -1452,7 +1452,7 @@ module Scimitar
           #                   writer identified through +with_attr_map+ being
           #                   called with that value. This is often the same
           #                   that was passed in the +data+ attribute in a
-          #                   in a prior #find_matching_static_attr_map call.
+          #                   prior #find_matching_static_attr_map call.
           #
           # +with_attr_map::  The map fragment that corresponds exactly to the
           #                   +altering_hash+ data - e.g. the return value of a
