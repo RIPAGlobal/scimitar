@@ -16,7 +16,7 @@ RSpec.describe Scimitar::Resources::Base do
             name: 'names', multiValued: true, complexType: Scimitar::ComplexTypes::Name, required: false
           ),
           Scimitar::Schema::Attribute.new(
-            name: 'privateName', complexType: Scimitar::ComplexTypes::Name, required: false, returned: false
+            name: 'privateName', complexType: Scimitar::ComplexTypes::Name, required: false, returned: 'never'
           ),
         ]
       end
