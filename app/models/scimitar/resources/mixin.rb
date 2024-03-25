@@ -391,7 +391,10 @@ module Scimitar
         #                   to +true+, so clearing is applied - single value
         #                   attributes are set to +nil+ and arrays are emptied.
         #                   If +false+, an unusual <b>preservation</b> mode is
-        #                   applied -
+        #                   applied and anything absent from +scim_hash+ will
+        #                   have no impact on the target object (any mapped
+        #                   attributes in the local data model with existing
+        #                   non-nil values will retain those values).
         #
         # Returns 'self', for convenience of e.g. chaining other methods.
         #
