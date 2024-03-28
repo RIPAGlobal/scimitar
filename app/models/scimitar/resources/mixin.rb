@@ -441,7 +441,7 @@ module Scimitar
         # Call ONLY for PATCH. For POST and PUT, see #from_scim!.
         #
         def from_scim_patch!(patch_hash:)
-          ci_scim_hash = self.scim_hash_from_patch(patch_hash:)
+          ci_scim_hash = self.scim_hash_from_patch(patch_hash: patch_hash)
 
           self.from_scim!(scim_hash: ci_scim_hash, with_clearing: false)
           return self
