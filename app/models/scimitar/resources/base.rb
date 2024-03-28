@@ -129,7 +129,7 @@ module Scimitar
 
           if scim_attribute && scim_attribute.complexType
             if scim_attribute.multiValued
-              self.send("#{attr_name}=", attr_value.map {|attr_for_each_item| complex_type_from_hash(scim_attribute, attr_for_each_item)})
+              self.send("#{attr_name}=", attr_value&.map {|attr_for_each_item| complex_type_from_hash(scim_attribute, attr_for_each_item)})
             else
               self.send("#{attr_name}=", complex_type_from_hash(scim_attribute, attr_value))
             end
@@ -137,18 +137,21 @@ module Scimitar
         end
       end
 
+      # Renders *in full* as JSON; typically used for write-based operations...
+      #
+      #     record = self.storage_class().new
+      #     record.from_scim!(scim_hash: scim_resource.as_json())
+      #     self.save!(record)
+      #
+      # ...so all fields, even those marked "returned: false", are included.
+      # Use Scimitar::Resources::Mixin::to_scim to obtain a SCIM object with
+      # non-returnable fields omitted, rendering *that* as JSON via #to_json.
+      #
       def as_json(options = {})
         self.meta = Meta.new unless self.meta && self.meta.is_a?(Meta)
         self.meta.resourceType = self.class.resource_type_id
 
-        non_returnable_attributes = self.class
-          .schemas
-          .flat_map(&:scim_attributes)
-          .filter_map { |attribute| attribute.name if attribute.returned == 'never' }
-
-        non_returnable_attributes << 'errors'
-
-        original_hash = super(options).except(*non_returnable_attributes)
+        original_hash = super(options).except('errors')
         original_hash.merge!('schemas' => self.class.schemas.map(&:id))
 
         self.class.extended_schemas.each do |extension_schema|

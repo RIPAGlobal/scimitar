@@ -1,4 +1,13 @@
+# 2.7.2 (2024-03-27)
+
+Fixes:
+
+* The implementation of non-returned SCIM fields turned out to inadvertently prevent their subsequent update (so SCIM _updates_ to e.g. passwords would fail); fixed [105](https://github.com/RIPAGlobal/scimitar/issues/105) and (in passing) [6](https://github.com/RIPAGlobal/scimitar/issues/6), via [109](https://github.com/RIPAGlobal/scimitar/pull/109) - thanks to `@xjunior`
+* The case-insensitive, String or Symbol access Hash class documented itself as preserving case but did not, reported in [98](https://github.com/RIPAGlobal/scimitar/issues/98), also via [109](https://github.com/RIPAGlobal/scimitar/pull/109) - thanks to `@s-andringa`
+
 # 2.7.1 (2024-01-16)
+
+Fixes:
 
 * Some dependency chain gems have stopped supporting Ruby 2.7, so a `Gemfile.lock` for local development generated under Ruby 3 does not work under Ruby 2.7. Solved by removing `Gemfile.lock` entirely, so that an errant Nokogiri lock in `scimitar.gemspec` used previously as a workaround could also be removed.
 
