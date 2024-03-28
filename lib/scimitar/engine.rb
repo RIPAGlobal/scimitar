@@ -1,6 +1,12 @@
+require 'rails/engine'
+
 module Scimitar
-  class Engine < ::Rails::Engine
+  class Engine < Rails::Engine
     isolate_namespace Scimitar
+    config.autoload_once_paths = %W(
+      #{root}/app/controllers
+      #{root}/app/models
+    )
 
     Mime::Type.register 'application/scim+json', :scim
 

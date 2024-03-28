@@ -79,15 +79,6 @@ Scimitar.engine_configuration = Scimitar::EngineConfiguration.new({
 
 When it comes to token access, Scimitar neither enforces nor presumes any kind of encoding for bearer tokens. You can use anything you like, including encoding/encrypting JWTs if you so wish - https://rubygems.org/gems/jwt may be useful. The way in which a client might integrate with your SCIM service varies by client and you will have to check documentation to see how a token gets conveyed to that client in the first place (e.g. a full OAuth flow with your application, or just a static token generated in some UI which an administrator copies and pastes into their client's SCIM configuration UI).
 
-**Important:** Under Rails 7 or later, you may need to wrap any Scimitar configuration with `Rails.application.config.to_prepare do...` to avoid `NameError: uninitialized constant...` exceptions arising due to autoloader problems:
-
-```ruby
-Rails.application.config.to_prepare do
-  Scimitar.engine_configuration = Scimitar::EngineConfiguration.new({
-    # ...
-  end
-end
-```
 
 ### Routes
 
