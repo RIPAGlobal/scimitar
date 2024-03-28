@@ -1,4 +1,3 @@
-require_dependency "scimitar/application_controller"
 module Scimitar
   class ServiceProviderConfigurationsController < ApplicationController
     def show
