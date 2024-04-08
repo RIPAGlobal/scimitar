@@ -176,7 +176,7 @@ module Scimitar
       def record_to_scim(record)
         record.to_scim(
           location: url_for(action: :show, id: record.send(@id_column)),
-          attributes: params.fetch(:attributes, "").split(",")
+          include_attributes: params.fetch(:attributes, "").split(",")
         )
       end
 

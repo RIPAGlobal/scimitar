@@ -278,7 +278,7 @@ RSpec.describe Scimitar::Resources::Mixin do
           g1.mock_users << instance
           g3.mock_users << instance
 
-          scim = instance.to_scim(location: "https://test.com/mock_users/#{uuid}", attributes: %w[id userName name groups.display groups.value organization])
+          scim = instance.to_scim(location: "https://test.com/mock_users/#{uuid}", include_attributes: %w[id userName name groups.display groups.value organization])
           json = scim.to_json()
           hash = JSON.parse(json)
 

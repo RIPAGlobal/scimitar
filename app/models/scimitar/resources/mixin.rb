@@ -343,11 +343,11 @@ module Scimitar
         #              not the remote SCIM client's external IDs. #url_for is a
         #              good way to generate this.
         #
-        def to_scim(location:, attributes: [])
+        def to_scim(location:, include_attributes: [])
           map             = self.class.scim_attributes_map()
           resource_type   = self.class.scim_resource_type()
           timestamps_map  = self.class.scim_timestamps_map() if self.class.respond_to?(:scim_timestamps_map)
-          attrs_hash      = self.to_scim_backend(data_source: self, resource_type: resource_type, attrs_map_or_leaf_value: map, attributes: attributes)
+          attrs_hash      = self.to_scim_backend(data_source: self, resource_type: resource_type, attrs_map_or_leaf_value: map, include_attributes: include_attributes)
           resource        = resource_type.new(attrs_hash)
           meta_attrs_hash = { location: location }
 
@@ -556,10 +556,10 @@ module Scimitar
             resource_type:,
             attrs_map_or_leaf_value:,
             attribute_path: [],
-            attributes:,
+            include_attributes:
           )
             full_path = attribute_path.join(".")
-            return unless attribute_path.empty? || attributes.empty? || attributes.any? { |att| full_path.start_with?(att) || att.start_with?(full_path) }
+            return unless attribute_path.empty? || include_attributes.empty? || include_attributes.any? { |att| full_path.start_with?(att) || att.start_with?(full_path) }
 
             # On assumption of a top-level attributes list, the 'return never'
             # state is only checked on the recursive call from a Hash type. The
@@ -578,7 +578,7 @@ module Scimitar
                       resource_type:           resource_type,
                       attribute_path:          nested_attribute_path,
                       attrs_map_or_leaf_value: value,
-                      attributes: attributes
+                      include_attributes: include_attributes
                     )
                   end
                 end.compact
@@ -597,7 +597,7 @@ module Scimitar
                         resource_type:           resource_type,
                         attribute_path:          attribute_path,
                         attrs_map_or_leaf_value: value[:using],
-                        attributes: attributes
+                        include_attributes: include_attributes
                       )
                     )
                     static_hash
@@ -611,7 +611,7 @@ module Scimitar
                         resource_type:           resource_type,
                         attribute_path:          attribute_path,
                         attrs_map_or_leaf_value: value[:using],
-                        attributes: attributes
+                        include_attributes: include_attributes
                       )
                     end
 
