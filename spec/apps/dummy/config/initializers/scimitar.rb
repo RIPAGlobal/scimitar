@@ -57,7 +57,8 @@ module ScimSchemaExtensions
       def self.scim_attributes
         [
           Scimitar::Schema::Attribute.new(name: 'organization', type: 'string'),
-          Scimitar::Schema::Attribute.new(name: 'department',   type: 'string')
+          Scimitar::Schema::Attribute.new(name: 'department',   type: 'string'),
+          Scimitar::Schema::Attribute.new(name: 'primaryEmail', type: 'string'),
         ]
       end
     end

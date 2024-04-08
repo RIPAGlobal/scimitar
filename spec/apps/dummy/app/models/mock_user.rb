@@ -96,6 +96,7 @@ class MockUser < ActiveRecord::Base
       #
       organization: :organization,
       department:   :department,
+      primaryEmail: :scim_primary_email,
       userGroups: [
         {
           list:      :mock_groups,
@@ -124,8 +125,14 @@ class MockUser < ActiveRecord::Base
       'groups.value'      => { column: MockGroup.arel_table[:id] },
       'emails'            => { columns: [ :work_email_address, :home_email_address ] },
       'emails.value'      => { columns: [ :work_email_address, :home_email_address ] },
-      'emails.type'       => { ignore: true } # We can't filter on that; it'll just search all e-mails
+      'emails.type'       => { ignore: true }, # We can't filter on that; it'll just search all e-mails
+      'primaryEmail'      => { column: :scim_primary_email },
     }
+  end
+
+  # reader
+  def scim_primary_email
+    work_email_address
   end
 
   include Scimitar::Resources::Mixin

@@ -337,7 +337,8 @@ RSpec.describe Scimitar::Resources::Mixin do
 
             'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
               'organization' => 'SOMEORG',
-              'department'   => nil
+              'department'   => nil,
+              'primaryEmail' => instance.work_email_address
             }
           })
         end
