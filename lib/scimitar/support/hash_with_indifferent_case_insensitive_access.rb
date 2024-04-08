@@ -23,8 +23,8 @@ class Hash
   #
   def self.deep_indifferent_case_insensitive_access(object)
     if object.is_a?(Hash)
-      new_hash = Scimitar::Support::HashWithIndifferentCaseInsensitiveAccess.new(object)
-      new_hash.each do | key, value |
+      new_hash = Scimitar::Support::HashWithIndifferentCaseInsensitiveAccess.new
+      object.each do | key, value |
         new_hash[key] = deep_indifferent_case_insensitive_access(value)
       end
       new_hash
@@ -49,34 +49,164 @@ module Scimitar
     # in a case-insensitive fashion too.
     #
     # During enumeration, Hash keys will always be returned in whatever case
-    # they were originally set.
+    # they were originally set. Just as with
+    # ActiveSupport::HashWithIndifferentAccess, though, the type of the keys is
+    # always returned as a String, even if originally set as a Symbol - only
+    # the upper/lower case nature of the original key is preserved.
+    #
+    # If a key is written more than once with the same effective meaning in a
+    # to-string, to-downcase form, then whatever case was used *first* wins;
+    # e.g. if you did hash['User'] = 23, then hash['USER'] = 42, the result
+    # would be {"User" => 42}.
+    #
+    # It's important to remember that Hash#merge is shallow and replaces values
+    # found at existing keys in the target ("this") hash with values in the
+    # inbound Hash. If that new value that is itself a Hash, this *replaces*
+    # the value. For example:
+    #
+    # * Original: <tt>'Foo' => { 'Bar' => 42 }</tt>
+    # * Merge:    <tt>'FOO' => { 'BAR' => 24 }</tt>
+    #
+    # ...results in "this" target hash's key +Foo+ being addressed in the merge
+    # by inbound key +FOO+, so the case doesn't change. But the value for +Foo+
+    # is _replaced_ by the merging-in Hash completely:
+    #
+    # * Result: <tt>'Foo' => { 'BAR' => 24 }</tt>
+    #
+    # ...and of course we might've replaced with a totally different type, such
+    # as +true+:
+    #
+    # * Original: <tt>'Foo' => { 'Bar' => 42 }</tt>
+    # * Merge:    <tt>'FOO' => true</tt>
+    # * Result:   <tt>'Foo' => true</tt>
+    #
+    # If you're intending to merge nested Hashes, then use ActiveSupport's
+    # #deep_merge or an equivalent. This will have the expected outcome, where
+    # the hash with 'BAR' is _merged_ into the existing value and, therefore,
+    # the original 'Bar' key case is preserved:
+    #
+    # * Original:   <tt>'Foo' => { 'Bar' => 42 }</tt>
+    # * Deep merge: <tt>'FOO' => { 'BAR' => 24 }</tt>
+    # * Result:     <tt>'Foo' => { 'Bar' => 24 }</tt>
     #
     class HashWithIndifferentCaseInsensitiveAccess < ActiveSupport::HashWithIndifferentAccess
       def with_indifferent_case_insensitive_access
         self
       end
 
+      def initialize(constructor = nil)
+        @scimitar_hash_with_indifferent_case_insensitive_access_key_map = {}
+        super
+      end
+
+      # It's vital that the attribute map is carried over when one of these
+      # objects is duplicated. Duplication of this ivar state does *not* happen
+      # when 'dup' is called on our superclass, so we have to do that manually.
+      #
+      def dup
+        duplicate = super
+        duplicate.instance_variable_set(
+          '@scimitar_hash_with_indifferent_case_insensitive_access_key_map',
+          @scimitar_hash_with_indifferent_case_insensitive_access_key_map
+        )
+
+        return duplicate
+      end
+
+      # Override the individual key writer.
+      #
+      def []=(key, value)
+        string_key      = scimitar_hash_with_indifferent_case_insensitive_access_string(key)
+        indifferent_key = scimitar_hash_with_indifferent_case_insensitive_access_downcase(string_key)
+        converted_value = convert_value(value, conversion: :assignment)
+
+        # Note '||=', as there might have been a prior use of the "same" key in
+        # a different case. The earliest one is preserved since the actual Hash
+        # underneath all this is already using that variant of the key.
+        #
+        key_for_writing = (
+          @scimitar_hash_with_indifferent_case_insensitive_access_key_map[indifferent_key] ||= string_key
+        )
+
+        regular_writer(key_for_writing, converted_value)
+      end
+
+      # Override #merge to express it in terms of #merge! (also overridden), so
+      # that merged hashes can have their keys treated indifferently too.
+      #
+      def merge(*other_hashes, &block)
+        dup.merge!(*other_hashes, &block)
+      end
+
+      # Modifies-self version of #merge, overriding Hash#merge!.
+      #
+      def merge!(*hashes_to_merge_to_self, &block)
+        if block_given?
+          hashes_to_merge_to_self.each do |hash_to_merge_to_self|
+            hash_to_merge_to_self.each_pair do |key, value|
+              value = block.call(key, self[key], value) if self.key?(key)
+              self[key] = value
+            end
+          end
+        else
+          hashes_to_merge_to_self.each do |hash_to_merge_to_self|
+            hash_to_merge_to_self.each_pair do |key, value|
+              self[key] = value
+            end
+          end
+        end
+
+        self
+      end
+
+      # =======================================================================
+      # PRIVATE INSTANCE METHODS
+      # =======================================================================
+      #
       private
 
         if Symbol.method_defined?(:name)
-          def convert_key(key)
-            key.kind_of?(Symbol) ? key.name.downcase : key.downcase
+          def scimitar_hash_with_indifferent_case_insensitive_access_string(key)
+            key.kind_of?(Symbol) ? key.name : key
           end
         else
-          def convert_key(key)
-            key.kind_of?(Symbol) ? key.to_s.downcase : key.downcase
+          def scimitar_hash_with_indifferent_case_insensitive_access_string(key)
+            key.kind_of?(Symbol) ? key.to_s : key
+          end
+        end
+
+        def scimitar_hash_with_indifferent_case_insensitive_access_downcase(key)
+          key.kind_of?(String) ? key.downcase : key
+        end
+
+        def convert_key(key)
+          string_key      = scimitar_hash_with_indifferent_case_insensitive_access_string(key)
+          indifferent_key = scimitar_hash_with_indifferent_case_insensitive_access_downcase(string_key)
+
+          @scimitar_hash_with_indifferent_case_insensitive_access_key_map[indifferent_key] || string_key
+        end
+
+        def convert_value(value, conversion: nil)
+          if value.is_a?(Hash)
+            if conversion == :to_hash
+              value.to_hash
+            else
+              value.with_indifferent_case_insensitive_access
+            end
+          else
+            super
           end
         end
 
         def update_with_single_argument(other_hash, block)
-          if other_hash.is_a? HashWithIndifferentCaseInsensitiveAccess
+          if other_hash.is_a?(HashWithIndifferentCaseInsensitiveAccess)
             regular_update(other_hash, &block)
           else
             other_hash.to_hash.each_pair do |key, value|
               if block && key?(key)
-                value = block.call(convert_key(key), self[key], value)
+                value = block.call(self.convert_key(key), self[key], value)
               end
-              regular_writer(convert_key(key), convert_value(value))
+              self.[]=(key, value)
             end
           end
         end
