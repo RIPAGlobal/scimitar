@@ -60,6 +60,15 @@ RSpec.describe Scimitar::Lists::QueryParser do
       expect(%Q("O'Malley")).to eql(tree[2])
     end
 
+    it "extended attribute equals" do
+      @instance.parse(%Q(primaryEmail eq "foo@bar.com"))
+
+      rpn = @instance.rpn
+      expect('primaryEmail').to eql(rpn[0])
+      expect(%Q("foo@bar.com")).to eql(rpn[1])
+      expect('eq').to eql(rpn[2])
+    end
+
     it "user name starts with" do
       @instance.parse(%Q(userName sw "J"))
 
