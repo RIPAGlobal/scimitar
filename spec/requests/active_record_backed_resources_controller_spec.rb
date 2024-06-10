@@ -764,6 +764,49 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         expect(@u2.password).to eql('oldpassword')
       end
 
+      it 'which accepts not-to-spec Azure/Entra payloads with misplaced attribute paths' do
+        payload = {
+          Operations: [
+            {
+              op: 'add',
+              value: {
+                'name.givenName'  => 'Foo!',
+                'name.familyName' => 'Bar!',
+                'name.formatted'  => 'Foo! Bar!',
+                'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User': {
+                  'organization' => 'Foo Bar!',
+                  'department' => 'Bar Foo!'
+                },
+              },
+            },
+          ]
+        }
+
+@u2.organization = "HELLO"
+@u2.save!
+
+        payload = spec_helper_hupcase(payload) if force_upper_case
+        patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
+
+        # expect(response.status                 ).to eql(200)
+        # expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+        result = JSON.parse(response.body)
+
+        @u2.reload
+
+puts "--- RESULT:"
+puts result
+PP.pp @u2.attributes
+
+        expect(@u2.first_name).to eql('Foo!')
+        expect(@u2.last_name).to eql('Bar!')
+        expect(@u2.organization).to eql('Foo Bar!' )
+        expect(@u2.department).to eql('Bar Foo!')
+
+        byebug
+      end
+
       it 'which patches "returned: \'never\'" fields' do
         payload = {
           Operations: [
