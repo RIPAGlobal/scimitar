@@ -757,11 +757,44 @@ module Scimitar
                   #   https://github.com/RIPAGlobal/scimitar/issues/48
                   #   https://github.com/RIPAGlobal/scimitar/pull/49
                   #
+# Iterate over all extended schema for the resource class.
+#
+# If the attribute name we're dealing with in the *map* of attributes happens
+# to match a name in the extended schema, then add the schema ID to the front of
+# attribute_tree; we'll end up with - for example:
+#
+# ["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User", "organization"]
+#
+# ...by the time the "attribute_tree << scim_attribute.to_s" always-run line has
+# executed.
+#
+# This works for defined extensions and core schema but would fail for any user
+# schema that happened to use a same-named attribute; the idea of the schema ID
+# is to namespace things and stop it happening, but the code below breaks that.
+# If our attribute map *already* included the schema ID then it wouldn't be
+# needed - i.e. if it had something like this:
+#
+#   "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+#     organization: :organization,
+#     department:   :department,
+#   },
+#
+# ...though at present that just doesn't seem to navigate the tree as expected.
+
+
                   attribute_tree = []
-                  resource_class.extended_schemas.each do |schema|
-                    attribute_tree << schema.id and break if schema.scim_attributes.any? { |attribute| attribute.name == scim_attribute.to_s }
-                  end
+                  # resource_class.extended_schemas.each do |schema|
+                  #   if schema.scim_attributes.any? { |attribute| attribute.name == scim_attribute.to_s }
+                  #     attribute_tree << schema.id and break
+                  #     puts "(yes) #{schema.id}"
+                  #   end
+                  # end
                   attribute_tree << scim_attribute.to_s
+
+puts "==="
+puts attribute_tree.inspect
+puts scim_hash_or_leaf_value.inspect
+puts "==="
 
                   continue_processing = if with_clearing
                     true
@@ -779,6 +812,9 @@ module Scimitar
                   if continue_processing
                     sub_scim_hash_or_leaf_value = scim_hash_or_leaf_value&.dig(*attribute_tree)
 
+# puts "Recurse"
+# puts sub_attrs_map_or_leaf_value.inspect
+# puts (path + [scim_attribute]).inspect
                     self.from_scim_backend!(
                       attrs_map_or_leaf_value: sub_attrs_map_or_leaf_value,
                       scim_hash_or_leaf_value: sub_scim_hash_or_leaf_value, # May be 'nil'
@@ -884,6 +920,24 @@ module Scimitar
           def from_patch_backend!(nature:, path:, value:, altering_hash:, with_attr_map:)
             raise 'Case sensitivity violation' unless altering_hash.is_a?(Scimitar::Support::HashWithIndifferentCaseInsensitiveAccess)
 
+
+
+path = path.map do | entry |
+  if entry.include?('.')
+    entry.split('.')
+#     value = array.pop()
+#
+#     ::Scimitar::Support::Utilities.dot_path(array, value)
+  else
+    entry
+  end
+end.flatten
+
+puts "--- IN:"
+puts nature.inspect
+puts path.inspect
+puts value.inspect
+
             # These all throw exceptions if data is not as expected / required,
             # any of which are rescued below.
             #
@@ -908,6 +962,10 @@ module Scimitar
             # Treat all exceptions as a malformed or unsupported PATCH.
             #
             rescue => _exception # You can use _exception if debugging
+
+
+              byebug
+
               raise Scimitar::InvalidSyntaxError.new('PATCH describes unrecognised attributes and/or unsupported filters')
           end
 
@@ -967,7 +1025,11 @@ module Scimitar
             end
 
             found_data_for_recursion.each do | found_data |
-              attr_map = with_attr_map[path_component.to_sym]
+              attr_map = if path_component.to_sym == :root
+                with_attr_map
+              else
+                with_attr_map[path_component.to_sym]
+              end
 
               # Static array mappings need us to find the right map entry that
               # corresponds to the SCIM data at hand and recurse back into the
@@ -1108,13 +1170,36 @@ module Scimitar
                     # at key 'members' with the above, rather than adding.
                     #
                     value.keys.each do | key |
-                      from_patch_backend!(
-                        nature:        nature,
-                        path:          path + [key],
-                        value:         value[key],
-                        altering_hash: altering_hash,
-                        with_attr_map: with_attr_map
+
+
+                      # Azure / Entra case;
+
+                      subpaths = ::Scimitar::Support::Utilities.path_str_to_array(
+                        self.class.scim_resource_type.extended_schemas,
+                        key
                       )
+
+                      byebug
+
+puts "ADD #{(path + subpaths).inspect} -> #{value[key].inspect}"
+
+                      # if key.include?('.') && ! key.include?(':') # (avoid e.g. "enterprise:2.0:User" from extension schema)
+                      #   from_patch_backend!(
+                      #     nature:        nature,
+                      #     path:          path + key.split('.'),
+                      #     value:         value[key],
+                      #     altering_hash: altering_hash,
+                      #     with_attr_map: with_attr_map
+                      #   )
+                      # else
+                        from_patch_backend!(
+                          nature:        nature,
+                          path:          path + subpaths,
+                          value:         value[key],
+                          altering_hash: altering_hash,
+                          with_attr_map: with_attr_map
+                        )
+                      # end
                     end
                   else
                     altering_hash[path_component] = value
