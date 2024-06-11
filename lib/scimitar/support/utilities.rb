@@ -46,6 +46,61 @@ module Scimitar
           hash[array.shift()] = self.dot_path(array, value)
         end
       end
+
+      # Schema ID-aware splitter handling ":" or "." separators. Adapted from
+      # contribution by @bettysteger and @MorrisFreeman in:
+      #
+      #   https://github.com/RIPAGlobal/scimitar/issues/48
+      #   https://github.com/RIPAGlobal/scimitar/pull/49
+      #
+      # +schemas::   Array of extension schemas, e.g. a SCIM resource class'
+      #              <tt>scim_resource_type.extended_schemas</tt> value. The
+      #              Array should be empty if there are no extensions.
+      #
+      # +path_str+:: Path string, e.g. <tt>"password"</tt>, <tt>"name.givenName"</tt>,
+      #              <tt>"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"</tt> (special case),
+      #              <tt>"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:organization"</tt>
+      #
+      # Returns an array of components, e.g. <tt>["password"]</tt>, <tt>["name",
+      # "givenName"]</tt>,
+      # <tt>["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"]</tt> (special case),
+      # <tt>["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User", "organization"]</tt>.
+      #
+      # The called-out special case is for a schema ID without any appended
+      # path components, which is returned as a single element ID to aid in
+      # traversal particularly of things like PATCH requests. There, a "value"
+      # attribute might have a key string that's simply a schema ID, with an
+      # object beneath that's got attribute-name pairs, possibly nested, in a
+      # path-free payload.
+      #
+      def self.path_str_to_array(schemas, path_str)
+        components = []
+
+        # Note the ":" separating the schema ID (URN) from the attribute.
+        # The nature of JSON rendering / other payloads might lead you to
+        # expect a "." as with any complex types, but that's not the case;
+        # see https://tools.ietf.org/html/rfc7644#section-3.10, or
+        # https://tools.ietf.org/html/rfc7644#section-3.5.2 of which in
+        # particular, https://tools.ietf.org/html/rfc7644#page-35.
+        #
+        if path_str.include?(':')
+          schemas.each do |schema|
+            attributes_after_schema_id = path_str.downcase.split(schema.id.downcase + ':').drop(1)
+
+            if attributes_after_schema_id.empty?
+              components += [schema.id]
+            else
+              attributes_after_schema_id.each do |component|
+                components += [schema.id] + component.split('.')
+              end
+            end
+          end
+        end
+
+        components = path_str.split('.') if components.empty?
+        return components
+      end
+
     end
   end
 end

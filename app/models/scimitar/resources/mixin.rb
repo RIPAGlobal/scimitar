@@ -483,26 +483,14 @@ module Scimitar
               ci_scim_hash = { 'root' => ci_scim_hash }.with_indifferent_case_insensitive_access()
             end
 
-            # Handle extension schema. Contributed by @bettysteger and
-            # @MorrisFreeman via:
+            # Split the path into an array of path components, in a way
+            # which is aware of extension schemas. See documentation of
+            # Scimitar::Support::Utilities.path_str_to_array for details.
             #
-            #   https://github.com/RIPAGlobal/scimitar/issues/48
-            #   https://github.com/RIPAGlobal/scimitar/pull/49
-            #
-            # Note the ":" separating the schema ID (URN) from the attribute.
-            # The nature of JSON rendering / other payloads might lead you to
-            # expect a "." as with any complex types, but that's not the case;
-            # see https://tools.ietf.org/html/rfc7644#section-3.10, or
-            # https://tools.ietf.org/html/rfc7644#section-3.5.2 of which in
-            # particular, https://tools.ietf.org/html/rfc7644#page-35.
-            #
-            paths = []
-            self.class.scim_resource_type.extended_schemas.each do |schema|
-              path_str.downcase.split(schema.id.downcase + ':').drop(1).each do |path|
-                paths += [schema.id] + path.split('.')
-              end
-            end
-            paths = path_str.split('.') if paths.empty?
+            paths = ::Scimitar::Support::Utilities.path_str_to_array(
+              self.class.scim_resource_type.extended_schemas,
+              path_str
+            )
 
             self.from_patch_backend!(
               nature:        nature,
@@ -740,9 +728,17 @@ module Scimitar
                   #   https://github.com/RIPAGlobal/scimitar/issues/48
                   #   https://github.com/RIPAGlobal/scimitar/pull/49
                   #
+                  # Note the shortcoming that attribute names within extensions
+                  # must be unique, as this mechanism basically just pulls out
+                  # extension attributes to the top level, losing what amounts
+                  # to the namespace that the extension schema ID provides.
+                  #
                   attribute_tree = []
                   resource_class.extended_schemas.each do |schema|
-                    attribute_tree << schema.id and break if schema.scim_attributes.any? { |attribute| attribute.name == scim_attribute.to_s }
+                    if schema.scim_attributes.any? { |attribute| attribute.name == scim_attribute.to_s }
+                      attribute_tree << schema.id
+                      break # NOTE EARLY LOOP EXIT
+                    end
                   end
                   attribute_tree << scim_attribute.to_s
 
@@ -950,7 +946,11 @@ module Scimitar
             end
 
             found_data_for_recursion.each do | found_data |
-              attr_map = with_attr_map[path_component.to_sym]
+              attr_map = if path_component.to_sym == :root
+                with_attr_map
+              else
+                with_attr_map[path_component.to_sym]
+              end
 
               # Static array mappings need us to find the right map entry that
               # corresponds to the SCIM data at hand and recurse back into the
@@ -1091,9 +1091,27 @@ module Scimitar
                     # at key 'members' with the above, rather than adding.
                     #
                     value.keys.each do | key |
+
+                      # Handle the Azure (Entra) case where keys might use
+                      # dotted paths - see:
+                      #
+                      #   https://github.com/RIPAGlobal/scimitar/issues/123
+                      #
+                      # ...along with keys containing schema IDs - see:
+                      #
+                      #   https://is.docs.wso2.com/en/next/apis/scim2-patch-operations/#add-user-attributes
+                      #
+                      # ...and scroll down to example 3 of "Complex singular
+                      # attributes".
+                      #
+                      subpaths = ::Scimitar::Support::Utilities.path_str_to_array(
+                        self.class.scim_resource_type.extended_schemas,
+                        key
+                      )
+
                       from_patch_backend!(
                         nature:        nature,
-                        path:          path + [key],
+                        path:          path + subpaths,
                         value:         value[key],
                         altering_hash: altering_hash,
                         with_attr_map: with_attr_map
@@ -1106,7 +1124,12 @@ module Scimitar
                 when 'replace'
                   if path_component == 'root'
                     dot_pathed_value = value.inject({}) do |hash, (k, v)|
-                      hash.deep_merge!(::Scimitar::Support::Utilities.dot_path(k.split('.'), v))
+                      subpaths = ::Scimitar::Support::Utilities.path_str_to_array(
+                        self.class.scim_resource_type.extended_schemas,
+                        k
+                      )
+
+                      hash.deep_merge!(::Scimitar::Support::Utilities.dot_path(subpaths, v))
                     end
 
                     altering_hash[path_component].deep_merge!(dot_pathed_value)
