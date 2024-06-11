@@ -47,7 +47,11 @@ module Scimitar
         end
       end
 
-      # Schema ID-aware splitter handling ":" or "." separators.
+      # Schema ID-aware splitter handling ":" or "." separators. Adapted from
+      # contribution by @bettysteger and @MorrisFreeman in:
+      #
+      #   https://github.com/RIPAGlobal/scimitar/issues/48
+      #   https://github.com/RIPAGlobal/scimitar/pull/49
       #
       # +schemas::   Array of extension schemas, e.g. a SCIM resource class'
       #              <tt>scim_resource_type.extended_schemas</tt> value. The
@@ -64,14 +68,21 @@ module Scimitar
       #
       # The called-out special case is for a schema ID without any appended
       # path components, which is returned as a single element ID to aid in
-      # traversal particularly of things like PATCH requests (where a "value"
+      # traversal particularly of things like PATCH requests. There, a "value"
       # attribute might have a key string that's simply a schema ID, with an
       # object beneath that's got attribute-name pairs, possibly nested, in a
-      # path-free payload. SCIM is - well, frankly, utterly horrifying).
+      # path-free payload. SCIM is... Over-complicated.
       #
       def self.path_str_to_array(schemas, path_str)
         components = []
 
+        # Note the ":" separating the schema ID (URN) from the attribute.
+        # The nature of JSON rendering / other payloads might lead you to
+        # expect a "." as with any complex types, but that's not the case;
+        # see https://tools.ietf.org/html/rfc7644#section-3.10, or
+        # https://tools.ietf.org/html/rfc7644#section-3.5.2 of which in
+        # particular, https://tools.ietf.org/html/rfc7644#page-35.
+        #
         if path_str.include?(':')
           schemas.each do |schema|
             attributes_after_schema_id = path_str.downcase.split(schema.id.downcase + ':').drop(1)

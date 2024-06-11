@@ -764,47 +764,104 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         expect(@u2.password).to eql('oldpassword')
       end
 
-      it 'which accepts not-to-spec Azure/Entra payloads with misplaced attribute paths' do
-        payload = {
-          Operations: [
-            {
-              op: 'add',
-              value: {
-                'name.givenName'  => 'Foo!',
-                'name.familyName' => 'Bar!',
-                'name.formatted'  => 'Foo! Bar!',
-                'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User': {
-                  'organization' => 'Foo Bar!',
-                  'department' => 'Bar Foo!'
+      context 'which' do
+        shared_examples 'it handles not-to-spec in-value Azure/Entra dotted attribute paths' do | operation |
+          it "and performs operation" do
+            payload = {
+              Operations: [
+                {
+                  op: 'add',
+                  value: {
+                    'name.givenName'  => 'Foo!',
+                    'name.familyName' => 'Bar!',
+                    'name.formatted'  => 'Foo! Bar!' # Unrecognised; should be ignored
+                  },
                 },
-              },
-            },
-          ]
-        }
+              ]
+            }
 
-@u2.organization = "HELLO"
-@u2.save!
+            payload = spec_helper_hupcase(payload) if force_upper_case
+            patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
 
-        payload = spec_helper_hupcase(payload) if force_upper_case
-        patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
+            expect(response.status                 ).to eql(200)
+            expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
 
-        # expect(response.status                 ).to eql(200)
-        # expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+            @u2.reload
+            result = JSON.parse(response.body)
 
-        result = JSON.parse(response.body)
+            expect(@u2.first_name).to eql('Foo!')
+            expect(@u2.last_name).to eql('Bar!')
+          end
+        end
 
-        @u2.reload
+        it_behaves_like 'it handles not-to-spec in-value Azure/Entra dotted attribute paths', 'add'
+        it_behaves_like 'it handles not-to-spec in-value Azure/Entra dotted attribute paths', 'replace'
 
-puts "--- RESULT:"
-puts result
-PP.pp @u2.attributes
+        shared_examples 'it handles schema ID value keys without inline attributes' do | operation |
+          it "and performs operation" do
+            payload = {
+              Operations: [
+                {
+                  op: operation,
+                  value: {
+                    'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User': {
+                      'organization' => 'Foo Bar!',
+                      'department' => 'Bar Foo!'
+                    },
+                  },
+                },
+              ]
+            }
 
-        expect(@u2.first_name).to eql('Foo!')
-        expect(@u2.last_name).to eql('Bar!')
-        expect(@u2.organization).to eql('Foo Bar!' )
-        expect(@u2.department).to eql('Bar Foo!')
+            @u2.update!(organization: 'Old org')
+            payload = spec_helper_hupcase(payload) if force_upper_case
+            patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
 
-        byebug
+            expect(response.status                 ).to eql(200)
+            expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+            @u2.reload
+            result = JSON.parse(response.body)
+
+            expect(@u2.organization).to eql('Foo Bar!' )
+            expect(@u2.department).to eql('Bar Foo!')
+          end
+        end
+
+        it_behaves_like 'it handles schema ID value keys without inline attributes', 'add'
+        it_behaves_like 'it handles schema ID value keys without inline attributes', 'replace'
+
+        shared_examples 'it handles schema ID value keys with inline attributes' do
+          it "and performs operation" do
+            payload = {
+              Operations: [
+                {
+                  op: 'add',
+                  value: {
+                    'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:organization' => 'Foo Bar!',
+                    'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:department'   => 'Bar Foo!'
+                  },
+                },
+              ]
+            }
+
+            @u2.update!(organization: 'Old org')
+            payload = spec_helper_hupcase(payload) if force_upper_case
+            patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
+
+            expect(response.status                 ).to eql(200)
+            expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+            @u2.reload
+            result = JSON.parse(response.body)
+
+            expect(@u2.organization).to eql('Foo Bar!' )
+            expect(@u2.department).to eql('Bar Foo!')
+          end
+        end
+
+        it_behaves_like 'it handles schema ID value keys with inline attributes', 'add'
+        it_behaves_like 'it handles schema ID value keys with inline attributes', 'replace'
       end
 
       it 'which patches "returned: \'never\'" fields' do
