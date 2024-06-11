@@ -255,6 +255,47 @@ RSpec.describe Scimitar::Resources::Mixin do
     # =========================================================================
 
     context '#to_scim' do
+      context 'with list of requested attributes' do
+        it 'compiles instance attribute values into a SCIM representation, including only the requested attributes' do
+          uuid                        = SecureRandom.uuid
+
+          instance                    = MockUser.new
+          instance.primary_key        = uuid
+          instance.scim_uid           = 'AA02984'
+          instance.username           = 'foo'
+          instance.password           = 'correcthorsebatterystaple'
+          instance.first_name         = 'Foo'
+          instance.last_name          = 'Bar'
+          instance.work_email_address = 'foo.bar@test.com'
+          instance.home_email_address = nil
+          instance.work_phone_number  = '+642201234567'
+          instance.organization       = 'SOMEORG'
+
+          g1 = MockGroup.create!(display_name: 'Group 1')
+          g2 = MockGroup.create!(display_name: 'Group 2')
+          g3 = MockGroup.create!(display_name: 'Group 3')
+
+          g1.mock_users << instance
+          g3.mock_users << instance
+
+          scim = instance.to_scim(location: "https://test.com/mock_users/#{uuid}", include_attributes: %w[id userName name groups.display groups.value organization])
+          json = scim.to_json()
+          hash = JSON.parse(json)
+
+          expect(hash).to eql({
+            'id'          => uuid,
+            'userName'    => 'foo',
+            'name'        => {'givenName'=>'Foo', 'familyName'=>'Bar'},
+            'groups'      => [{'display'=>g1.display_name, 'value'=>g1.id.to_s}, {'display'=>g3.display_name, 'value'=>g3.id.to_s}],
+            'meta'        => {'location'=>"https://test.com/mock_users/#{uuid}", 'resourceType'=>'User'},
+            'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
+            'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
+              'organization' => 'SOMEORG',
+            },
+          })
+        end
+      end # "context 'with list of requested attributes' do"
+
       context 'with a UUID, renamed primary key column' do
         it 'compiles instance attribute values into a SCIM representation, but omits do-not-return fields' do
           uuid                        = SecureRandom.uuid
@@ -286,7 +327,7 @@ RSpec.describe Scimitar::Resources::Mixin do
             'userName'    => 'foo',
             'name'        => {'givenName'=>'Foo', 'familyName'=>'Bar'},
             'active'      => true,
-            'emails'      => [{'type'=>'work', 'primary'=>true, 'value'=>'foo.bar@test.com'}, {"primary"=>false, "type"=>"home", "value"=>nil}],
+            'emails'      => [{'type'=>'work', 'primary'=>true, 'value'=>'foo.bar@test.com'}, {"primary"=>false, "type"=>"home"}],
             'phoneNumbers'=> [{'type'=>'work', 'primary'=>false, 'value'=>'+642201234567'}],
             'id'          => uuid,
             'externalId'  => 'AA02984',
@@ -296,7 +337,6 @@ RSpec.describe Scimitar::Resources::Mixin do
 
             'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
               'organization' => 'SOMEORG',
-              'department'   => nil
             }
           })
         end

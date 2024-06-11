@@ -107,6 +107,27 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         expect(usernames).to match_array(['2'])
       end
 
+      it 'returns only the requested attributes' do
+        get '/Users', params: {
+          format: :scim,
+          attributes: "id,name"
+        }
+
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+        result = JSON.parse(response.body)
+
+        expect(result['totalResults']).to eql(3)
+        expect(result['Resources'].size).to eql(3)
+
+        keys = result['Resources'].map { |resource| resource.keys }.flatten.uniq
+        expect(keys).to match_array(%w[id meta name schemas urn:ietf:params:scim:schemas:extension:enterprise:2.0:User])
+        expect(result.dig('Resources', 0, 'id')).to eql @u1.primary_key.to_s
+        expect(result.dig('Resources', 0, 'name', 'givenName')).to eql 'Foo'
+        expect(result.dig('Resources', 0, 'name', 'familyName')).to eql 'Ark'
+      end
+
       it 'applies a filter, with case-insensitive attribute matching (GitHub issue #37)' do
         get '/Users', params: {
           format: :scim,
