@@ -790,7 +790,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
             result = JSON.parse(response.body)
 
             expect(@u2.first_name).to eql('Foo!')
-            expect(@u2.last_name).to eql('Bar!')
+            expect(@u2.last_name ).to eql('Bar!')
           end
         end
 
@@ -806,7 +806,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
                   value: {
                     'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User': {
                       'organization' => 'Foo Bar!',
-                      'department' => 'Bar Foo!'
+                      'department'   => 'Bar Foo!'
                     },
                   },
                 },
@@ -823,8 +823,8 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
             @u2.reload
             result = JSON.parse(response.body)
 
-            expect(@u2.organization).to eql('Foo Bar!' )
-            expect(@u2.department).to eql('Bar Foo!')
+            expect(@u2.organization).to eql('Foo Bar!')
+            expect(@u2.department  ).to eql('Bar Foo!')
           end
         end
 
@@ -855,8 +855,8 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
             @u2.reload
             result = JSON.parse(response.body)
 
-            expect(@u2.organization).to eql('Foo Bar!' )
-            expect(@u2.department).to eql('Bar Foo!')
+            expect(@u2.organization).to eql('Foo Bar!')
+            expect(@u2.department  ).to eql('Bar Foo!')
           end
         end
 

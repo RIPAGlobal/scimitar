@@ -483,7 +483,9 @@ module Scimitar
               ci_scim_hash = { 'root' => ci_scim_hash }.with_indifferent_case_insensitive_access()
             end
 
-            # Handle extension schemas.
+            # Split the path into an array of path components, in a way
+            # which is aware of extension schemas. See documentation of
+            # Scimitar::Support::Utilities.path_str_to_array for details.
             #
             paths = ::Scimitar::Support::Utilities.path_str_to_array(
               self.class.scim_resource_type.extended_schemas,
@@ -734,7 +736,8 @@ module Scimitar
                   attribute_tree = []
                   resource_class.extended_schemas.each do |schema|
                     if schema.scim_attributes.any? { |attribute| attribute.name == scim_attribute.to_s }
-                      attribute_tree << schema.id and break
+                      attribute_tree << schema.id
+                      break # NOTE EARLY LOOP EXIT
                     end
                   end
                   attribute_tree << scim_attribute.to_s
@@ -884,7 +887,6 @@ module Scimitar
             # Treat all exceptions as a malformed or unsupported PATCH.
             #
             rescue => _exception # You can use _exception if debugging
-
               raise Scimitar::InvalidSyntaxError.new('PATCH describes unrecognised attributes and/or unsupported filters')
           end
 
@@ -1090,11 +1092,12 @@ module Scimitar
                     #
                     value.keys.each do | key |
 
-                      # Azure (Entra) case where keys use dotted paths - see:
+                      # Handle the Azure (Entra) case where keys might use
+                      # dotted paths - see:
                       #
                       #   https://github.com/RIPAGlobal/scimitar/issues/123
                       #
-                      # ...or handle keys with schema IDs - see:
+                      # ...along with keys containing schema IDs - see:
                       #
                       #   https://is.docs.wso2.com/en/next/apis/scim2-patch-operations/#add-user-attributes
                       #
@@ -1121,12 +1124,12 @@ module Scimitar
                 when 'replace'
                   if path_component == 'root'
                     dot_pathed_value = value.inject({}) do |hash, (k, v)|
-                      split_k = ::Scimitar::Support::Utilities.path_str_to_array(
+                      subpaths = ::Scimitar::Support::Utilities.path_str_to_array(
                         self.class.scim_resource_type.extended_schemas,
                         k
                       )
 
-                      hash.deep_merge!(::Scimitar::Support::Utilities.dot_path(split_k, v))
+                      hash.deep_merge!(::Scimitar::Support::Utilities.dot_path(subpaths, v))
                     end
 
                     altering_hash[path_component].deep_merge!(dot_pathed_value)
