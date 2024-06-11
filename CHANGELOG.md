@@ -1,3 +1,13 @@
+# 2.7.3 (2024-06-11)
+
+Fixes:
+
+* Handles what I _think_ are technically malformed payloads from Azure (Entra), but since they seem unavoidable, it's important to handle them - should fix [123](https://github.com/RIPAGlobal/scimitar/issues/123) reported by `@eduardoborba`
+
+Features:
+
+* As part of the above fix, schema ID handling was improved and extended with better test coverage. `PATCH` `add` and `replace` operations with `value` objects containing schema IDs both with or without attributes inline should now work reliably.
+
 # 2.7.2 (2024-03-27)
 
 Fixes:
