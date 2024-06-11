@@ -71,7 +71,7 @@ module Scimitar
       # traversal particularly of things like PATCH requests. There, a "value"
       # attribute might have a key string that's simply a schema ID, with an
       # object beneath that's got attribute-name pairs, possibly nested, in a
-      # path-free payload. SCIM is... Over-complicated.
+      # path-free payload.
       #
       def self.path_str_to_array(schemas, path_str)
         components = []
