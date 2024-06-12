@@ -346,6 +346,33 @@ RSpec.describe Scimitar::Lists::QueryParser do
         result = @instance.send(:flatten_filter, 'emails[type eq "work" and value co "@example.com"    ] or userType eq "Admin" or ims[type eq "xmpp" and value co "@foo.com"]')
         expect(result).to eql('emails.type eq "work" and emails.value co "@example.com" or userType eq "Admin" or ims.type eq "xmpp" and ims.value co "@foo.com"')
       end
+
+      # https://github.com/RIPAGlobal/scimitar/issues/115
+      #
+      context 'broken filters from Microsoft (GitHub issue #115)' do
+        it 'work with "eq"' do
+          result = @instance.send(:flatten_filter, 'emails[type eq "work"].value eq "foo@bar.com"')
+          expect(result).to eql('emails.type eq "work" and emails.value eq "foo@bar.com"')
+        end
+
+        it 'work with "ne"' do # (just check a couple of operators, not all!)
+          result = @instance.send(:flatten_filter, 'emails[type eq "work"].value ne "foo@bar.com"')
+          expect(result).to eql('emails.type eq "work" and emails.value ne "foo@bar.com"')
+        end
+
+        it 'preserve input case' do
+          result = @instance.send(:flatten_filter, 'emaiLs[TYPE eq "work"].valUE eq "FOO@bar.com"')
+          expect(result).to eql('emaiLs.TYPE eq "work" and emaiLs.valUE eq "FOO@bar.com"')
+        end
+
+        # At the time of writing, this was used in a "belt and braces" request
+        # spec in 'active_record_backed_resources_controller_spec.rb'.
+        #
+        it 'handles more complex, hypothetical cases' do
+          result = @instance.send(:flatten_filter, 'name[givenName eq "FOO"].familyName pr and emails ne "home_1@test.com"')
+          expect(result).to eql('name.givenName eq "FOO" and name.familyName pr and emails ne "home_1@test.com"')
+        end
+      end # "context 'broken filters from Microsoft' do"
     end # "context 'when flattening is needed' do"
 
     context 'with bad filters' do
