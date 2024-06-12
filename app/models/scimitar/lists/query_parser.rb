@@ -65,7 +65,7 @@ module Scimitar
 
       PAREN       = /[\(\)]/.freeze
       STR         = /"(?:\\"|[^"])*"/.freeze
-      OP          = /#{OPERATORS.keys.join('|')}/i.freeze
+      OP          = /(?:#{OPERATORS.keys.join('|')})\b/i.freeze
       WORD        = /[\w\.]+/.freeze
       SEP         = /\s?/.freeze
       NEXT_TOKEN  = /\A(#{PAREN}|#{STR}|#{OP}|#{WORD})#{SEP}/.freeze
