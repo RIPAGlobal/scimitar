@@ -128,6 +128,8 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         expect(result.dig('Resources', 0, 'name', 'familyName')).to eql 'Ark'
       end
 
+      # https://github.com/RIPAGlobal/scimitar/issues/37
+      #
       it 'applies a filter, with case-insensitive attribute matching (GitHub issue #37)' do
         get '/Users', params: {
           format: :scim,
@@ -148,6 +150,30 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         usernames = result['Resources'].map { |resource| resource['userName'] }
         expect(usernames).to match_array(['2'])
       end
+
+      # https://github.com/RIPAGlobal/scimitar/issues/115
+      #
+      it 'handles broken Microsoft filters (GitHub issue #115)' do
+        get '/Users', params: {
+          format: :scim,
+          filter: 'name[givenName eq "FOO"].familyName pr and emails ne "home_1@test.com"'
+        }
+
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+        result = JSON.parse(response.body)
+
+        expect(result['totalResults']).to eql(1)
+        expect(result['Resources'].size).to eql(1)
+
+        ids = result['Resources'].map { |resource| resource['id'] }
+        expect(ids).to match_array([@u2.primary_key.to_s])
+
+        usernames = result['Resources'].map { |resource| resource['userName'] }
+        expect(usernames).to match_array(['2'])
+      end
+
 
       # Strange attribute capitalisation in tests here builds on test coverage
       # for now-fixed GitHub issue #37.
