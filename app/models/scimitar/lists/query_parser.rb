@@ -324,7 +324,7 @@ module Scimitar
         #     => userType ne "Employee" and not (emails.value co "example.com" or (emails.value co "example.org")) and userName="foo"
         #
         #     <- emails[type eq "work"].value eq "foo@bar.com"   (Microsoft workaround)
-        #     => emails[type eq "work" and value eq "foo@bar.com"]
+        #     => emails.type eq "work" and emails.value eq "foo@bar.com"
         #
         # +filter+:: Input filter string. Returns a possibly modified String,
         #            with the hopefully equivalent but flattened filter inside.
