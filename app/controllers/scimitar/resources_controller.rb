@@ -1,5 +1,3 @@
-require_dependency "scimitar/application_controller"
-
 module Scimitar
 
   # A Rails controller which is mostly idiomatic, with #index, #show, #create
