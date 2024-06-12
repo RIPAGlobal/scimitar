@@ -150,10 +150,10 @@ module Scimitar
     #       #...
     #     end
     #
-    # The mixing-in class _must+ implement the read accessor identified by the
+    # The mixing-in class _must_ implement the read accessor identified by the
     # value of the "list" key, returning any indexed, Enumerable collection
     # (e.g. an Array or ActiveRecord::Relation instance). The optional key
-    # ":find_with" is defined with a Proc that's passed the SCIM entry at each
+    # ":find_with" is defined with a Proc that is passed the SCIM entry at each
     # list position. It must use this to look up the equivalent entry for
     # association via the write accessor described by the ":list" key. In the
     # example above, "find_with"'s Proc might look at a SCIM entry value which
@@ -204,12 +204,12 @@ module Scimitar
     # Define this method to return a Hash that maps field names you wish to
     # support in SCIM filter queries to corresponding attributes in the in the
     # mixing-in class. If +nil+ then filtering is not supported in the
-    # ResouceController subclass which declares that it maps to the mixing-in
+    # ResourceController subclass which declares that it maps to the mixing-in
     # class. If not +nil+ but a SCIM filter enquiry is made for an unmapped
     # attribute, an 'invalid filter' exception is raised.
     #
     # If using ActiveRecord support in Scimitar::Lists::QueryParser, the mapped
-    # entites are columns and that's expressed in the names of keys described
+    # entities are columns and that's expressed in the names of keys described
     # below; if you have other approaches to searching, these might be virtual
     # attributes or other such constructs rather than columns. That would be up
     # to your non-ActiveRecord's implementation to decide.
@@ -262,8 +262,8 @@ module Scimitar
     # both of the keys 'created' and 'lastModified', as Symbols. The values
     # should be methods that the including method supports which return a
     # creation or most-recently-updated time, respectively. The returned object
-    # mustsupport #iso8601 to convert to a String representation. Example for a
-    # typical ActiveRecord object with standard timestamps:
+    # must support #iso8601 to convert to a String representation. Example for
+    # a typical ActiveRecord object with standard timestamps:
     #
     #     def self.scim_timestamps_map
     #       {
@@ -338,16 +338,32 @@ module Scimitar
         # Render self as a SCIM object using ::scim_attributes_map. Fields that
         # are marked as <tt>returned: 'never'</tt> are excluded.
         #
-        # +location+:: The location (HTTP(S) full URI) of this resource, in the
-        #              domain of the object including this mixin - "your" IDs,
-        #              not the remote SCIM client's external IDs. #url_for is a
-        #              good way to generate this.
+        # +location+::           The location (HTTP(S) full URI) of this
+        #                        resource in the domain of the object including
+        #                        this mixin - "your" IDs, not the remote SCIM
+        #                        client's external IDs. #url_for is a good way
+        #                        to generate this.
         #
-        def to_scim(location:)
+        # +include_attributes+:: The attributes that should be included in the
+        #                        response, in the form of a list of full
+        #                        attribute paths. Schema IDs are not supported.
+        #                        See RFC 7644 section 3.9 and section 3.10 for
+        #                        more. When a collection is given, +nil+ value
+        #                        items are also excluded from the response. If
+        #                        omitted or given an empty collection, all
+        #                        attributes are included.
+        #
+        def to_scim(location:, include_attributes: [])
           map             = self.class.scim_attributes_map()
           resource_type   = self.class.scim_resource_type()
           timestamps_map  = self.class.scim_timestamps_map() if self.class.respond_to?(:scim_timestamps_map)
-          attrs_hash      = self.to_scim_backend(data_source: self, resource_type: resource_type, attrs_map_or_leaf_value: map)
+          attrs_hash      = self.to_scim_backend(
+            data_source:             self,
+            resource_type:           resource_type,
+            attrs_map_or_leaf_value: map,
+            include_attributes:      include_attributes
+          )
+
           resource        = resource_type.new(attrs_hash)
           meta_attrs_hash = { location: location }
 
@@ -532,6 +548,16 @@ module Scimitar
           # +attrs_map_or_leaf_value+:: The attribute map. At the top level,
           #                             this is from ::scim_attributes_map.
           #
+          # +include_attributes+::      The attributes that should be included
+          #                             in the response, in the form of a list
+          #                             of full attribute paths. Schema IDs are
+          #                             not supported. See RFC 7644 section
+          #                             3.9 and section 3.10 for more. When a
+          #                             collection is given, +nil+ value items
+          #                             are also excluded from the response. If
+          #                             omitted or given an empty collection,
+          #                             all attributes are included.
+          #
           # Internal recursive calls also send:
           #
           # +attribute_path+::          Array of path components to the
@@ -543,8 +569,15 @@ module Scimitar
             data_source:,
             resource_type:,
             attrs_map_or_leaf_value:,
+            include_attributes:,
             attribute_path: []
           )
+            # NOTE EARLY EXIT
+            #
+            return unless scim_attribute_included?(
+              include_attributes: include_attributes,
+              attribute_path:     attribute_path
+            )
 
             # On assumption of a top-level attributes list, the 'return never'
             # state is only checked on the recursive call from a Hash type. The
@@ -554,7 +587,7 @@ module Scimitar
             #
             case attrs_map_or_leaf_value
               when Hash # Expected at top-level of any map, or nested within
-                attrs_map_or_leaf_value.each.with_object({}) do |(key, value), hash|
+                result = attrs_map_or_leaf_value.each.with_object({}) do |(key, value), hash|
                   nested_attribute_path = attribute_path + [key]
 
                   if resource_type.find_attribute(*nested_attribute_path)&.returned != "never"
@@ -562,10 +595,14 @@ module Scimitar
                       data_source:             data_source,
                       resource_type:           resource_type,
                       attribute_path:          nested_attribute_path,
-                      attrs_map_or_leaf_value: value
+                      attrs_map_or_leaf_value: value,
+                      include_attributes:      include_attributes
                     )
                   end
                 end
+
+                result.compact! if include_attributes.any?
+                result
 
               when Array # Static or dynamic mapping against lists in data source
                 built_dynamic_list = false
@@ -580,7 +617,8 @@ module Scimitar
                         data_source:             data_source,
                         resource_type:           resource_type,
                         attribute_path:          attribute_path,
-                        attrs_map_or_leaf_value: value[:using]
+                        attrs_map_or_leaf_value: value[:using],
+                        include_attributes:      include_attributes
                       )
                     )
                     static_hash
@@ -593,7 +631,8 @@ module Scimitar
                         data_source:             list_entry,
                         resource_type:           resource_type,
                         attribute_path:          attribute_path,
-                        attrs_map_or_leaf_value: value[:using]
+                        attrs_map_or_leaf_value: value[:using],
+                        include_attributes:      include_attributes
                       )
                     end
 
@@ -1499,6 +1538,29 @@ module Scimitar
             end
 
             return handled
+          end
+
+          # Related to to_scim_backend, this methods tells whether +attribute_path+
+          # should be included in the current +include_attributes+. This method
+          # implements the attributes request from RFC 7644, section 3.9 and 3.10.
+          #
+          # +include_attributes+::      The attributes that should be included
+          #                             in the response, in the form of a list of
+          #                             full attribute paths. See RFC 7644 section
+          #                             3.9 and section 3.10. An empty collection
+          #                             will include all attributes.
+          #
+          # +attribute_path+::          Array of path components to the attribute,
+          #                             e.g. <tt>["name", "givenName"]</tt>.
+          #
+          def scim_attribute_included?(include_attributes:, attribute_path:)
+            return true unless attribute_path.any? && include_attributes.any?
+
+            full_path = attribute_path.join(".")
+            attribute_included = full_path.start_with?(*include_attributes)
+            will_include_nested = include_attributes.any? { |att| att.start_with?(full_path) }
+
+            attribute_included || will_include_nested
           end
 
       end # "included do"
