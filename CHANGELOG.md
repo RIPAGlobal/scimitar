@@ -1,3 +1,26 @@
+# 2.8.0 (2024-06-13)
+
+Features:
+
+* Supports the [SCIM mechanism for requesting specific attributes](https://datatracker.ietf.org/doc/html/rfc7644#section-3.9) (noting however that schema ID URN prefixes are not supported; use only dotted attribute paths without such prefixes) - closes [89](https://github.com/RIPAGlobal/scimitar/issues/89) via [102](https://github.com/RIPAGlobal/scimitar/pull/102) and [127](https://github.com/RIPAGlobal/scimitar/pull/127) - thanks to `@xjunior`
+* In a moment of déja vu from v2.7.3's Microsoft payload workarounds for [123](https://github.com/RIPAGlobal/scimitar/issues/123), handles a different kind of malformed filter sent by Microsoft Azure (Entra) in `GET` requests - implements [115](https://github.com/RIPAGlobal/scimitar/issues/115) requested by `@gsar` via [128](https://github.com/RIPAGlobal/scimitar/pull/128)
+* Handles schema IDs (URNs) in filters of `GET` requests - implements [116](https://github.com/RIPAGlobal/scimitar/issues/116) requested by `@gsar` via [131](https://github.com/RIPAGlobal/scimitar/pull/131)
+
+Fixes:
+
+* Corrects schema for `name.givenName` and `name.familyName` in User, which previously specified these as required, but the SCIM specification says they are not - fixes [113](https://github.com/RIPAGlobal/scimitar/issues/113) reported by `@s-andringa` via [129](https://github.com/RIPAGlobal/scimitar/pull/129)
+
+**IMPORTANT:** In the unlikely event that your code relies upon `name.givenName` and/or `name.familyName` being _required_ in the User schema, you can patch this in your `config/initializers/scimitar.rb` file - for example:
+
+```ruby
+Rails.application.config.to_prepare do
+  Scimitar::Schema::Name.scim_attributes.find { |a| a.name == 'familyName' }.required = true
+  Scimitar::Schema::Name.scim_attributes.find { |a| a.name == 'givenName'  }.required = true
+
+  # ...
+end
+```
+
 # 2.7.3 (2024-06-11)
 
 Fixes:
