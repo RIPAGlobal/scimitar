@@ -543,6 +543,8 @@ Whatever you provide in the `::id` method in your extension class will be used a
 }
 ```
 
+**IMPORTANT: Attribute names must be unique** across your entire combined schema, regardless of URNs used. This is because of a limitation in Scimitar's implementation. [This GitHub issue](https://github.com/RIPAGlobal/scimitar/issues/130) explains more. If this is a problem for you, please comment on the GitHub issue to help the maintainers understand the level of demand for remediation.
+
 Resource extensions can provide any fields you choose, under any ID/URN you choose, to either RFC-described resources or entirely custom SCIM resources. There are no hard-coded assumptions or other "magic" that might require you to only extend RFC-described resources with RFC-described extensions. Of course, if you use custom resources or custom extensions that are not described by the SCIM RFCs, then the SCIM API you provide may only work with custom-written API callers that are aware of your bespoke resources and/or extensions.
 
 Extensions can also contain complex attributes such as groups. For instance, if you want the ability to write to groups from the User resource perspective (since 'groups' collection in a SCIM User resource is read-only), you can add one attribute to your extension like this:
