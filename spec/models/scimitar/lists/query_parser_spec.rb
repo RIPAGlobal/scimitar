@@ -347,6 +347,35 @@ RSpec.describe Scimitar::Lists::QueryParser do
         expect(result).to eql('emails.type eq "work" and emails.value co "@example.com" or userType eq "Admin" or ims.type eq "xmpp" and ims.value co "@foo.com"')
       end
 
+      # https://github.com/RIPAGlobal/scimitar/issues/116
+      #
+      context 'with schema IDs (GitHub issue #116)' do
+        it 'handles simple attributes' do
+          result = @instance.send(:flatten_filter, 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:employeeId eq "gsar"')
+          expect(result).to eql('employeeId eq "gsar"')
+        end
+
+        it 'handles dotted attribute paths' do
+          result = @instance.send(:flatten_filter, 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:imaginary.path eq "gsar"')
+          expect(result).to eql('imaginary.path eq "gsar"')
+        end
+
+        it 'replaces all examples' do
+          result = @instance.send(:flatten_filter, 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:employeeId eq "gsar" or urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:imaginary.path eq "gsar"')
+          expect(result).to eql('employeeId eq "gsar" or imaginary.path eq "gsar"')
+        end
+
+        it 'handles the square bracket form with schema ID at the root' do
+          result = @instance.send(:flatten_filter, 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User[employeeId eq "gsar"')
+          expect(result).to eql('employeeId eq "gsar"')
+        end
+
+        it 'handles the square bracket form with schema ID and attribute at the root' do
+          result = @instance.send(:flatten_filter, 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:imaginary[path eq "gsar"')
+          expect(result).to eql('imaginary.path eq "gsar"')
+        end
+      end
+
       # https://github.com/RIPAGlobal/scimitar/issues/115
       #
       context 'broken filters from Microsoft (GitHub issue #115)' do
