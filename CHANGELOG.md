@@ -8,18 +8,16 @@ Features:
 
 Fixes:
 
-* Corrects schema for `name.givenName` and `name.familyName` in User, which previously specified these as required, but the SCIM specification says they are not - fixes [113](https://github.com/RIPAGlobal/scimitar/issues/113) reported by `@s-andringa` via [129](https://github.com/RIPAGlobal/scimitar/pull/129)
+* Corrects schema for `name.givenName` and `name.familyName` in User, which previously specified these as required, but the SCIM specification says they are not - fixes [113](https://github.com/RIPAGlobal/scimitar/issues/113) reported by `@s-andringa` via [129](https://github.com/RIPAGlobal/scimitar/pull/129). If your code somehow _relies_ upon `name.givenName` and/or `name.familyName` being required in the User schema, you can patch this in your `config/initializers/scimitar.rb` file - for example:
 
-If your code somehow _relies_ upon `name.givenName` and/or `name.familyName` being required in the User schema, you can patch this in your `config/initializers/scimitar.rb` file - for example:
+    ```ruby
+    Rails.application.config.to_prepare do
+      Scimitar::Schema::Name.scim_attributes.find { |a| a.name == 'familyName' }.required = true
+      Scimitar::Schema::Name.scim_attributes.find { |a| a.name == 'givenName'  }.required = true
 
-```ruby
-Rails.application.config.to_prepare do
-  Scimitar::Schema::Name.scim_attributes.find { |a| a.name == 'familyName' }.required = true
-  Scimitar::Schema::Name.scim_attributes.find { |a| a.name == 'givenName'  }.required = true
-
-  # ...
-end
-```
+      # ...
+    end
+    ```
 
 # 2.7.3 (2024-06-11)
 
