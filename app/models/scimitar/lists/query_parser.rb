@@ -466,7 +466,36 @@ module Scimitar
             end
           end
 
-          return rewritten.join(' ')
+          # Handle schema IDs.
+          #
+          # Scimitar currently has a limitation where it strips schema IDs in
+          # things like PATCH operation path traversal; see
+          # https://github.com/RIPAGlobal/scimitar/issues/130. At least that
+          # makes things easy here; use the same approach and strip them out!
+          #
+          # We don't know which resource is being queried at this layer of the
+          # software. If Scimitar were to bump major version, then an extension
+          # to QueryParser#parse to include this information would be wise. In
+          # the mean time, all we can do is enumerate all extension schema
+          # subclasses with IDs and remove those IDs if present in the filter.
+          #
+          # Inbound unrecognised schema IDs will be left behind. If the client
+          # Scimitar application hasn't defined requested schemas, it would
+          # very likely never have been able to handle the filter either way.
+          #
+          rewritten_joined = rewritten.join(' ')
+          if rewritten_joined.include?(':')
+
+            # README.md notes that extensions *must* be a subclass of
+            # Scimitar::Schema::Base and must define IDs.
+            #
+            known_schema_ids = Scimitar::Schema::Base.subclasses.map { |s| s.new.id }.compact
+            known_schema_ids.each do | schema_id |
+              rewritten_joined.gsub!(/#{schema_id}[\:\.]/, '')
+            end
+          end
+
+          return rewritten_joined
         end
 
         # Service method to DRY up #flatten_filter a little. Applies a prefix
