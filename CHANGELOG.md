@@ -10,7 +10,7 @@ Fixes:
 
 * Corrects schema for `name.givenName` and `name.familyName` in User, which previously specified these as required, but the SCIM specification says they are not - fixes [113](https://github.com/RIPAGlobal/scimitar/issues/113) reported by `@s-andringa` via [129](https://github.com/RIPAGlobal/scimitar/pull/129)
 
-If your code relies upon `name.givenName` and/or `name.familyName` being _required_ in the User schema, you can patch this in your `config/initializers/scimitar.rb` file - for example:
+If your code somehow _relies_ upon `name.givenName` and/or `name.familyName` being required in the User schema, you can patch this in your `config/initializers/scimitar.rb` file - for example:
 
 ```ruby
 Rails.application.config.to_prepare do
