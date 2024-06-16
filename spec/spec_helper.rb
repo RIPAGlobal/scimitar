@@ -19,7 +19,7 @@ require File.expand_path('../apps/dummy/config/environment', __FILE__)
 abort("The Rails environment is running in production mode!") if Rails.env.production?
 
 require 'rspec/rails'
-require 'byebug'
+require 'debug'
 require 'scimitar'
 
 # ============================================================================
