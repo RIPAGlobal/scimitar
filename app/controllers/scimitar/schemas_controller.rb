@@ -12,7 +12,21 @@ module Scimitar
         hash
       end
 
-      render json: schemas_by_id[params[:name]] || schemas
+      list = if params.key?(:name)
+        [ schemas_by_id[params[:name]] ]
+      else
+        schemas
+      end
+
+      render(json: {
+        schemas: [
+            'urn:ietf:params:scim:api:messages:2.0:ListResponse'
+        ],
+        totalResults: list.size,
+        startIndex:   1,
+        itemsPerPage: list.size,
+        Resources:    list
+      })
     end
 
   end

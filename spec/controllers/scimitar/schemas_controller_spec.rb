@@ -10,35 +10,60 @@ RSpec.describe Scimitar::SchemasController do
       super
     end
   end
+
   context '#index' do
+    it 'returns a valid ListResponse' do
+      get :index, params: { format: :scim }
+      expect(response).to be_ok
+
+      parsed_body  = JSON.parse(response.body)
+      schema_count = parsed_body['Resources']&.size
+
+      expect(parsed_body['schemas'     ]).to match_array(['urn:ietf:params:scim:api:messages:2.0:ListResponse'])
+      expect(parsed_body['totalResults']).to eql(schema_count)
+      expect(parsed_body['itemsPerPage']).to eql(schema_count)
+      expect(parsed_body['startIndex'  ]).to eql(1)
+    end
+
     it 'returns a collection of supported schemas' do
       get :index, params: { format: :scim }
       expect(response).to be_ok
+
       parsed_body = JSON.parse(response.body)
-      expect(parsed_body.length).to eql(3)
-      schema_names = parsed_body.map {|schema| schema['name']}
+      expect(parsed_body['Resources']&.size).to eql(3)
+
+      schema_names = parsed_body['Resources'].map {|schema| schema['name']}
       expect(schema_names).to match_array(['User', 'ExtendedUser', 'Group'])
     end
 
     it 'returns only the User schema when its id is provided' do
       get :index, params: { name: Scimitar::Schema::User.id, format: :scim }
       expect(response).to be_ok
+
       parsed_body = JSON.parse(response.body)
-      expect(parsed_body['name']).to eql('User')
+      expect(parsed_body.dig('Resources', 0, 'name')).to eql('User')
     end
 
     it 'includes the controller customised schema location' do
       get :index, params: { name: Scimitar::Schema::User.id, format: :scim }
       expect(response).to be_ok
+
       parsed_body = JSON.parse(response.body)
-      expect(parsed_body.dig('meta', 'location')).to eq scim_schemas_url(name: Scimitar::Schema::User.id, test: 1)
+      expect(parsed_body.dig('Resources', 0, 'meta', 'location')).to eq scim_schemas_url(name: Scimitar::Schema::User.id, test: 1)
     end
 
     it 'returns only the Group schema when its id is provided' do
       get :index, params: { name: Scimitar::Schema::Group.id, format: :scim }
       expect(response).to be_ok
+
       parsed_body = JSON.parse(response.body)
-      expect(parsed_body['name']).to eql('Group')
+
+      expect(parsed_body['Resources'   ]&.size).to eql(1)
+      expect(parsed_body['totalResults']      ).to eql(1)
+      expect(parsed_body['itemsPerPage']      ).to eql(1)
+      expect(parsed_body['startIndex'  ]      ).to eql(1)
+
+      expect(parsed_body.dig('Resources', 0, 'name')).to eql('Group')
     end
 
     context 'with custom resource types' do
@@ -65,7 +90,7 @@ RSpec.describe Scimitar::SchemasController do
 
         license_resource = Class.new(Scimitar::Resources::Base) do
           set_schema license_schema
-          def self.endopint
+          def self.endpoint
             '/Gaga'
           end
         end
@@ -75,9 +100,9 @@ RSpec.describe Scimitar::SchemasController do
         get :index, params: { name: license_schema.id, format: :scim }
         expect(response).to be_ok
         parsed_body = JSON.parse(response.body)
-        expect(parsed_body['name']).to eql('License')
+        expect(parsed_body.dig('Resources', 0, 'name')).to eql('License')
       end
-    end
-  end
+    end # "context 'with custom resource types' do"
+  end # "context '#index' do
 end
 

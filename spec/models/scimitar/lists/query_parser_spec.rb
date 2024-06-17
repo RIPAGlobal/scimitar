@@ -347,6 +347,11 @@ RSpec.describe Scimitar::Lists::QueryParser do
         expect(result).to eql('emails.type eq "work" and emails.value co "@example.com" or userType eq "Admin" or ims.type eq "xmpp" and ims.value co "@foo.com"')
       end
 
+      it 'handles an example previously described as unsupported in README.md' do
+        result = @instance.send(:flatten_filter, 'filter=userType eq "Employee" and emails[type eq "work" and value co "@example.com"]')
+        expect(result).to eql('filter=userType eq "Employee" and emails.type eq "work" and emails.value co "@example.com"')
+      end
+
       # https://github.com/RIPAGlobal/scimitar/issues/116
       #
       context 'with schema IDs (GitHub issue #116)' do
