@@ -374,6 +374,11 @@ RSpec.describe Scimitar::Lists::QueryParser do
           result = @instance.send(:flatten_filter, 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:imaginary[path eq "gsar"')
           expect(result).to eql('imaginary.path eq "gsar"')
         end
+
+        it 'handles an example previously described as unsupported in README.md' do
+          result = @instance.send(:flatten_filter, 'filter=userType eq "Employee" and emails[type eq "work" and value co "@example.com"]')
+          expect(result).to eql('filter=userType eq "Employee" and emails.type eq "work" and emails.value co "@example.com"')
+        end
       end
 
       # https://github.com/RIPAGlobal/scimitar/issues/115
