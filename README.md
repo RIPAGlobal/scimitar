@@ -583,6 +583,23 @@ And write to it like this:
 }
 ```
 
+### Helping with auto-discovery
+
+If you have an API consumer entity querying your Scimitar-based SCIM API provider endpoint and want to enable a degree of auto-discovery for that entity, then depending on your implementation, there may be customisations you wish to make.
+
+#### Default resources
+
+By default, Scimitar advertises (via things like [the `/Schemas` endpoint](https://tools.ietf.org/html/rfc7644#section-4)) support for both a `User` and `Group` resource, but if you (say) only support a `User` concept, you override the default using code such as this in your `config/initializers/scimitar.rb` file:
+
+```ruby
+Rails.application.config.to_prepare do
+  Scimitar::Engine::set_default_resources([Scimitar::Resources::User])
+  # ...other Scimitar configuration / initialisation code...
+end
+```
+
+
+
 ## Security
 
 One vital feature of SCIM is its authorisation and security model. The best resource I've found to describe this in any detail is [section 2 of the protocol RFC, 7644](https://tools.ietf.org/html/rfc7644#section-2).
@@ -600,8 +617,6 @@ Often, you'll find that bearer tokens are in use by SCIM API consumers, but the 
 ## Limitations
 
 ### Specification versus implementation
-
-* The `name` complex type of a User has `givenName` and `familyName` fields which [the RFC 7643 core schema](https://tools.ietf.org/html/rfc7643#section-8.7.1) describes as optional. Scimitar marks these as required, in the belief that most user synchronisation scenarios between clients and a Scimitar-based provider would require at least those names for basic user management on the provider side, in conjunction with the in-spec-required `userName` field. That's only if the whole `name` type is given at all - at the top level, this itself remains optional per spec, but if you're going to bother specifying names at all, Scimitar wants at least those two pieces of data.
 
 * Several complex types for User contain the same set of `value`, `display`, `type` and `primary` fields, all used in synonymous ways.
 
@@ -621,6 +636,8 @@ Often, you'll find that bearer tokens are in use by SCIM API consumers, but the 
 
 * [RFC 7644 indicates](https://tools.ietf.org/html/rfc7644#page-35) that a resource might only return its core schema in the `schemas` attribute if it was created without any extension fields used. Only if e.g. a subsequent `PATCH` operation added data provided by extension schema, would that extension also appear in `schemas`. This behaviour is extremely difficult to implement and Scimitar does not try - it will always return a resource's core schema and any/all defined extension schemas in the `schemas` array at all times.
 
+* As noted earlier, extension schema attribute names must be unique across your entire combined schema, regardless of schema IDs (URNs) used.
+
 If you believe choices made in this section may be incorrect, please [create a GitHub issue](https://github.com/RIPAGlobal/scimitar/issues/new) describing the problem.
 
 ### Omissions
@@ -632,20 +649,6 @@ If you believe choices made in this section may be incorrect, please [create a G
   - `filter=userType eq "Employee" and (emails co "example.com" or emails.value co "example.org")`
 
   It's very strange just specifying `emails co...`, since this is an Array which contains complex types. Is the filter there meant to try and match every attribute of the nested types in all array entries? I.e. if `type` happened to contain `example.com`, is that meant to match? It's strongly implied, because the next part of the filter specifically says `emails.value`. Again, we have to reach a little and assume that `emails.value` means "in _any_ of the objects in the `emails` Array, match all things where `value` contains `example.org`. It seems likely that this is a specification error and both of the specifiers should be `emails.value`.
-
-  Adding even more complexity - the specification shows filters _which include filters within them_. In the same way that PATCH operations use paths to identify attributes not just by name, but by filter matches within collections - e.g. `emails[type eq "work"]`, for all e-mail objects inside the `emails` array with a `type` attribute that has a value of `work`) - so also can a filter _contain a filter_, which isn't supported. So, this [example from the RFC](https://tools.ietf.org/html/rfc7644#page-23) is not supported by Scimitar:
-
-  - `filter=userType eq "Employee" and emails[type eq "work" and value co "@example.com"]`
-
-  Another filter shows a potential workaround:
-
-  - `filter=userType eq "Employee" and (emails.type eq "work")`
-
-  ...which is just a match on `emails.type`, so if you have a queryable attribute mapping defined for `emails.type`, that would become queryable. Likewise, you could rewrite the more complex prior example thus:
-
-  - `filter=userType eq "Employee" and emails.type eq "work" and emails.value co "@example.com"`
-
-  ...so adding a mapping for `emails.value` would then allow a database query to be constructed.
 
 * Currently filtering for lists is always matched case-insensitive regardless of schema declarations that might indicate otherwise, for `eq`, `ne`, `co`, `sw` and `ew` operators; for greater/less-thank style filters, case is maintained with simple `>`, `<` etc. database operations in use. The standard Group and User schema have `caseExact` set to `false` for just about anything readily queryable, so this hopefully would only ever potentially be an issue for custom schema.
 
