@@ -66,8 +66,9 @@ module Scimitar
     # * Scimitar::Resources::User
     # * Scimitar::Resources::Group
     #
-    # ...but if an implementation does not e.g. support Group, it can override
-    # via ::set_default_resources to help with service auto-discovery.
+    # ...but if an implementation does not e.g. support Group, it can
+    # be overridden via ::set_default_resources to help with service
+    # auto-discovery.
     #
     def self.default_resources
       @standard_default_resources = [ Resources::User, Resources::Group ]
