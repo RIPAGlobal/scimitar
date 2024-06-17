@@ -42,4 +42,78 @@ RSpec.describe Scimitar::Engine do
       expect(JSON.parse(response.body)['name']['familyName']).to eql('baz')
     end
   end # "context 'parameter parser' do"
+
+  # These are unit tests rather than request tests; seems like a reasonable
+  # place to put them in the absence of a standardised RSpec "engine" location.
+  #
+  context 'engine unit tests' do
+    around :each do | example |
+      license_schema = Class.new(Scimitar::Schema::Base) do
+        def initialize(options = {})
+          super(name: 'License', id: self.class.id(), description: 'Represents a License')
+        end
+        def self.id;              'License'; end
+        def self.scim_attributes; [];        end
+      end
+
+      @license_resource = Class.new(Scimitar::Resources::Base) do
+        self.set_schema(license_schema)
+        def self.endpoint; '/License'; end
+      end
+
+      example.run()
+    ensure
+      Scimitar::Engine.reset_default_resources()
+      Scimitar::Engine.reset_custom_resources()
+    end
+
+    context '::resources, :add_custom_resource, ::set_default_resources' do
+      it 'returns default resources' do
+        expect(Scimitar::Engine.resources()).to match_array([Scimitar::Resources::User, Scimitar::Resources::Group])
+      end
+
+      it 'includes custom resources' do
+        Scimitar::Engine.add_custom_resource(@license_resource)
+        expect(Scimitar::Engine.resources()).to match_array([Scimitar::Resources::User, Scimitar::Resources::Group, @license_resource])
+      end
+
+      it 'notes changes to defaults' do
+        Scimitar::Engine::set_default_resources([Scimitar::Resources::User])
+        expect(Scimitar::Engine.resources()).to match_array([Scimitar::Resources::User])
+      end
+
+      it 'notes changes to defaults with custom resources added' do
+        Scimitar::Engine::set_default_resources([Scimitar::Resources::User])
+        Scimitar::Engine.add_custom_resource(@license_resource)
+        expect(Scimitar::Engine.resources()).to match_array([Scimitar::Resources::User, @license_resource])
+      end
+
+      it 'rejects bad defaults' do
+        expect {
+          Scimitar::Engine::set_default_resources([@license_resource])
+        }.to raise_error('Scimitar::Engine::set_default_resources: Only Scimitar::Resources::User, Scimitar::Resources::Group are supported')
+      end
+
+      it 'rejects empty defaults' do
+        expect {
+          Scimitar::Engine::set_default_resources([])
+        }.to raise_error('Scimitar::Engine::set_default_resources: At least one resource must be given')
+      end
+    end # "context '::resources, :add_custom_resource, ::set_default_resources' do"
+
+    context '#schemas' do
+      it 'returns schema instances from ::resources' do
+        expect(Scimitar::Engine).to receive(:resources).and_return([Scimitar::Resources::User, @license_resource])
+
+        schema_instances = Scimitar::Engine.schemas()
+        schema_classes   = schema_instances.map(&:class)
+
+        expect(schema_classes).to match_array([
+          Scimitar::Schema::User,
+          ScimSchemaExtensions::User::Enterprise,
+          @license_resource.schemas.first
+        ])
+      end
+    end # "context '#schemas' do"
+  end # "context 'engine unit tests' do"
 end

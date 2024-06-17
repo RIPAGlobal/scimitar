@@ -10,6 +10,7 @@ RSpec.describe Scimitar::SchemasController do
       super
     end
   end
+
   context '#index' do
     it 'returns a valid ListResponse' do
       get :index, params: { format: :scim }
@@ -89,7 +90,7 @@ RSpec.describe Scimitar::SchemasController do
 
         license_resource = Class.new(Scimitar::Resources::Base) do
           set_schema license_schema
-          def self.endopint
+          def self.endpoint
             '/Gaga'
           end
         end
@@ -101,7 +102,7 @@ RSpec.describe Scimitar::SchemasController do
         parsed_body = JSON.parse(response.body)
         expect(parsed_body.dig('Resources', 0, 'name')).to eql('License')
       end
-    end
-  end
+    end # "context 'with custom resource types' do"
+  end # "context '#index' do
 end
 
