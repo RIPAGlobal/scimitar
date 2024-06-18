@@ -107,6 +107,35 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         expect(usernames).to match_array(['2'])
       end
 
+      it 'returns only the requested attributes' do
+        get '/Users', params: {
+          format: :scim,
+          attributes: "id,name"
+        }
+
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+        result = JSON.parse(response.body)
+
+        expect(result['totalResults']).to eql(3)
+        expect(result['Resources'].size).to eql(3)
+
+        keys = result['Resources'].map { |resource| resource.keys }.flatten.uniq
+
+        expect(keys).to match_array(%w[
+          id
+          meta
+          name
+          schemas
+          urn:ietf:params:scim:schemas:extension:enterprise:2.0:User
+          urn:ietf:params:scim:schemas:extension:manager:1.0:User
+        ])
+        expect(result.dig('Resources', 0, 'id')).to eql @u1.primary_key.to_s
+        expect(result.dig('Resources', 0, 'name', 'givenName')).to eql 'Foo'
+        expect(result.dig('Resources', 0, 'name', 'familyName')).to eql 'Ark'
+      end
+
       # https://github.com/RIPAGlobal/scimitar/issues/37
       #
       it 'applies a filter, with case-insensitive attribute matching (GitHub issue #37)' do
@@ -411,6 +440,76 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           expect(new_mock.last_name).to eql('Family')
           expect(new_mock.home_email_address).to eql('home_4@test.com')
           expect(new_mock.work_email_address).to eql('work_4@test.com')
+        end
+
+        it 'with schema ID value keys without inline attributes' do
+          mock_before = MockUser.all.to_a
+
+          attributes = {
+            userName: '4',
+            'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User': {
+              organization: 'Foo Bar!',
+              department:   'Bar Foo!'
+            },
+            'urn:ietf:params:scim:schemas:extension:manager:1.0:User': {
+              manager: 'Foo Baz!'
+            }
+          }
+
+          attributes = spec_helper_hupcase(attributes) if force_upper_case
+
+          expect {
+            post "/Users", params: attributes.merge(format: :scim)
+          }.to change { MockUser.count }.by(1)
+
+          mock_after = MockUser.all.to_a
+          new_mock = (mock_after - mock_before).first
+
+          expect(response.status                 ).to eql(201)
+          expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+          result = JSON.parse(response.body)
+
+          expect(new_mock.organization).to eql('Foo Bar!')
+          expect(new_mock.department  ).to eql('Bar Foo!')
+          expect(new_mock.manager     ).to eql('Foo Baz!')
+
+          expect(result['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']['organization']).to eql(new_mock.organization)
+          expect(result['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']['department'  ]).to eql(new_mock.department  )
+          expect(result['urn:ietf:params:scim:schemas:extension:manager:1.0:User'   ]['manager'     ]).to eql(new_mock.manager     )
+        end
+
+        it 'with schema ID value keys that have inline attributes' do
+          mock_before = MockUser.all.to_a
+
+          attributes = {
+            userName: '4',
+            'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:organization': 'Foo Bar!',
+            'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:department':   'Bar Foo!',
+            'urn:ietf:params:scim:schemas:extension:manager:1.0:User:manager':         'Foo Baz!'
+          }
+
+          attributes = spec_helper_hupcase(attributes) if force_upper_case
+
+          expect {
+            post "/Users", params: attributes.merge(format: :scim)
+          }.to change { MockUser.count }.by(1)
+
+          mock_after = MockUser.all.to_a
+          new_mock = (mock_after - mock_before).first
+
+          expect(response.status                 ).to eql(201)
+          expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+          result = JSON.parse(response.body)
+
+          expect(new_mock.organization).to eql('Foo Bar!')
+          expect(new_mock.department  ).to eql('Bar Foo!')
+          expect(new_mock.manager     ).to eql('Foo Baz!')
+
+          expect(result['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']['organization']).to eql(new_mock.organization)
+          expect(result['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']['department'  ]).to eql(new_mock.department  )
+          expect(result['urn:ietf:params:scim:schemas:extension:manager:1.0:User'   ]['manager'     ]).to eql(new_mock.manager     )
         end
       end # "shared_examples 'a creator' do | force_upper_case: |"
 
@@ -834,6 +933,9 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
                       'organization' => 'Foo Bar!',
                       'department'   => 'Bar Foo!'
                     },
+                    'urn:ietf:params:scim:schemas:extension:manager:1.0:User': {
+                      'manager' => 'Foo Baz!'
+                    }
                   },
                 },
               ]
@@ -851,6 +953,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
             expect(@u2.organization).to eql('Foo Bar!')
             expect(@u2.department  ).to eql('Bar Foo!')
+            expect(@u2.manager     ).to eql('Foo Baz!')
           end
         end
 
@@ -865,7 +968,8 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
                   op: 'add',
                   value: {
                     'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:organization' => 'Foo Bar!',
-                    'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:department'   => 'Bar Foo!'
+                    'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:department'   => 'Bar Foo!',
+                    'urn:ietf:params:scim:schemas:extension:manager:1.0:User:manager'         => 'Foo Baz!'
                   },
                 },
               ]
@@ -883,6 +987,7 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
 
             expect(@u2.organization).to eql('Foo Bar!')
             expect(@u2.department  ).to eql('Bar Foo!')
+            expect(@u2.manager     ).to eql('Foo Baz!')
           end
         end
 

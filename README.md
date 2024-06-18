@@ -458,7 +458,9 @@ You can extend schema with custom data by defining an extension class and callin
 * Must call `super` in `def initialize`, providing data as shown in the example below
 * Must define class methods for `::id` and `::scim_attributes`
 
-The `::id` class method defines a unique schema ID that is used to namespace payloads or paths in JSON responses describing extended resources, JSON payloads creating them or PATCH paths modifying them. The SCIM RFCs would refer to this as the URN. For example, we might choose to use the [RFC-defined User extension schema](https://tools.ietf.org/html/rfc7643#section-4.3) to define a couple of extra fields our User model happens to support:
+The `::id` class method defines a unique schema ID that is used to namespace payloads or paths in JSON responses describing extended resources, JSON payloads creating them or PATCH paths modifying them. The RFCs require this to be a URN ([see RFC 2141](https://tools.ietf.org/html/rfc2141)). Your extension's ID URN must be globally unique. Depending on your expected use case, you should review the [IANA registration considerations that RFC 7643 describes](https://tools.ietf.org//html/rfc7643#section-10) and definitely review the [syntactic structure declaration therein](https://tools.ietf.org/html/rfc7643#section-10.2.1) (`urn:ietf:params:scim:{type}:{name}{:other}`).
+
+For example, we might choose to use the [RFC-defined User extension schema](https://tools.ietf.org/html/rfc7643#section-4.3) to define a couple of extra fields our User model happens to support:
 
 ```ruby
 class UserEnterpriseExtension < Scimitar::Schema::Base

@@ -30,10 +30,10 @@ RSpec.describe Scimitar::SchemasController do
       expect(response).to be_ok
 
       parsed_body = JSON.parse(response.body)
-      expect(parsed_body['Resources']&.size).to eql(3)
+      expect(parsed_body['Resources']&.size).to eql(4)
 
       schema_names = parsed_body['Resources'].map {|schema| schema['name']}
-      expect(schema_names).to match_array(['User', 'ExtendedUser', 'Group'])
+      expect(schema_names).to match_array(['User', 'EnterpriseExtendedUser', 'ManagementExtendedUser', 'Group'])
     end
 
     it 'returns only the User schema when its id is provided' do

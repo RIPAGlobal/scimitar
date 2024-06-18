@@ -111,6 +111,7 @@ RSpec.describe Scimitar::Engine do
         expect(schema_classes).to match_array([
           Scimitar::Schema::User,
           ScimSchemaExtensions::User::Enterprise,
+          ScimSchemaExtensions::User::Manager,
           @license_resource.schemas.first
         ])
       end

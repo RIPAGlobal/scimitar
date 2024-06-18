@@ -35,14 +35,45 @@ module Scimitar
         @errors = ActiveModel::Errors.new(self)
       end
 
+      # Scimitar has at present a general limitation in handling schema IDs,
+      # which just involves stripping them and requiring attributes across all
+      # extension schemas to be overall unique.
+      #
+      # This method takes an options payload for the initializer and strips out
+      # *recognised* schema IDs, so that the resulting attribute data matches
+      # the resource attribute map.
+      #
+      # +attributes+:: Attributes to assign via initializer; typically a POST
+      #                payload of attributes that has been run through Rails
+      #                strong parameters for safety.
+      #
+      # Returns a new object of the same class as +options+ with recognised
+      # schema IDs removed.
+      #
       def flatten_extension_attributes(options)
-        flattened = options.dup
-        self.class.extended_schemas.each do |extended_schema|
-          if extension_attrs = flattened.delete(extended_schema.id)
-            flattened.merge!(extension_attrs)
+        flattened             = options.class.new
+        lower_case_schema_ids = self.class.extended_schemas.map do | schema |
+          schema.id.downcase()
+        end
+
+        options.each do | key, value |
+          path = Scimitar::Support::Utilities::path_str_to_array(
+            self.class.extended_schemas,
+            key
+          )
+
+          if path.first.include?(':') && lower_case_schema_ids.include?(path.first.downcase)
+            path.shift()
+          end
+
+          if path.empty?
+            flattened.merge!(value)
+          else
+            flattened[path.join('.')] = value
           end
         end
-        flattened
+
+        return flattened
       end
 
       # Can be used to extend an existing resource type's schema. For example:
