@@ -57,9 +57,10 @@ module Scimitar
       #              <tt>scim_resource_type.extended_schemas</tt> value. The
       #              Array should be empty if there are no extensions.
       #
-      # +path_str+:: Path string, e.g. <tt>"password"</tt>, <tt>"name.givenName"</tt>,
+      # +path_str+:: Path String, e.g. <tt>"password"</tt>, <tt>"name.givenName"</tt>,
       #              <tt>"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"</tt> (special case),
       #              <tt>"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:organization"</tt>
+      #              (if given a Symbol, it'll be converted to a String).
       #
       # Returns an array of components, e.g. <tt>["password"]</tt>, <tt>["name",
       # "givenName"]</tt>,
@@ -74,6 +75,7 @@ module Scimitar
       # path-free payload.
       #
       def self.path_str_to_array(schemas, path_str)
+        path_str   = path_str.to_s
         components = []
 
         # Note the ":" separating the schema ID (URN) from the attribute.
@@ -84,11 +86,14 @@ module Scimitar
         # particular, https://tools.ietf.org/html/rfc7644#page-35.
         #
         if path_str.include?(':')
+          lower_case_path_str = path_str.downcase()
+
           schemas.each do |schema|
-            attributes_after_schema_id = path_str.downcase.split(schema.id.downcase + ':').drop(1)
+            lower_case_schema_id       = schema.id.downcase()
+            attributes_after_schema_id = lower_case_path_str.split(lower_case_schema_id + ':').drop(1)
 
             if attributes_after_schema_id.empty?
-              components += [schema.id]
+              components += [schema.id] if lower_case_path_str == lower_case_schema_id
             else
               attributes_after_schema_id.each do |component|
                 components += [schema.id] + component.split('.')

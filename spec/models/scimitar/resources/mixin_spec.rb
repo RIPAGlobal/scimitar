@@ -288,10 +288,15 @@ RSpec.describe Scimitar::Resources::Mixin do
             'name'        => {'givenName'=>'Foo', 'familyName'=>'Bar'},
             'groups'      => [{'display'=>g1.display_name, 'value'=>g1.id.to_s}, {'display'=>g3.display_name, 'value'=>g3.id.to_s}],
             'meta'        => {'location'=>"https://test.com/mock_users/#{uuid}", 'resourceType'=>'User'},
-            'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
+            'schemas'     => [
+              'urn:ietf:params:scim:schemas:core:2.0:User',
+              'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User',
+              'urn:ietf:params:scim:schemas:extension:manager:1.0:User',
+            ],
             'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
               'organization' => 'SOMEORG',
             },
+            'urn:ietf:params:scim:schemas:extension:manager:1.0:User' => {},
           })
         end
       end # "context 'with list of requested attributes' do"
@@ -333,13 +338,19 @@ RSpec.describe Scimitar::Resources::Mixin do
             'externalId'  => 'AA02984',
             'groups'      => [{'display'=>g1.display_name, 'value'=>g1.id.to_s}, {'display'=>g3.display_name, 'value'=>g3.id.to_s}],
             'meta'        => {'location'=>"https://test.com/mock_users/#{uuid}", 'resourceType'=>'User'},
-            'schemas'     => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
-
+            'schemas'     => [
+              'urn:ietf:params:scim:schemas:core:2.0:User',
+              'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User',
+              'urn:ietf:params:scim:schemas:extension:manager:1.0:User',
+            ],
             'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {
               'organization' => 'SOMEORG',
               'department'   => nil,
-              'primaryEmail' => instance.work_email_address
-            }
+              'primaryEmail' => instance.work_email_address,
+            },
+            'urn:ietf:params:scim:schemas:extension:manager:1.0:User' => {
+              'manager' => nil
+            },
           })
         end
       end # "context 'with a UUID, renamed primary key column' do"
@@ -463,9 +474,13 @@ RSpec.describe Scimitar::Resources::Mixin do
               ],
 
               'meta'    => {'location'=>'https://test.com/static_map_test', 'resourceType'=>'User'},
-              'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
-
-              'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {}
+              'schemas' => [
+                'urn:ietf:params:scim:schemas:core:2.0:User',
+                'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User',
+                'urn:ietf:params:scim:schemas:extension:manager:1.0:User',
+              ],
+              'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {},
+              'urn:ietf:params:scim:schemas:extension:manager:1.0:User' => {},
             })
           end
         end # "context 'using static mappings' do"
@@ -492,9 +507,13 @@ RSpec.describe Scimitar::Resources::Mixin do
               ],
 
               'meta'    => {'location'=>'https://test.com/dynamic_map_test', 'resourceType'=>'User'},
-              'schemas' => ['urn:ietf:params:scim:schemas:core:2.0:User', 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'],
-
-              'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {}
+              'schemas' => [
+                'urn:ietf:params:scim:schemas:core:2.0:User',
+                'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User',
+                'urn:ietf:params:scim:schemas:extension:manager:1.0:User',
+              ],
+              'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User' => {},
+              'urn:ietf:params:scim:schemas:extension:manager:1.0:User' => {},
             })
           end
         end # "context 'using dynamic lists' do"

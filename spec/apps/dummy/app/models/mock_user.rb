@@ -18,6 +18,7 @@ class MockUser < ActiveRecord::Base
     work_phone_number
     organization
     department
+    manager
     mock_groups
   }
 
@@ -90,13 +91,15 @@ class MockUser < ActiveRecord::Base
         }
       ],
       active: :is_active,
+      primaryEmail: :scim_primary_email,
 
       # Custom extension schema - see configuration in
       # "spec/apps/dummy/config/initializers/scimitar.rb".
       #
       organization: :organization,
       department:   :department,
-      primaryEmail: :scim_primary_email,
+      manager:      :manager,
+
       userGroups: [
         {
           list:      :mock_groups,
@@ -130,7 +133,8 @@ class MockUser < ActiveRecord::Base
     }
   end
 
-  # reader
+  # Custom attribute reader
+  #
   def scim_primary_email
     work_email_address
   end

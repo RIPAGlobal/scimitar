@@ -33,10 +33,13 @@ Rails.application.config.to_prepare do
 
   module ScimSchemaExtensions
     module User
+
+      # This "looks like" part of the standard Enterprise extension.
+      #
       class Enterprise < Scimitar::Schema::Base
         def initialize(options = {})
           super(
-            name:            'ExtendedUser',
+            name:            'EnterpriseExtendedUser',
             description:     'Enterprise extension for a User',
             id:              self.class.id,
             scim_attributes: self.class.scim_attributes
@@ -55,8 +58,33 @@ Rails.application.config.to_prepare do
           ]
         end
       end
+
+      # In https://github.com/RIPAGlobal/scimitar/issues/122 we learn that with
+      # more than one extension, things can go wrong - so now we test with two.
+      #
+      class Manager < Scimitar::Schema::Base
+        def initialize(options = {})
+          super(
+            name:            'ManagementExtendedUser',
+            description:     'Management extension for a User',
+            id:              self.class.id,
+            scim_attributes: self.class.scim_attributes
+          )
+        end
+
+        def self.id
+          'urn:ietf:params:scim:schemas:extension:manager:1.0:User'
+        end
+
+        def self.scim_attributes
+          [
+            Scimitar::Schema::Attribute.new(name: 'manager', type: 'string')
+          ]
+        end
+      end
     end
   end
 
   Scimitar::Resources::User.extend_schema ScimSchemaExtensions::User::Enterprise
+  Scimitar::Resources::User.extend_schema ScimSchemaExtensions::User::Manager
 end
