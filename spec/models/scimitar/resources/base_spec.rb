@@ -305,7 +305,7 @@ RSpec.describe Scimitar::Resources::Base do
 
       ExtensionSchema = Class.new(Scimitar::Schema::Base) do
         def self.id
-          'extension-id'
+          'urn:extension'
         end
 
         def self.scim_attributes
@@ -333,13 +333,13 @@ RSpec.describe Scimitar::Resources::Base do
 
       context '#initialize' do
         it 'allows setting extension attributes' do
-          resource = resource_class.new('extension-id' => {relationship: 'GAGA'})
+          resource = resource_class.new('urn:extension' => {relationship: 'GAGA'})
           expect(resource.relationship).to eql('GAGA')
         end
 
         it 'allows setting complex extension attributes' do
           user_groups = [{ value: '123' }, { value: '456'}]
-          resource = resource_class.new('extension-id' => {userGroups: user_groups})
+          resource = resource_class.new('urn:extension' => {userGroups: user_groups})
           expect(resource.userGroups.map(&:value)).to eql(['123', '456'])
         end
       end # "context '#initialize' do"
@@ -348,8 +348,8 @@ RSpec.describe Scimitar::Resources::Base do
         it 'namespaces the extension attributes' do
           resource = resource_class.new(relationship: 'GAGA')
           hash = resource.as_json
-          expect(hash["schemas"]).to eql(['custom-id', 'extension-id'])
-          expect(hash["extension-id"]).to eql("relationship" => 'GAGA')
+          expect(hash["schemas"]).to eql(['custom-id', 'urn:extension'])
+          expect(hash["urn:extension"]).to eql("relationship" => 'GAGA')
         end
       end # "context '#as_json' do"
 
@@ -362,10 +362,10 @@ RSpec.describe Scimitar::Resources::Base do
 
         context 'validation' do
           it 'validates into custom schema' do
-            resource = resource_class.new('extension-id' => {})
+            resource = resource_class.new('urn:extension' => {})
             expect(resource.valid?).to eql(false)
 
-            resource = resource_class.new('extension-id' => {relationship: 'GAGA'})
+            resource = resource_class.new('urn:extension' => {relationship: 'GAGA'})
             expect(resource.relationship).to eql('GAGA')
             expect(resource.valid?).to eql(true)
           end

@@ -19,6 +19,7 @@ class CreateMockUsers < ActiveRecord::Migration[6.1]
       #
       t.text :organization
       t.text :department
+      t.text :manager
     end
   end
 end
