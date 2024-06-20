@@ -49,6 +49,7 @@ class MockUser < ActiveRecord::Base
       externalId: :scim_uid,
       userName:   :username,
       password:   :password,
+      active:     :is_active,
       name:       {
         givenName:  :first_name,
         familyName: :last_name
@@ -90,14 +91,14 @@ class MockUser < ActiveRecord::Base
           }
         }
       ],
-      active: :is_active,
-      primaryEmail: :scim_primary_email,
 
       # Custom extension schema - see configuration in
       # "spec/apps/dummy/config/initializers/scimitar.rb".
       #
       organization: :organization,
       department:   :department,
+      primaryEmail: :scim_primary_email,
+
       manager:      :manager,
 
       userGroups: [
