@@ -52,8 +52,8 @@ RSpec.describe Scimitar::Engine do
         def initialize(options = {})
           super(name: 'License', id: self.class.id(), description: 'Represents a License')
         end
-        def self.id;              'License'; end
-        def self.scim_attributes; [];        end
+        def self.id; 'urn:ietf:params:scim:schemas:license'; end
+        def self.scim_attributes; []; end
       end
 
       @license_resource = Class.new(Scimitar::Resources::Base) do

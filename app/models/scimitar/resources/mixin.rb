@@ -139,11 +139,12 @@ module Scimitar
     #       # ...
     #       groups: [
     #         {
-    #           list: :users,          # <-- i.e. Team.users,
+    #           list:  :users,         # <-- i.e. Team.users,
     #           using: {
     #             value:   :id,        # <-- i.e. Team.users[n].id
     #             display: :full_name  # <-- i.e. Team.users[n].full_name
     #           },
+    #           class: Team, # Optional; see below
     #           find_with: -> (scim_list_entry) {...} # See below
     #         }
     #       ],
@@ -159,7 +160,10 @@ module Scimitar
     # example above, "find_with"'s Proc might look at a SCIM entry value which
     # is expected to be a user ID and find that User. The mapped set of User
     # data thus found would be written back with "#users=", due to the ":list"
-    # key declaring the method name ":users".
+    # key declaring the method name ":users". The optional "class" key is
+    # recommended but not really *needed* unless the configuration option
+    # Scimitar::EngineConfiguration::schema_list_from_attribute_mappings is
+    # defined; see documentation of that option for more information.
     #
     # Note that you can only use either:
     #
@@ -176,7 +180,8 @@ module Scimitar
     # == scim_mutable_attributes
     #
     # Define this method to return a Set (preferred) or Array of names of
-    # attributes which may be written in the mixing-in class.
+    # attributes which may be written in the mixing-in class. The names MUST be
+    # expressed as Symbols, *not* Strings.
     #
     # If you return +nil+, it is assumed that +any+ attribute mapped by
     # ::scim_attributes_map which has a write accessor will be eligible for
@@ -291,7 +296,7 @@ module Scimitar
         # the result in an instance variable.
         #
         def scim_mutable_attributes
-          @scim_mutable_attributes ||= self.class.scim_mutable_attributes()
+          @scim_mutable_attributes ||= self.class.scim_mutable_attributes()&.map(&:to_sym)
 
           if @scim_mutable_attributes.nil?
             @scim_mutable_attributes = Set.new
