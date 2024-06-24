@@ -4,7 +4,7 @@ RSpec.describe Scimitar::Resources::Base do
   context '#valid?' do
     MyCustomSchema = Class.new(Scimitar::Schema::Base) do
       def self.id
-        'custom-id'
+        'urn:ietf:params:scim:schemas:custom-id'
       end
 
       class NameWithRequirementsSchema < Scimitar::Schema::Base
