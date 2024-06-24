@@ -14,6 +14,7 @@ module Scimitar
       :application_controller_mixin,
       :exception_reporter,
       :optional_value_fields_required,
+      :schema_list_from_attribute_mappings,
     )
 
     def initialize(attributes = {})
@@ -22,7 +23,8 @@ module Scimitar
       # Set defaults that may be overridden by the initializer.
       #
       defaults = {
-        optional_value_fields_required: true
+        optional_value_fields_required:      true,
+        schema_list_from_attribute_mappings: []
       }
 
       super(defaults.merge(attributes))
