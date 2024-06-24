@@ -82,8 +82,11 @@ class MockUser < ActiveRecord::Base
           }
         },
       ],
-      groups: [ # NB read-only, so no :find_with key
+      groups: [
         {
+          # Read-only, so no :find_with key. There's no 'class' specified here
+          # either, to help test the "/Schemas" endpoint's reflection code.
+          #
           list:  :mock_groups,
           using: {
             value:   :id,

@@ -22,7 +22,7 @@ module Scimitar
 
       # Now we either have a simple render method, or a complex one.
       #
-      schema_to_render = if Scimitar.engine_configuration.schema_list_from_attribute_mappings.empty?
+      schemas_to_render = if Scimitar.engine_configuration.schema_list_from_attribute_mappings.empty?
         list
       else
         self.redraw_schema_list_using_mappings(list)
@@ -32,10 +32,10 @@ module Scimitar
         schemas: [
             'urn:ietf:params:scim:api:messages:2.0:ListResponse'
         ],
-        totalResults: schema_to_render.size,
+        totalResults: schemas_to_render.size,
         startIndex:   1,
-        itemsPerPage: schema_to_render.size,
-        Resources:    schema_to_render
+        itemsPerPage: schemas_to_render.size,
+        Resources:    schemas_to_render
       })
     end
 
