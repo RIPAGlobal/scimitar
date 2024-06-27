@@ -1,3 +1,5 @@
+require 'rails/engine'
+
 module Scimitar
   class Engine < ::Rails::Engine
     isolate_namespace Scimitar

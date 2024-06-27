@@ -88,6 +88,7 @@ Rails.application.config.to_prepare do
   end
 end
 ```
+
 In general, Scimitar's own development and tests assume this approach. If you choose to put the configuration directly into an initializer file without the `to_prepare` wrapper, you will be at a _slightly_ higher risk of tripping over unrecognised Scimitar bugs; please make sure that your own application test coverage is reasonably comprehensive.
 
 ### Routes
@@ -244,8 +245,6 @@ If you use ActiveRecord, your controllers can potentially be extremely simple by
 ```ruby
 module Scim
   class UsersController < Scimitar::ActiveRecordBackedResourcesController
-
-    skip_before_action :verify_authenticity_token
 
     protected
 
