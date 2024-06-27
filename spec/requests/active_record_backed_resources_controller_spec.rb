@@ -107,6 +107,37 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         expect(usernames).to match_array(['2'])
       end
 
+      it 'returns only the requested attributes' do
+        get '/Users', params: {
+          format: :scim,
+          attributes: "id,name"
+        }
+
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+        result = JSON.parse(response.body)
+
+        expect(result['totalResults']).to eql(3)
+        expect(result['Resources'].size).to eql(3)
+
+        keys = result['Resources'].map { |resource| resource.keys }.flatten.uniq
+
+        expect(keys).to match_array(%w[
+          id
+          meta
+          name
+          schemas
+          urn:ietf:params:scim:schemas:extension:enterprise:2.0:User
+          urn:ietf:params:scim:schemas:extension:manager:1.0:User
+        ])
+        expect(result.dig('Resources', 0, 'id')).to eql @u1.primary_key.to_s
+        expect(result.dig('Resources', 0, 'name', 'givenName')).to eql 'Foo'
+        expect(result.dig('Resources', 0, 'name', 'familyName')).to eql 'Ark'
+      end
+
+      # https://github.com/RIPAGlobal/scimitar/issues/37
+      #
       it 'applies a filter, with case-insensitive attribute matching (GitHub issue #37)' do
         get '/Users', params: {
           format: :scim,
@@ -127,6 +158,30 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         usernames = result['Resources'].map { |resource| resource['userName'] }
         expect(usernames).to match_array(['2'])
       end
+
+      # https://github.com/RIPAGlobal/scimitar/issues/115
+      #
+      it 'handles broken Microsoft filters (GitHub issue #115)' do
+        get '/Users', params: {
+          format: :scim,
+          filter: 'name[givenName eq "FOO"].familyName pr and emails ne "home_1@test.com"'
+        }
+
+        expect(response.status                 ).to eql(200)
+        expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+        result = JSON.parse(response.body)
+
+        expect(result['totalResults']).to eql(1)
+        expect(result['Resources'].size).to eql(1)
+
+        ids = result['Resources'].map { |resource| resource['id'] }
+        expect(ids).to match_array([@u2.primary_key.to_s])
+
+        usernames = result['Resources'].map { |resource| resource['userName'] }
+        expect(usernames).to match_array(['2'])
+      end
+
 
       # Strange attribute capitalisation in tests here builds on test coverage
       # for now-fixed GitHub issue #37.
@@ -385,6 +440,76 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
           expect(new_mock.last_name).to eql('Family')
           expect(new_mock.home_email_address).to eql('home_4@test.com')
           expect(new_mock.work_email_address).to eql('work_4@test.com')
+        end
+
+        it 'with schema ID value keys without inline attributes' do
+          mock_before = MockUser.all.to_a
+
+          attributes = {
+            userName: '4',
+            'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User': {
+              organization: 'Foo Bar!',
+              department:   'Bar Foo!'
+            },
+            'urn:ietf:params:scim:schemas:extension:manager:1.0:User': {
+              manager: 'Foo Baz!'
+            }
+          }
+
+          attributes = spec_helper_hupcase(attributes) if force_upper_case
+
+          expect {
+            post "/Users", params: attributes.merge(format: :scim)
+          }.to change { MockUser.count }.by(1)
+
+          mock_after = MockUser.all.to_a
+          new_mock = (mock_after - mock_before).first
+
+          expect(response.status                 ).to eql(201)
+          expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+          result = JSON.parse(response.body)
+
+          expect(new_mock.organization).to eql('Foo Bar!')
+          expect(new_mock.department  ).to eql('Bar Foo!')
+          expect(new_mock.manager     ).to eql('Foo Baz!')
+
+          expect(result['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']['organization']).to eql(new_mock.organization)
+          expect(result['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']['department'  ]).to eql(new_mock.department  )
+          expect(result['urn:ietf:params:scim:schemas:extension:manager:1.0:User'   ]['manager'     ]).to eql(new_mock.manager     )
+        end
+
+        it 'with schema ID value keys that have inline attributes' do
+          mock_before = MockUser.all.to_a
+
+          attributes = {
+            userName: '4',
+            'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:organization': 'Foo Bar!',
+            'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:department':   'Bar Foo!',
+            'urn:ietf:params:scim:schemas:extension:manager:1.0:User:manager':         'Foo Baz!'
+          }
+
+          attributes = spec_helper_hupcase(attributes) if force_upper_case
+
+          expect {
+            post "/Users", params: attributes.merge(format: :scim)
+          }.to change { MockUser.count }.by(1)
+
+          mock_after = MockUser.all.to_a
+          new_mock = (mock_after - mock_before).first
+
+          expect(response.status                 ).to eql(201)
+          expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+          result = JSON.parse(response.body)
+
+          expect(new_mock.organization).to eql('Foo Bar!')
+          expect(new_mock.department  ).to eql('Bar Foo!')
+          expect(new_mock.manager     ).to eql('Foo Baz!')
+
+          expect(result['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']['organization']).to eql(new_mock.organization)
+          expect(result['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']['department'  ]).to eql(new_mock.department  )
+          expect(result['urn:ietf:params:scim:schemas:extension:manager:1.0:User'   ]['manager'     ]).to eql(new_mock.manager     )
         end
       end # "shared_examples 'a creator' do | force_upper_case: |"
 
@@ -762,6 +887,112 @@ RSpec.describe Scimitar::ActiveRecordBackedResourcesController do
         expect(@u2.home_email_address).to eql('home_2@test.com')
         expect(@u2.work_email_address).to eql('work_4@test.com')
         expect(@u2.password).to eql('oldpassword')
+      end
+
+      context 'which' do
+        shared_examples 'it handles not-to-spec in-value Azure/Entra dotted attribute paths' do | operation |
+          it "and performs operation" do
+            payload = {
+              Operations: [
+                {
+                  op: 'add',
+                  value: {
+                    'name.givenName'  => 'Foo!',
+                    'name.familyName' => 'Bar!',
+                    'name.formatted'  => 'Foo! Bar!' # Unrecognised; should be ignored
+                  },
+                },
+              ]
+            }
+
+            payload = spec_helper_hupcase(payload) if force_upper_case
+            patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
+
+            expect(response.status                 ).to eql(200)
+            expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+            @u2.reload
+            result = JSON.parse(response.body)
+
+            expect(@u2.first_name).to eql('Foo!')
+            expect(@u2.last_name ).to eql('Bar!')
+          end
+        end
+
+        it_behaves_like 'it handles not-to-spec in-value Azure/Entra dotted attribute paths', 'add'
+        it_behaves_like 'it handles not-to-spec in-value Azure/Entra dotted attribute paths', 'replace'
+
+        shared_examples 'it handles schema ID value keys without inline attributes' do | operation |
+          it "and performs operation" do
+            payload = {
+              Operations: [
+                {
+                  op: operation,
+                  value: {
+                    'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User': {
+                      'organization' => 'Foo Bar!',
+                      'department'   => 'Bar Foo!'
+                    },
+                    'urn:ietf:params:scim:schemas:extension:manager:1.0:User': {
+                      'manager' => 'Foo Baz!'
+                    }
+                  },
+                },
+              ]
+            }
+
+            @u2.update!(organization: 'Old org')
+            payload = spec_helper_hupcase(payload) if force_upper_case
+            patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
+
+            expect(response.status                 ).to eql(200)
+            expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+            @u2.reload
+            result = JSON.parse(response.body)
+
+            expect(@u2.organization).to eql('Foo Bar!')
+            expect(@u2.department  ).to eql('Bar Foo!')
+            expect(@u2.manager     ).to eql('Foo Baz!')
+          end
+        end
+
+        it_behaves_like 'it handles schema ID value keys without inline attributes', 'add'
+        it_behaves_like 'it handles schema ID value keys without inline attributes', 'replace'
+
+        shared_examples 'it handles schema ID value keys with inline attributes' do
+          it "and performs operation" do
+            payload = {
+              Operations: [
+                {
+                  op: 'add',
+                  value: {
+                    'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:organization' => 'Foo Bar!',
+                    'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:department'   => 'Bar Foo!',
+                    'urn:ietf:params:scim:schemas:extension:manager:1.0:User:manager'         => 'Foo Baz!'
+                  },
+                },
+              ]
+            }
+
+            @u2.update!(organization: 'Old org')
+            payload = spec_helper_hupcase(payload) if force_upper_case
+            patch "/Users/#{@u2.primary_key}", params: payload.merge(format: :scim)
+
+            expect(response.status                 ).to eql(200)
+            expect(response.headers['Content-Type']).to eql('application/scim+json; charset=utf-8')
+
+            @u2.reload
+            result = JSON.parse(response.body)
+
+            expect(@u2.organization).to eql('Foo Bar!')
+            expect(@u2.department  ).to eql('Bar Foo!')
+            expect(@u2.manager     ).to eql('Foo Baz!')
+          end
+        end
+
+        it_behaves_like 'it handles schema ID value keys with inline attributes', 'add'
+        it_behaves_like 'it handles schema ID value keys with inline attributes', 'replace'
       end
 
       it 'which patches "returned: \'never\'" fields' do

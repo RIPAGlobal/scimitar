@@ -139,27 +139,31 @@ module Scimitar
     #       # ...
     #       groups: [
     #         {
-    #           list: :users,          # <-- i.e. Team.users,
+    #           list:  :users,         # <-- i.e. Team.users,
     #           using: {
     #             value:   :id,        # <-- i.e. Team.users[n].id
     #             display: :full_name  # <-- i.e. Team.users[n].full_name
     #           },
+    #           class: Team, # Optional; see below
     #           find_with: -> (scim_list_entry) {...} # See below
     #         }
     #       ],
     #       #...
     #     end
     #
-    # The mixing-in class _must+ implement the read accessor identified by the
+    # The mixing-in class _must_ implement the read accessor identified by the
     # value of the "list" key, returning any indexed, Enumerable collection
     # (e.g. an Array or ActiveRecord::Relation instance). The optional key
-    # ":find_with" is defined with a Proc that's passed the SCIM entry at each
+    # ":find_with" is defined with a Proc that is passed the SCIM entry at each
     # list position. It must use this to look up the equivalent entry for
     # association via the write accessor described by the ":list" key. In the
     # example above, "find_with"'s Proc might look at a SCIM entry value which
     # is expected to be a user ID and find that User. The mapped set of User
     # data thus found would be written back with "#users=", due to the ":list"
-    # key declaring the method name ":users".
+    # key declaring the method name ":users". The optional "class" key is
+    # recommended but not really *needed* unless the configuration option
+    # Scimitar::EngineConfiguration::schema_list_from_attribute_mappings is
+    # defined; see documentation of that option for more information.
     #
     # Note that you can only use either:
     #
@@ -176,7 +180,8 @@ module Scimitar
     # == scim_mutable_attributes
     #
     # Define this method to return a Set (preferred) or Array of names of
-    # attributes which may be written in the mixing-in class.
+    # attributes which may be written in the mixing-in class. The names MUST be
+    # expressed as Symbols, *not* Strings.
     #
     # If you return +nil+, it is assumed that +any+ attribute mapped by
     # ::scim_attributes_map which has a write accessor will be eligible for
@@ -204,12 +209,12 @@ module Scimitar
     # Define this method to return a Hash that maps field names you wish to
     # support in SCIM filter queries to corresponding attributes in the in the
     # mixing-in class. If +nil+ then filtering is not supported in the
-    # ResouceController subclass which declares that it maps to the mixing-in
+    # ResourceController subclass which declares that it maps to the mixing-in
     # class. If not +nil+ but a SCIM filter enquiry is made for an unmapped
     # attribute, an 'invalid filter' exception is raised.
     #
     # If using ActiveRecord support in Scimitar::Lists::QueryParser, the mapped
-    # entites are columns and that's expressed in the names of keys described
+    # entities are columns and that's expressed in the names of keys described
     # below; if you have other approaches to searching, these might be virtual
     # attributes or other such constructs rather than columns. That would be up
     # to your non-ActiveRecord's implementation to decide.
@@ -262,8 +267,8 @@ module Scimitar
     # both of the keys 'created' and 'lastModified', as Symbols. The values
     # should be methods that the including method supports which return a
     # creation or most-recently-updated time, respectively. The returned object
-    # mustsupport #iso8601 to convert to a String representation. Example for a
-    # typical ActiveRecord object with standard timestamps:
+    # must support #iso8601 to convert to a String representation. Example for
+    # a typical ActiveRecord object with standard timestamps:
     #
     #     def self.scim_timestamps_map
     #       {
@@ -291,7 +296,7 @@ module Scimitar
         # the result in an instance variable.
         #
         def scim_mutable_attributes
-          @scim_mutable_attributes ||= self.class.scim_mutable_attributes()
+          @scim_mutable_attributes ||= self.class.scim_mutable_attributes()&.map(&:to_sym)
 
           if @scim_mutable_attributes.nil?
             @scim_mutable_attributes = Set.new
@@ -338,16 +343,32 @@ module Scimitar
         # Render self as a SCIM object using ::scim_attributes_map. Fields that
         # are marked as <tt>returned: 'never'</tt> are excluded.
         #
-        # +location+:: The location (HTTP(S) full URI) of this resource, in the
-        #              domain of the object including this mixin - "your" IDs,
-        #              not the remote SCIM client's external IDs. #url_for is a
-        #              good way to generate this.
+        # +location+::           The location (HTTP(S) full URI) of this
+        #                        resource in the domain of the object including
+        #                        this mixin - "your" IDs, not the remote SCIM
+        #                        client's external IDs. #url_for is a good way
+        #                        to generate this.
         #
-        def to_scim(location:)
+        # +include_attributes+:: The attributes that should be included in the
+        #                        response, in the form of a list of full
+        #                        attribute paths. Schema IDs are not supported.
+        #                        See RFC 7644 section 3.9 and section 3.10 for
+        #                        more. When a collection is given, +nil+ value
+        #                        items are also excluded from the response. If
+        #                        omitted or given an empty collection, all
+        #                        attributes are included.
+        #
+        def to_scim(location:, include_attributes: [])
           map             = self.class.scim_attributes_map()
           resource_type   = self.class.scim_resource_type()
           timestamps_map  = self.class.scim_timestamps_map() if self.class.respond_to?(:scim_timestamps_map)
-          attrs_hash      = self.to_scim_backend(data_source: self, resource_type: resource_type, attrs_map_or_leaf_value: map)
+          attrs_hash      = self.to_scim_backend(
+            data_source:             self,
+            resource_type:           resource_type,
+            attrs_map_or_leaf_value: map,
+            include_attributes:      include_attributes
+          )
+
           resource        = resource_type.new(attrs_hash)
           meta_attrs_hash = { location: location }
 
@@ -483,26 +504,14 @@ module Scimitar
               ci_scim_hash = { 'root' => ci_scim_hash }.with_indifferent_case_insensitive_access()
             end
 
-            # Handle extension schema. Contributed by @bettysteger and
-            # @MorrisFreeman via:
+            # Split the path into an array of path components, in a way
+            # which is aware of extension schemas. See documentation of
+            # Scimitar::Support::Utilities.path_str_to_array for details.
             #
-            #   https://github.com/RIPAGlobal/scimitar/issues/48
-            #   https://github.com/RIPAGlobal/scimitar/pull/49
-            #
-            # Note the ":" separating the schema ID (URN) from the attribute.
-            # The nature of JSON rendering / other payloads might lead you to
-            # expect a "." as with any complex types, but that's not the case;
-            # see https://tools.ietf.org/html/rfc7644#section-3.10, or
-            # https://tools.ietf.org/html/rfc7644#section-3.5.2 of which in
-            # particular, https://tools.ietf.org/html/rfc7644#page-35.
-            #
-            paths = []
-            self.class.scim_resource_type.extended_schemas.each do |schema|
-              path_str.downcase.split(schema.id.downcase + ':').drop(1).each do |path|
-                paths += [schema.id] + path.split('.')
-              end
-            end
-            paths = path_str.split('.') if paths.empty?
+            paths = ::Scimitar::Support::Utilities.path_str_to_array(
+              self.class.scim_resource_type.extended_schemas,
+              path_str
+            )
 
             self.from_patch_backend!(
               nature:        nature,
@@ -544,6 +553,16 @@ module Scimitar
           # +attrs_map_or_leaf_value+:: The attribute map. At the top level,
           #                             this is from ::scim_attributes_map.
           #
+          # +include_attributes+::      The attributes that should be included
+          #                             in the response, in the form of a list
+          #                             of full attribute paths. Schema IDs are
+          #                             not supported. See RFC 7644 section
+          #                             3.9 and section 3.10 for more. When a
+          #                             collection is given, +nil+ value items
+          #                             are also excluded from the response. If
+          #                             omitted or given an empty collection,
+          #                             all attributes are included.
+          #
           # Internal recursive calls also send:
           #
           # +attribute_path+::          Array of path components to the
@@ -555,8 +574,15 @@ module Scimitar
             data_source:,
             resource_type:,
             attrs_map_or_leaf_value:,
+            include_attributes:,
             attribute_path: []
           )
+            # NOTE EARLY EXIT
+            #
+            return unless scim_attribute_included?(
+              include_attributes: include_attributes,
+              attribute_path:     attribute_path
+            )
 
             # On assumption of a top-level attributes list, the 'return never'
             # state is only checked on the recursive call from a Hash type. The
@@ -566,7 +592,7 @@ module Scimitar
             #
             case attrs_map_or_leaf_value
               when Hash # Expected at top-level of any map, or nested within
-                attrs_map_or_leaf_value.each.with_object({}) do |(key, value), hash|
+                result = attrs_map_or_leaf_value.each.with_object({}) do |(key, value), hash|
                   nested_attribute_path = attribute_path + [key]
 
                   if resource_type.find_attribute(*nested_attribute_path)&.returned != "never"
@@ -574,10 +600,14 @@ module Scimitar
                       data_source:             data_source,
                       resource_type:           resource_type,
                       attribute_path:          nested_attribute_path,
-                      attrs_map_or_leaf_value: value
+                      attrs_map_or_leaf_value: value,
+                      include_attributes:      include_attributes
                     )
                   end
                 end
+
+                result.compact! if include_attributes.any?
+                result
 
               when Array # Static or dynamic mapping against lists in data source
                 built_dynamic_list = false
@@ -592,7 +622,8 @@ module Scimitar
                         data_source:             data_source,
                         resource_type:           resource_type,
                         attribute_path:          attribute_path,
-                        attrs_map_or_leaf_value: value[:using]
+                        attrs_map_or_leaf_value: value[:using],
+                        include_attributes:      include_attributes
                       )
                     )
                     static_hash
@@ -605,7 +636,8 @@ module Scimitar
                         data_source:             list_entry,
                         resource_type:           resource_type,
                         attribute_path:          attribute_path,
-                        attrs_map_or_leaf_value: value[:using]
+                        attrs_map_or_leaf_value: value[:using],
+                        include_attributes:      include_attributes
                       )
                     end
 
@@ -740,9 +772,17 @@ module Scimitar
                   #   https://github.com/RIPAGlobal/scimitar/issues/48
                   #   https://github.com/RIPAGlobal/scimitar/pull/49
                   #
+                  # Note the shortcoming that attribute names within extensions
+                  # must be unique, as this mechanism basically just pulls out
+                  # extension attributes to the top level, losing what amounts
+                  # to the namespace that the extension schema ID provides.
+                  #
                   attribute_tree = []
                   resource_class.extended_schemas.each do |schema|
-                    attribute_tree << schema.id and break if schema.scim_attributes.any? { |attribute| attribute.name == scim_attribute.to_s }
+                    if schema.scim_attributes.any? { |attribute| attribute.name == scim_attribute.to_s }
+                      attribute_tree << schema.id
+                      break # NOTE EARLY LOOP EXIT
+                    end
                   end
                   attribute_tree << scim_attribute.to_s
 
@@ -950,7 +990,11 @@ module Scimitar
             end
 
             found_data_for_recursion.each do | found_data |
-              attr_map = with_attr_map[path_component.to_sym]
+              attr_map = if path_component.to_sym == :root
+                with_attr_map
+              else
+                with_attr_map[path_component.to_sym]
+              end
 
               # Static array mappings need us to find the right map entry that
               # corresponds to the SCIM data at hand and recurse back into the
@@ -1091,9 +1135,27 @@ module Scimitar
                     # at key 'members' with the above, rather than adding.
                     #
                     value.keys.each do | key |
+
+                      # Handle the Azure (Entra) case where keys might use
+                      # dotted paths - see:
+                      #
+                      #   https://github.com/RIPAGlobal/scimitar/issues/123
+                      #
+                      # ...along with keys containing schema IDs - see:
+                      #
+                      #   https://is.docs.wso2.com/en/next/apis/scim2-patch-operations/#add-user-attributes
+                      #
+                      # ...and scroll down to example 3 of "Complex singular
+                      # attributes".
+                      #
+                      subpaths = ::Scimitar::Support::Utilities.path_str_to_array(
+                        self.class.scim_resource_type.extended_schemas,
+                        key
+                      )
+
                       from_patch_backend!(
                         nature:        nature,
-                        path:          path + [key],
+                        path:          path + subpaths,
                         value:         value[key],
                         altering_hash: altering_hash,
                         with_attr_map: with_attr_map
@@ -1106,7 +1168,12 @@ module Scimitar
                 when 'replace'
                   if path_component == 'root'
                     dot_pathed_value = value.inject({}) do |hash, (k, v)|
-                      hash.deep_merge!(::Scimitar::Support::Utilities.dot_path(k.split('.'), v))
+                      subpaths = ::Scimitar::Support::Utilities.path_str_to_array(
+                        self.class.scim_resource_type.extended_schemas,
+                        k
+                      )
+
+                      hash.deep_merge!(::Scimitar::Support::Utilities.dot_path(subpaths, v))
                     end
 
                     altering_hash[path_component].deep_merge!(dot_pathed_value)
@@ -1476,6 +1543,29 @@ module Scimitar
             end
 
             return handled
+          end
+
+          # Related to to_scim_backend, this methods tells whether +attribute_path+
+          # should be included in the current +include_attributes+. This method
+          # implements the attributes request from RFC 7644, section 3.9 and 3.10.
+          #
+          # +include_attributes+::      The attributes that should be included
+          #                             in the response, in the form of a list of
+          #                             full attribute paths. See RFC 7644 section
+          #                             3.9 and section 3.10. An empty collection
+          #                             will include all attributes.
+          #
+          # +attribute_path+::          Array of path components to the attribute,
+          #                             e.g. <tt>["name", "givenName"]</tt>.
+          #
+          def scim_attribute_included?(include_attributes:, attribute_path:)
+            return true unless attribute_path.any? && include_attributes.any?
+
+            full_path = attribute_path.join(".")
+            attribute_included = full_path.start_with?(*include_attributes)
+            will_include_nested = include_attributes.any? { |att| att.start_with?(full_path) }
+
+            attribute_included || will_include_nested
           end
 
       end # "included do"

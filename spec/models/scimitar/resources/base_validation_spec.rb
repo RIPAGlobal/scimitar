@@ -4,7 +4,20 @@ RSpec.describe Scimitar::Resources::Base do
   context '#valid?' do
     MyCustomSchema = Class.new(Scimitar::Schema::Base) do
       def self.id
-        'custom-id'
+        'urn:ietf:params:scim:schemas:custom-id'
+      end
+
+      class NameWithRequirementsSchema < Scimitar::Schema::Base
+        def self.scim_attributes
+          @scim_attributes ||= [
+            Scimitar::Schema::Attribute.new(name: 'familyName', type: 'string', required: true),
+            Scimitar::Schema::Attribute.new(name: 'givenName',  type: 'string', required: true),
+          ]
+        end
+      end
+
+      class NameWithRequirementsComplexType < Scimitar::ComplexTypes::Base
+        set_schema NameWithRequirementsSchema
       end
 
       def self.scim_attributes
@@ -16,10 +29,10 @@ RSpec.describe Scimitar::Resources::Base do
             name: 'enforce', type: 'boolean', required: true
           ),
           Scimitar::Schema::Attribute.new(
-            name: 'complexName', complexType: Scimitar::ComplexTypes::Name, required: false
+            name: 'complexName', complexType: NameWithRequirementsComplexType, required: false
           ),
           Scimitar::Schema::Attribute.new(
-            name: 'complexNames', complexType: Scimitar::ComplexTypes::Name, multiValued:true, required: false
+            name: 'complexNames', complexType: Scimitar::ComplexTypes::Name, multiValued: true, required: false
           ),
           Scimitar::Schema::Attribute.new(
             name: 'vdtpTestByEmail', complexType: Scimitar::ComplexTypes::Email, required: false

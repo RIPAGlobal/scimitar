@@ -106,6 +106,47 @@ Rails.application.config.to_prepare do # (required for >= Rails 7 / Zeitwerk)
     # whatever that means for you receiving system in your model code.
     #
     #     optional_value_fields_required: false
+
+    # The SCIM standard `/Schemas` endpoint lists, by default, all known schema
+    # definitions with the mutabilty (read-write, read-only, write-only) state
+    # described by those definitions, and includes all defined attributes. For
+    # user-defined schema, this will typically exactly match your underlying
+    # mapped attribute and model capability - it wouldn't make sense to define
+    # your own schema that misrepresented the implementation! For core SCIM RFC
+    # schema, though, you might want to only list actually mapped attributes.
+    # Further, if you happen to have a non-compliant implementation especially
+    # in relation to mutability of some attributes, you may want to report that
+    # accurately in the '/Schemas' list, for auto-discovery purposes. To switch
+    # to a significantly slower but more accurate render method for the list,
+    # driven by your resource subclasses and their attribute maps, set:
+    #
+    #     schema_list_from_attribute_mappings: [...array...]
+    #
+    # ...where you provide an Array of *models*, your classes that include the
+    # Scimitar::Resources::Mixin module and, therefore, define an attribute map
+    # translating SCIM schema attributes into actual implemented data. These
+    # must *uniquely* describe, via the Scimitar resources they each declare in
+    # their Scimitar::Resources::Mixin::scim_resource_type implementation, the
+    # set of schemas and extended schemas you want to render. Should resources
+    # share schema, the '/Schemas' endpoint will fail since it cannot determine
+    # which model attribute map it should use and it needs the map in order to
+    # resolve the differences (if any) between what the schema might say, and
+    # what the actual underlying model supports.
+    #
+    # It is further _very_ _strongly_ _recommended_ that, for any
+    # +scim_attributes_map+ containing a collection which has "list:" key (for
+    # an associative array of zero or more entities; the Groups to which a User
+    # might belong is a good example) then you should also specify the "class:"
+    # key, giving the class used for objects in that associated collection. The
+    # class *must* include Scimitar::Resources::Mixin, since its own attribute
+    # map is consulted in order to render the part of the schema describing
+    # those associated properties in the owning resource. If you don't do this,
+    # and if you're using ActiveRecord, then Scimitar attempts association
+    # reflection to determine the collection class - but that's more fragile
+    # than just being told the exact class in the attribute map. No matter how
+    # this class is determined, though, it must be possible to create a simple
+    # instance with +new+ and no parameters, since that's needed in order to
+    # call Scimitar::Resources::Mixin#scim_mutable_attributes.
   })
 
 end

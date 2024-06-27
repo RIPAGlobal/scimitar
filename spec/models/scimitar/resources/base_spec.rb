@@ -4,7 +4,7 @@ RSpec.describe Scimitar::Resources::Base do
   context 'basic operation' do
     FirstCustomSchema = Class.new(Scimitar::Schema::Base) do
       def self.id
-        'custom-id'
+        'urn:ietf:params:scim:schemas:custom-id'
       end
 
       def self.scim_attributes
@@ -125,7 +125,7 @@ RSpec.describe Scimitar::Resources::Base do
 
         result = resource.as_json
 
-        expect(result['schemas']             ).to eql(['custom-id'])
+        expect(result['schemas']             ).to eql(['urn:ietf:params:scim:schemas:custom-id'])
         expect(result['meta']['resourceType']).to eql('CustomResourse')
         expect(result['errors']              ).to be_nil
       end
@@ -144,7 +144,7 @@ RSpec.describe Scimitar::Resources::Base do
 
         result = resource.as_json
 
-        expect(result['schemas']             ).to eql(['custom-id'])
+        expect(result['schemas']             ).to eql(['urn:ietf:params:scim:schemas:custom-id'])
         expect(result['meta']['resourceType']).to eql('CustomResourse')
         expect(result['errors']              ).to be_nil
         expect(result['name']                ).to be_present
@@ -295,7 +295,7 @@ RSpec.describe Scimitar::Resources::Base do
     context 'of custom schema' do
       ThirdCustomSchema = Class.new(Scimitar::Schema::Base) do
         def self.id
-          'custom-id'
+          'urn:ietf:params:scim:schemas:custom-id'
         end
 
         def self.scim_attributes
@@ -305,7 +305,7 @@ RSpec.describe Scimitar::Resources::Base do
 
       ExtensionSchema = Class.new(Scimitar::Schema::Base) do
         def self.id
-          'extension-id'
+          'urn:ietf:params:scim:schemas:extension'
         end
 
         def self.scim_attributes
@@ -333,13 +333,13 @@ RSpec.describe Scimitar::Resources::Base do
 
       context '#initialize' do
         it 'allows setting extension attributes' do
-          resource = resource_class.new('extension-id' => {relationship: 'GAGA'})
+          resource = resource_class.new('urn:ietf:params:scim:schemas:extension' => {relationship: 'GAGA'})
           expect(resource.relationship).to eql('GAGA')
         end
 
         it 'allows setting complex extension attributes' do
           user_groups = [{ value: '123' }, { value: '456'}]
-          resource = resource_class.new('extension-id' => {userGroups: user_groups})
+          resource = resource_class.new('urn:ietf:params:scim:schemas:extension' => {userGroups: user_groups})
           expect(resource.userGroups.map(&:value)).to eql(['123', '456'])
         end
       end # "context '#initialize' do"
@@ -348,8 +348,8 @@ RSpec.describe Scimitar::Resources::Base do
         it 'namespaces the extension attributes' do
           resource = resource_class.new(relationship: 'GAGA')
           hash = resource.as_json
-          expect(hash["schemas"]).to eql(['custom-id', 'extension-id'])
-          expect(hash["extension-id"]).to eql("relationship" => 'GAGA')
+          expect(hash["schemas"]).to eql(['urn:ietf:params:scim:schemas:custom-id', 'urn:ietf:params:scim:schemas:extension'])
+          expect(hash["urn:ietf:params:scim:schemas:extension"]).to eql("relationship" => 'GAGA')
         end
       end # "context '#as_json' do"
 
@@ -362,10 +362,10 @@ RSpec.describe Scimitar::Resources::Base do
 
         context 'validation' do
           it 'validates into custom schema' do
-            resource = resource_class.new('extension-id' => {})
+            resource = resource_class.new('urn:ietf:params:scim:schemas:extension' => {})
             expect(resource.valid?).to eql(false)
 
-            resource = resource_class.new('extension-id' => {relationship: 'GAGA'})
+            resource = resource_class.new('urn:ietf:params:scim:schemas:extension' => {relationship: 'GAGA'})
             expect(resource.relationship).to eql('GAGA')
             expect(resource.valid?).to eql(true)
           end

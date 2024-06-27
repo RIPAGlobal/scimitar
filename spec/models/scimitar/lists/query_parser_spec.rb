@@ -60,6 +60,15 @@ RSpec.describe Scimitar::Lists::QueryParser do
       expect(%Q("O'Malley")).to eql(tree[2])
     end
 
+    it "extended attribute equals" do
+      @instance.parse(%Q(primaryEmail eq "foo@bar.com"))
+
+      rpn = @instance.rpn
+      expect('primaryEmail').to eql(rpn[0])
+      expect(%Q("foo@bar.com")).to eql(rpn[1])
+      expect('eq').to eql(rpn[2])
+    end
+
     it "user name starts with" do
       @instance.parse(%Q(userName sw "J"))
 
@@ -337,6 +346,67 @@ RSpec.describe Scimitar::Lists::QueryParser do
         result = @instance.send(:flatten_filter, 'emails[type eq "work" and value co "@example.com"    ] or userType eq "Admin" or ims[type eq "xmpp" and value co "@foo.com"]')
         expect(result).to eql('emails.type eq "work" and emails.value co "@example.com" or userType eq "Admin" or ims.type eq "xmpp" and ims.value co "@foo.com"')
       end
+
+      it 'handles an example previously described as unsupported in README.md' do
+        result = @instance.send(:flatten_filter, 'filter=userType eq "Employee" and emails[type eq "work" and value co "@example.com"]')
+        expect(result).to eql('filter=userType eq "Employee" and emails.type eq "work" and emails.value co "@example.com"')
+      end
+
+      # https://github.com/RIPAGlobal/scimitar/issues/116
+      #
+      context 'with schema IDs (GitHub issue #116)' do
+        it 'handles simple attributes' do
+          result = @instance.send(:flatten_filter, 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:employeeId eq "gsar"')
+          expect(result).to eql('employeeId eq "gsar"')
+        end
+
+        it 'handles dotted attribute paths' do
+          result = @instance.send(:flatten_filter, 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:imaginary.path eq "gsar"')
+          expect(result).to eql('imaginary.path eq "gsar"')
+        end
+
+        it 'replaces all examples' do
+          result = @instance.send(:flatten_filter, 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:employeeId eq "gsar" or urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:imaginary.path eq "gsar"')
+          expect(result).to eql('employeeId eq "gsar" or imaginary.path eq "gsar"')
+        end
+
+        it 'handles the square bracket form with schema ID at the root' do
+          result = @instance.send(:flatten_filter, 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User[employeeId eq "gsar"')
+          expect(result).to eql('employeeId eq "gsar"')
+        end
+
+        it 'handles the square bracket form with schema ID and attribute at the root' do
+          result = @instance.send(:flatten_filter, 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:imaginary[path eq "gsar"')
+          expect(result).to eql('imaginary.path eq "gsar"')
+        end
+      end
+
+      # https://github.com/RIPAGlobal/scimitar/issues/115
+      #
+      context 'broken filters from Microsoft (GitHub issue #115)' do
+        it 'work with "eq"' do
+          result = @instance.send(:flatten_filter, 'emails[type eq "work"].value eq "foo@bar.com"')
+          expect(result).to eql('emails.type eq "work" and emails.value eq "foo@bar.com"')
+        end
+
+        it 'work with "ne"' do # (just check a couple of operators, not all!)
+          result = @instance.send(:flatten_filter, 'emails[type eq "work"].value ne "foo@bar.com"')
+          expect(result).to eql('emails.type eq "work" and emails.value ne "foo@bar.com"')
+        end
+
+        it 'preserve input case' do
+          result = @instance.send(:flatten_filter, 'emaiLs[TYPE eq "work"].valUE eq "FOO@bar.com"')
+          expect(result).to eql('emaiLs.TYPE eq "work" and emaiLs.valUE eq "FOO@bar.com"')
+        end
+
+        # At the time of writing, this was used in a "belt and braces" request
+        # spec in 'active_record_backed_resources_controller_spec.rb'.
+        #
+        it 'handles more complex, hypothetical cases' do
+          result = @instance.send(:flatten_filter, 'name[givenName eq "FOO"].familyName pr and emails ne "home_1@test.com"')
+          expect(result).to eql('name.givenName eq "FOO" and name.familyName pr and emails ne "home_1@test.com"')
+        end
+      end # "context 'broken filters from Microsoft' do"
     end # "context 'when flattening is needed' do"
 
     context 'with bad filters' do

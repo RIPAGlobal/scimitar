@@ -1,5 +1,3 @@
-require_dependency "scimitar/application_controller"
-
 module Scimitar
 
   # An ActiveRecord-centric subclass of Scimitar::ResourcesController. See that
@@ -19,7 +17,7 @@ module Scimitar
   #
   class ActiveRecordBackedResourcesController < ResourcesController
 
-    rescue_from ActiveRecord::RecordNotFound, with: :handle_resource_not_found # See Scimitar::ApplicationController
+    rescue_from 'ActiveRecord::RecordNotFound', with: :handle_resource_not_found # See Scimitar::ApplicationController
 
     before_action :obtain_id_column_name_from_attribute_map
 
@@ -174,7 +172,10 @@ module Scimitar
       # representation, with a "show" location specified via #url_for.
       #
       def record_to_scim(record)
-        record.to_scim(location: url_for(action: :show, id: record.send(@id_column)))
+        record.to_scim(
+          location: url_for(action: :show, id: record.send(@id_column)),
+          include_attributes: params.fetch(:attributes, "").split(",")
+        )
       end
 
       # Save a record, dealing with validation exceptions by raising SCIM

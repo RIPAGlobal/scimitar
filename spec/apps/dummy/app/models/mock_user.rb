@@ -18,6 +18,7 @@ class MockUser < ActiveRecord::Base
     work_phone_number
     organization
     department
+    manager
     mock_groups
   }
 
@@ -48,6 +49,7 @@ class MockUser < ActiveRecord::Base
       externalId: :scim_uid,
       userName:   :username,
       password:   :password,
+      active:     :is_active,
       name:       {
         givenName:  :first_name,
         familyName: :last_name
@@ -80,8 +82,11 @@ class MockUser < ActiveRecord::Base
           }
         },
       ],
-      groups: [ # NB read-only, so no :find_with key
+      groups: [
         {
+          # Read-only, so no :find_with key. There's no 'class' specified here
+          # either, to help test the "/Schemas" endpoint's reflection code.
+          #
           list:  :mock_groups,
           using: {
             value:   :id,
@@ -89,13 +94,16 @@ class MockUser < ActiveRecord::Base
           }
         }
       ],
-      active: :is_active,
 
       # Custom extension schema - see configuration in
       # "spec/apps/dummy/config/initializers/scimitar.rb".
       #
       organization: :organization,
       department:   :department,
+      primaryEmail: :scim_primary_email,
+
+      manager:      :manager,
+
       userGroups: [
         {
           list:      :mock_groups,
@@ -124,8 +132,15 @@ class MockUser < ActiveRecord::Base
       'groups.value'      => { column: MockGroup.arel_table[:id] },
       'emails'            => { columns: [ :work_email_address, :home_email_address ] },
       'emails.value'      => { columns: [ :work_email_address, :home_email_address ] },
-      'emails.type'       => { ignore: true } # We can't filter on that; it'll just search all e-mails
+      'emails.type'       => { ignore: true }, # We can't filter on that; it'll just search all e-mails
+      'primaryEmail'      => { column: :scim_primary_email },
     }
+  end
+
+  # Custom attribute reader
+  #
+  def scim_primary_email
+    work_email_address
   end
 
   include Scimitar::Resources::Mixin

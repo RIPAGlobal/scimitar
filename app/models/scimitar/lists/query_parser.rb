@@ -59,13 +59,18 @@ module Scimitar
       #
       BINARY_OPERATORS = Set.new(OPERATORS.keys.reject { |op| UNARY_OPERATORS.include?(op) }).freeze
 
+      # Precompiled expression that matches a valid attribute name according to
+      # https://tools.ietf.org/html/rfc7643#section-2.1.
+      #
+      ATTRNAME = /[[:alpha:]][[:alnum:]$-_]*/
+
       # =======================================================================
       # Tokenizing expressions
       # =======================================================================
 
       PAREN       = /[\(\)]/.freeze
       STR         = /"(?:\\"|[^"])*"/.freeze
-      OP          = /#{OPERATORS.keys.join('|')}/i.freeze
+      OP          = /(?:#{OPERATORS.keys.join('|')})\b/i.freeze
       WORD        = /[\w\.]+/.freeze
       SEP         = /\s?/.freeze
       NEXT_TOKEN  = /\A(#{PAREN}|#{STR}|#{OP}|#{WORD})#{SEP}/.freeze
@@ -291,6 +296,10 @@ module Scimitar
         # the part before the "[" as a prefix - "emails[type" to "emails.type",
         # with similar substitutions therein.
         #
+        # Further, via https://github.com/RIPAGlobal/scimitar/issues/115 we see
+        # a requirement to support a broken form emitted by Microsoft; that is
+        # supported herein.
+        #
         # This method tries to flatten things thus. It throws exceptions if any
         # problems arise at all. Some limitations:
         #
@@ -313,6 +322,9 @@ module Scimitar
         #
         #     <- userType ne "Employee" and not (emails[value co "example.com" or (value co "example.org")]) and userName="foo"
         #     => userType ne "Employee" and not (emails.value co "example.com" or (emails.value co "example.org")) and userName="foo"
+        #
+        #     <- emails[type eq "work"].value eq "foo@bar.com"   (Microsoft workaround)
+        #     => emails.type eq "work" and emails.value eq "foo@bar.com"
         #
         # +filter+:: Input filter string. Returns a possibly modified String,
         #            with the hopefully equivalent but flattened filter inside.
@@ -363,9 +375,53 @@ module Scimitar
               end
 
             elsif (expecting_value)
-              matches = downcased.match(/([^\\])\]/) # Contains no-backslash-then-literal (unescaped) ']'
+              matches = downcased.match(/([^\\])\](.*)/) # Contains no-backslash-then-literal (unescaped) ']'; also capture anything after
               unless matches.nil? # Contains no-backslash-then-literal (unescaped) ']'
                 character_before_closing_bracket = matches[1]
+                characters_after_closing_bracket = matches[2]
+
+                # https://github.com/RIPAGlobal/scimitar/issues/115 - detect
+                # bad Microsoft filters. After the closing bracket, we expect a
+                # dot then valid attribute characters and at least one white
+                # space character and filter operator, but we split on spaces,
+                # so the next item in the components array must be a recognised
+                # operator for the special case code to kick in.
+                #
+                # If this all works out, we transform this section of the
+                # filter string into a local dotted form, reconstruct the
+                # overall filter with this substitution, and call back to this
+                # method with that modified filter, returning the result.
+                #
+                # So - NOTE RECURSION AND EARLY EXIT POSSIBILITY HEREIN.
+                #
+                if (
+                  ! attribute_prefix.nil? &&
+                  OPERATORS.key?(components[index + 1]&.downcase) &&
+                  characters_after_closing_bracket.match?(/^\.#{ATTRNAME}$/)
+                )
+                  # E.g. '"work"' and '.value' from input '"work"].value'
+                  #
+                  component_matches           = component.match(/^(.*?[^\\])\](.*)/)
+                  part_before_closing_bracket = component_matches[1]
+                  part_after_closing_bracket  = component_matches[2]
+
+                  # Produces e.g. '"work"] and emails.value'
+                  #
+                  dotted_version = "#{part_before_closing_bracket}] and #{attribute_prefix}#{part_after_closing_bracket}"
+
+                  # Overwrite the components array entry with this new version.
+                  #
+                  components[index] = dotted_version
+
+                  # Join it back again as a reconstructed valid filter string.
+                  #
+                  hopefully_valid_filter = components.join(' ')
+
+                  # NOTE EARLY EXIT
+                  #
+                  return flatten_filter(hopefully_valid_filter)
+                end
+
                 component.gsub!(/[^\\]\]/, character_before_closing_bracket)
 
                 if expecting_closing_bracket
@@ -410,7 +466,36 @@ module Scimitar
             end
           end
 
-          return rewritten.join(' ')
+          # Handle schema IDs.
+          #
+          # Scimitar currently has a limitation where it strips schema IDs in
+          # things like PATCH operation path traversal; see
+          # https://github.com/RIPAGlobal/scimitar/issues/130. At least that
+          # makes things easy here; use the same approach and strip them out!
+          #
+          # We don't know which resource is being queried at this layer of the
+          # software. If Scimitar were to bump major version, then an extension
+          # to QueryParser#parse to include this information would be wise. In
+          # the mean time, all we can do is enumerate all extension schema
+          # subclasses with IDs and remove those IDs if present in the filter.
+          #
+          # Inbound unrecognised schema IDs will be left behind. If the client
+          # Scimitar application hasn't defined requested schemas, it would
+          # very likely never have been able to handle the filter either way.
+          #
+          rewritten_joined = rewritten.join(' ')
+          if rewritten_joined.include?(':')
+
+            # README.md notes that extensions *must* be a subclass of
+            # Scimitar::Schema::Base and must define IDs.
+            #
+            known_schema_ids = Scimitar::Schema::Base.subclasses.map { |s| s.new.id }.compact
+            known_schema_ids.each do | schema_id |
+              rewritten_joined.gsub!(/#{schema_id}[\:\.]/, '')
+            end
+          end
+
+          return rewritten_joined
         end
 
         # Service method to DRY up #flatten_filter a little. Applies a prefix
