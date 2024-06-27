@@ -1,3 +1,19 @@
+# 2.9.0 (2024-06-27)
+
+Features:
+
+* Override which core schema are returned in the `/Schemas` endpoint via new call `Scimitar::Engine::set_default_resources` (see [this code diff](https://github.com/RIPAGlobal/scimitar/pull/133/files#diff-b8ad01f8ed8a88f41a13938505a2050d3d3ff86af93a78a7690b273ece6b80bdR80)) - implements [#118](https://github.com/RIPAGlobal/scimitar/issues/118) requested by `@gsar` via [#133](https://github.com/RIPAGlobal/scimitar/pull/133)
+* Opt-in feature to make the `/Schemas` endpoint walk resource attribute maps to determine _actual_ supported attributes and attribute mutability, rather than just reporting the literal schema definition; see the description of the `schema_list_from_attribute_mappings` configuration setting inside the template `config/initializers/scimitar.rb` file for details (or read it via the [code diff here](https://github.com/RIPAGlobal/scimitar/pull/135/files#diff-830211b739a7c7398083b7127d648b356f43d298713a2b3f0c13f2271b9d3c82R110)) - implements [#119](https://github.com/RIPAGlobal/scimitar/issues/119) requested by `@gsar` via [#135](https://github.com/RIPAGlobal/scimitar/pull/135)
+
+Fixes:
+
+* The `/Schemas` endpoint used to return a completely non-complaint response, but now returns a compliant `ListResponse`, as it always should have; there is no major version change to Scimitar with this fix, as it is hoped that this has no impact for most people (surely anyone who had attempted to use the endpoint would have already reported the issue!) - fixes [#117](https://github.com/RIPAGlobal/scimitar/issues/117) via [#133](https://github.com/RIPAGlobal/scimitar/pull/133) - thanks to `@gsar`
+* A number of problems with extension schema are fixed so they should work much more reliably now, with `README.md` documentation updated in a few places for clairty; check there if you are still having trouble - fixes [#122](https://github.com/RIPAGlobal/scimitar/issues/122) via [#134](https://github.com/RIPAGlobal/scimitar/pull/134) - thanks to `@easym0de`
+
+Other notes:
+
+* For developers, note that debugging is now via the standard Ruby debugger - use e.g. `debugger` instead of `byebug` if you want to halt code and reach a debugging prompt during development work
+
 # 2.8.0 (2024-06-13)
 
 Features:
