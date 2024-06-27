@@ -1,3 +1,50 @@
+# 1.10.0 (2024-06-27)
+
+Features:
+
+* Override which core schema are returned in the `/Schemas` endpoint via new call `Scimitar::Engine::set_default_resources` (see [this code diff](https://github.com/RIPAGlobal/scimitar/pull/133/files#diff-b8ad01f8ed8a88f41a13938505a2050d3d3ff86af93a78a7690b273ece6b80bdR80)) - implements [#118](https://github.com/RIPAGlobal/scimitar/issues/118) requested by `@gsar` via [#133](https://github.com/RIPAGlobal/scimitar/pull/133)
+* Opt-in feature to make the `/Schemas` endpoint walk resource attribute maps to determine _actual_ supported attributes and attribute mutability, rather than just reporting the literal schema definition; see the description of the `schema_list_from_attribute_mappings` configuration setting inside the template `config/initializers/scimitar.rb` file for details (or read it via the [code diff here](https://github.com/RIPAGlobal/scimitar/pull/135/files#diff-830211b739a7c7398083b7127d648b356f43d298713a2b3f0c13f2271b9d3c82R110)) - implements [#119](https://github.com/RIPAGlobal/scimitar/issues/119) requested by `@gsar` via [#135](https://github.com/RIPAGlobal/scimitar/pull/135)
+
+Fixes:
+
+* The `/Schemas` endpoint used to return a completely non-complaint response, but now returns a compliant `ListResponse`, as it always should have; there is no major version change to Scimitar with this fix, as it is hoped that this has no impact for most people (surely anyone who had attempted to use the endpoint would have already reported the issue!) - fixes [#117](https://github.com/RIPAGlobal/scimitar/issues/117) via [#133](https://github.com/RIPAGlobal/scimitar/pull/133) - thanks to `@gsar`
+* A number of problems with extension schema are fixed so they should work much more reliably now, with `README.md` documentation updated in a few places for clairty; check there if you are still having trouble - fixes [#122](https://github.com/RIPAGlobal/scimitar/issues/122) via [#134](https://github.com/RIPAGlobal/scimitar/pull/134) - thanks to `@easym0de`
+
+Other notes:
+
+* For developers, note that debugging is now via the standard Ruby debugger - use e.g. `debugger` instead of `byebug` if you want to halt code and reach a debugging prompt during development work
+
+# 1.9.0 (unreleased)
+
+Features:
+
+* Supports the [SCIM mechanism for requesting specific attributes](https://datatracker.ietf.org/doc/html/rfc7644#section-3.9) (noting however that schema ID URN prefixes are not supported; use only dotted attribute paths without such prefixes) - closes [89](https://github.com/RIPAGlobal/scimitar/issues/89) via [102](https://github.com/RIPAGlobal/scimitar/pull/102) and [127](https://github.com/RIPAGlobal/scimitar/pull/127) - thanks to `@xjunior`
+* In a moment of déja vu from v1.8.3's Microsoft payload workarounds for [123](https://github.com/RIPAGlobal/scimitar/issues/123), handles a different kind of malformed filter sent by Microsoft Azure (Entra) in `GET` requests - implements [115](https://github.com/RIPAGlobal/scimitar/issues/115) requested by `@gsar` via [128](https://github.com/RIPAGlobal/scimitar/pull/128)
+* Handles schema IDs (URNs) in filters of `GET` requests - implements [116](https://github.com/RIPAGlobal/scimitar/issues/116) requested by `@gsar` via [131](https://github.com/RIPAGlobal/scimitar/pull/131)
+
+Fixes:
+
+* Corrects schema for `name.givenName` and `name.familyName` in User, which previously specified these as required, but the SCIM specification says they are not - fixes [113](https://github.com/RIPAGlobal/scimitar/issues/113) reported by `@s-andringa` via [129](https://github.com/RIPAGlobal/scimitar/pull/129). If your code somehow _relies_ upon `name.givenName` and/or `name.familyName` being required in the User schema, you can patch this in your `config/initializers/scimitar.rb` file - for example:
+
+    ```ruby
+    Rails.application.config.to_prepare do
+      Scimitar::Schema::Name.scim_attributes.find { |a| a.name == 'familyName' }.required = true
+      Scimitar::Schema::Name.scim_attributes.find { |a| a.name == 'givenName'  }.required = true
+
+      # ...
+    end
+    ```
+
+# 1.8.3 (unreleased)
+
+Features:
+
+* As part of the above fix, schema ID handling was improved and extended with better test coverage. `PATCH` `add` and `replace` operations with `value` objects containing schema IDs both with or without attributes inline should now work reliably.
+
+Fixes:
+
+* Handles what I _think_ are technically malformed payloads from Azure (Entra), but since they seem unavoidable, it's important to handle them - should fix [123](https://github.com/RIPAGlobal/scimitar/issues/123) reported by `@eduardoborba`
+
 # 1.8.2 (2024-03-27)
 
 Fixes:
