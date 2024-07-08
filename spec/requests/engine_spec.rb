@@ -78,26 +78,26 @@ RSpec.describe Scimitar::Engine do
       end
 
       it 'notes changes to defaults' do
-        Scimitar::Engine::set_default_resources([Scimitar::Resources::User])
+        Scimitar::Engine.set_default_resources([Scimitar::Resources::User])
         expect(Scimitar::Engine.resources()).to match_array([Scimitar::Resources::User])
       end
 
       it 'notes changes to defaults with custom resources added' do
-        Scimitar::Engine::set_default_resources([Scimitar::Resources::User])
+        Scimitar::Engine.set_default_resources([Scimitar::Resources::User])
         Scimitar::Engine.add_custom_resource(@license_resource)
         expect(Scimitar::Engine.resources()).to match_array([Scimitar::Resources::User, @license_resource])
       end
 
       it 'rejects bad defaults' do
         expect {
-          Scimitar::Engine::set_default_resources([@license_resource])
-        }.to raise_error('Scimitar::Engine::set_default_resources: Only Scimitar::Resources::User, Scimitar::Resources::Group are supported')
+          Scimitar::Engine.set_default_resources([@license_resource])
+        }.to raise_error('Scimitar::Engine.set_default_resources: Only Scimitar::Resources::User, Scimitar::Resources::Group are supported')
       end
 
       it 'rejects empty defaults' do
         expect {
-          Scimitar::Engine::set_default_resources([])
-        }.to raise_error('Scimitar::Engine::set_default_resources: At least one resource must be given')
+          Scimitar::Engine.set_default_resources([])
+        }.to raise_error('Scimitar::Engine.set_default_resources: At least one resource must be given')
       end
     end # "context '::resources, :add_custom_resource, ::set_default_resources' do"
 

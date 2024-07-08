@@ -88,9 +88,9 @@ module Scimitar
       unrecognised_resources = resource_array - @standard_default_resources
 
       if unrecognised_resources.any?
-        raise "Scimitar::Engine::set_default_resources: Only #{@standard_default_resources.map(&:name).join(', ')} are supported"
+        raise "Scimitar::Engine.set_default_resources: Only #{@standard_default_resources.map(&:name).join(', ')} are supported"
       elsif resource_array.empty?
-        raise 'Scimitar::Engine::set_default_resources: At least one resource must be given'
+        raise 'Scimitar::Engine.set_default_resources: At least one resource must be given'
       end
 
       @default_resources = resource_array

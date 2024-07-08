@@ -594,7 +594,7 @@ By default, Scimitar advertises (via things like [the `/Schemas` endpoint](https
 
 ```ruby
 Rails.application.config.to_prepare do
-  Scimitar::Engine::set_default_resources([Scimitar::Resources::User])
+  Scimitar::Engine.set_default_resources([Scimitar::Resources::User])
   # ...other Scimitar configuration / initialisation code...
 end
 ```
