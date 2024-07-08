@@ -2,7 +2,7 @@
 
 Features:
 
-* Override which core schema are returned in the `/Schemas` endpoint via new call `Scimitar::Engine::set_default_resources` (see [this code diff](https://github.com/RIPAGlobal/scimitar/pull/133/files#diff-b8ad01f8ed8a88f41a13938505a2050d3d3ff86af93a78a7690b273ece6b80bdR80)) - implements [#118](https://github.com/RIPAGlobal/scimitar/issues/118) requested by `@gsar` via [#133](https://github.com/RIPAGlobal/scimitar/pull/133)
+* Override which core schema are returned in the `/Schemas` endpoint via new call `Scimitar::Engine.set_default_resources` (see [this code diff](https://github.com/RIPAGlobal/scimitar/pull/133/files#diff-b8ad01f8ed8a88f41a13938505a2050d3d3ff86af93a78a7690b273ece6b80bdR80)) - implements [#118](https://github.com/RIPAGlobal/scimitar/issues/118) requested by `@gsar` via [#133](https://github.com/RIPAGlobal/scimitar/pull/133)
 * Opt-in feature to make the `/Schemas` endpoint walk resource attribute maps to determine _actual_ supported attributes and attribute mutability, rather than just reporting the literal schema definition; see the description of the `schema_list_from_attribute_mappings` configuration setting inside the template `config/initializers/scimitar.rb` file for details (or read it via the [code diff here](https://github.com/RIPAGlobal/scimitar/pull/135/files#diff-830211b739a7c7398083b7127d648b356f43d298713a2b3f0c13f2271b9d3c82R110)) - implements [#119](https://github.com/RIPAGlobal/scimitar/issues/119) requested by `@gsar` via [#135](https://github.com/RIPAGlobal/scimitar/pull/135)
 
 Fixes:
