@@ -83,7 +83,7 @@ module Scimitar
       #                   method's return value here.
       #
       def initialize(attribute_map)
-        @attribute_map = attribute_map.with_indifferent_case_insensitive_access()
+        @attribute_map = attribute_map.with_indifferent_case_insensitive_access
       end
 
       # Parse SCIM filter query into RPN stack
@@ -138,11 +138,11 @@ module Scimitar
       def parse(input)
         preprocessed_input = flatten_filter(input) rescue input
 
-        @input  = input.clone() # Saved just for error msgs
+        @input  = input.clone # Saved just for error msgs
         @tokens = self.lex(preprocessed_input)
-        @rpn    = self.parse_expr()
+        @rpn    = self.parse_expr
 
-        self.assert_eos()
+        self.assert_eos
         self
       end
 
@@ -152,8 +152,8 @@ module Scimitar
       # See #parse for more information.
       #
       def tree
-        @stack = @rpn.clone()
-        self.get_tree()
+        @stack = @rpn.clone
+        self.get_tree
       end
 
       # Having called #parse, call here to generate an ActiveRecord query based
@@ -178,7 +178,7 @@ module Scimitar
       def to_activerecord_query(base_scope)
         return self.to_activerecord_query_backend(
           base_scope:      base_scope,
-          expression_tree: self.tree()
+          expression_tree: self.tree
         )
       end
 
@@ -192,10 +192,10 @@ module Scimitar
           ast       = []
           expect_op = false
 
-          while !self.eos? && self.peek() != ')'
-            expect_op && self.assert_op() || self.assert_not_op()
+          while !self.eos? && self.peek != ')'
+            expect_op && self.assert_op || self.assert_not_op
 
-            ast.push(self.start_group? ? self.parse_group() : self.pop())
+            ast.push(self.start_group? ? self.parse_group : self.pop)
 
             if ast.last.is_a?(String) && !UNARY_OPERATORS.include?(ast.last.downcase) || ast.last.is_a?(Array)
               expect_op ^= true
@@ -207,12 +207,12 @@ module Scimitar
 
         def parse_group
           # pop '(' token
-          self.pop()
+          self.pop
 
-          ast = self.parse_expr()
+          ast = self.parse_expr
 
           # pop ')' token
-          self.assert_close() && self.pop()
+          self.assert_close && self.pop
 
           ast
         end
@@ -266,11 +266,11 @@ module Scimitar
         def get_tree
           tree = []
           unless @stack.empty?
-            op = tree[0] = @stack.pop()
-            tree[1] = OPERATORS[@stack.last&.downcase] ? self.get_tree() : @stack.pop()
+            op = tree[0] = @stack.pop
+            tree[1] = OPERATORS[@stack.last&.downcase] ? self.get_tree : @stack.pop
 
             unless UNARY_OPERATORS.include?(op&.downcase)
-              tree.insert(1, (OPERATORS[@stack.last&.downcase] ? self.get_tree() : @stack.pop()))
+              tree.insert(1, (OPERATORS[@stack.last&.downcase] ? self.get_tree : @stack.pop))
             end
           end
           tree
@@ -533,11 +533,11 @@ module Scimitar
         # =====================================================================
 
         def peek
-          @tokens.first()
+          @tokens.first
         end
 
         def pop
-          @tokens.shift()
+          @tokens.shift
         end
 
         def eos?
@@ -545,11 +545,11 @@ module Scimitar
         end
 
         def start_group?
-          self.peek() == '('
+          self.peek == '('
         end
 
         def peek_operator
-          !self.eos? && self.peek().match(IS_OPERATOR)
+          !self.eos? && self.peek.match(IS_OPERATOR)
         end
 
         # =====================================================================
@@ -561,17 +561,17 @@ module Scimitar
         end
 
         def assert_op
-          return true if self.peek_operator()
+          return true if self.peek_operator
           self.parse_error("Unexpected token '%s'. Expected operator")
         end
 
         def assert_not_op
-          return true unless self.peek_operator()
+          return true unless self.peek_operator
           self.parse_error("Unexpected operator '%s'")
         end
 
         def assert_close
-          return true if self.peek() == ')'
+          return true if self.peek == ')'
           self.parse_error("Unexpected token '%s'. Expected ')'")
         end
 
@@ -605,9 +605,9 @@ module Scimitar
 
           if first_item == 'or'
             combining_method = :or
-            expression_tree.shift()
+            expression_tree.shift
           elsif first_item == 'and'
-            expression_tree.shift()
+            expression_tree.shift
           elsif ! first_item.is_a?(Array) # Simple query; entire tree is just presence tuple or expression triple
             raise Scimitar::FilterError unless expression_tree.size == 2 || expression_tree.size == 3
             return apply_scim_filter( # NOTE EARLY EXIT
@@ -697,7 +697,7 @@ module Scimitar
           raise Scimitar::FilterError unless arel_columns.all?
 
           unless case_sensitive
-            lc_scim_attribute = scim_attribute.downcase()
+            lc_scim_attribute = scim_attribute.downcase
 
             case_sensitive = (
               lc_scim_attribute == 'id' ||
@@ -758,7 +758,7 @@ module Scimitar
         def activerecord_columns(scim_attribute)
           raise Scimitar::FilterError.new("No scim_attribute provided") if scim_attribute.blank?
 
-          mapped_attribute = self.attribute_map()[scim_attribute]
+          mapped_attribute = self.attribute_map[scim_attribute]
           raise Scimitar::FilterError.new("Unable to find domain attribute from SCIM attribute: '#{scim_attribute}'") if mapped_attribute.blank?
 
           if mapped_attribute[:ignore]

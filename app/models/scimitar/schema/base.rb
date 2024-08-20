@@ -58,10 +58,10 @@ module Scimitar
       #
       def self.find_attribute(*path)
         found_attribute    = nil
-        current_attributes = self.scim_attributes()
+        current_attributes = self.scim_attributes
 
         until path.empty? do
-          current_path_entry = path.shift()
+          current_path_entry = path.shift
           next if current_path_entry.is_a?(Integer) # Skip array indicies arising from multi-value attributes
 
           current_path_entry = current_path_entry.to_s.downcase

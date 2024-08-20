@@ -12,7 +12,7 @@ module Scimitar
   #
   #     protected
   #       def storage_scope
-  #         self.storage_class().where(is_deleted: false)
+  #         self.storage_class.where(is_deleted: false)
   #       end
   #
   class ActiveRecordBackedResourcesController < ResourcesController
@@ -25,22 +25,22 @@ module Scimitar
     #
     def index
       query = if params[:filter].blank?
-        self.storage_scope()
+        self.storage_scope
       else
-        attribute_map = storage_class().new.scim_queryable_attributes()
+        attribute_map = storage_class.new.scim_queryable_attributes
         parser        = ::Scimitar::Lists::QueryParser.new(attribute_map)
 
         parser.parse(params[:filter])
-        parser.to_activerecord_query(self.storage_scope())
+        parser.to_activerecord_query(self.storage_scope)
       end
 
-      pagination_info = scim_pagination_info(query.count())
+      pagination_info = scim_pagination_info(query.count)
 
       page_of_results = query
         .order(@id_column => :asc)
         .offset(pagination_info.offset)
         .limit(pagination_info.limit)
-        .to_a()
+        .to_a
 
       super(pagination_info, page_of_results) do | record |
         record_to_scim(record)
@@ -68,9 +68,9 @@ module Scimitar
     #
     def create(&block)
       super do |scim_resource|
-        self.storage_class().transaction do
-          record = self.storage_class().new
-          record.from_scim!(scim_hash: scim_resource.as_json())
+        self.storage_class.transaction do
+          record = self.storage_class.new
+          record.from_scim!(scim_hash: scim_resource.as_json)
           self.save!(record, &block)
           record_to_scim(record)
         end
@@ -85,9 +85,9 @@ module Scimitar
     #
     def replace(&block)
       super do |record_id, scim_resource|
-        self.storage_class().transaction do
+        self.storage_class.transaction do
           record = self.find_record(record_id)
-          record.from_scim!(scim_hash: scim_resource.as_json())
+          record.from_scim!(scim_hash: scim_resource.as_json)
           self.save!(record, &block)
           record_to_scim(record)
         end
@@ -102,7 +102,7 @@ module Scimitar
     #
     def update(&block)
       super do |record_id, patch_hash|
-        self.storage_class().transaction do
+        self.storage_class.transaction do
           record = self.find_record(record_id)
           record.from_scim_patch!(patch_hash: patch_hash)
           self.save!(record, &block)
@@ -165,7 +165,7 @@ module Scimitar
       # +record_id+:: Record ID (SCIM schema 'id' value - "our" ID).
       #
       def find_record(record_id)
-        self.storage_scope().find_by!(@id_column => record_id)
+        self.storage_scope.find_by!(@id_column => record_id)
       end
 
       # DRY up controller actions - pass a record; returns the SCIM
@@ -201,7 +201,7 @@ module Scimitar
         else
           record.save!
         end
-      rescue *self.scimitar_rescuable_exceptions() => exception
+      rescue *self.scimitar_rescuable_exceptions => exception
         handle_on_save_exception(record, exception)
       end
 
@@ -247,7 +247,7 @@ module Scimitar
       # Default is <tt>:id</tt>.
       #
       def obtain_id_column_name_from_attribute_map
-        attrs      = storage_class().scim_attributes_map() || {}
+        attrs      = storage_class.scim_attributes_map || {}
         @id_column = attrs[:id] || :id
       end
 

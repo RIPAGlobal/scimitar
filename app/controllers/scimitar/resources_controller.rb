@@ -59,7 +59,7 @@ module Scimitar
     # to the SCIM representation of the arising found record.
     #
     def show(&block)
-      scim_resource = yield(self.safe_params()[:id])
+      scim_resource = yield(self.safe_params[:id])
       render(json: scim_resource)
     end
 
@@ -75,7 +75,7 @@ module Scimitar
     # Evaluate to the SCIM representation of the arising created record.
     #
     def create(&block)
-      with_scim_resource() do |resource|
+      with_scim_resource do |resource|
         render(json: yield(resource, :create), status: :created)
       end
     end
@@ -89,8 +89,8 @@ module Scimitar
     # Evaluate to the SCIM representation of the arising created record.
     #
     def replace(&block)
-      with_scim_resource() do |resource|
-        render(json: yield(self.safe_params()[:id], resource))
+      with_scim_resource do |resource|
+        render(json: yield(self.safe_params[:id], resource))
       end
     end
 
@@ -104,20 +104,20 @@ module Scimitar
     # Evaluate to the SCIM representation of the arising created record.
     #
     def update(&block)
-      validate_request()
+      validate_request
 
       # Params includes all of the PATCH data at the top level along with other
       # other Rails-injected params like 'id', 'action', 'controller'. These
       # are harmless given no namespace collision and we're only interested in
       # the 'Operations' key for the actual patch data.
       #
-      render(json: yield(self.safe_params()[:id], self.safe_params().to_hash()))
+      render(json: yield(self.safe_params[:id], self.safe_params.to_hash))
     end
 
     # DELETE (remove)
     #
     def destroy
-      if yield(self.safe_params()[:id]) != false
+      if yield(self.safe_params[:id]) != false
         head :no_content
       else
         raise ErrorResponse.new(
@@ -170,10 +170,10 @@ module Scimitar
       end
 
       def with_scim_resource
-        validate_request()
+        validate_request
 
-        resource_type = storage_class().scim_resource_type() # See Scimitar::Resources::Mixin
-        resource      = resource_type.new(self.safe_params().to_h)
+        resource_type = storage_class.scim_resource_type # See Scimitar::Resources::Mixin
+        resource      = resource_type.new(self.safe_params.to_h)
 
         if resource.valid?
           yield(resource)

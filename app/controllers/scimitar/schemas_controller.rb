@@ -68,7 +68,7 @@ module Scimitar
         schema_to_resource_map       = {}
 
         classes_using_scimitar_mixin.each do | model_class |
-          resource_class = model_class.scim_resource_type()
+          resource_class = model_class.scim_resource_type
           schemas        = resource_class.extended_schemas + [resource_class.schema]
 
           schemas.each do | schema_class |
@@ -97,7 +97,7 @@ module Scimitar
           end
 
           found_class = classes_using_scimitar_mixin.find do | class_using_scimitar_mixin |
-            resource_class = class_using_scimitar_mixin.scim_resource_type()
+            resource_class = class_using_scimitar_mixin.scim_resource_type
 
             resource_class.schema == schema_instance.class ||
             resource_class.extended_schemas.include?(schema_instance.class)
@@ -179,8 +179,8 @@ module Scimitar
         schema_attributes   ||= original_schema_instance.scim_attributes
         scim_attributes_map ||= instance_including_mixin
           .class
-          .scim_attributes_map()
-          .with_indifferent_case_insensitive_access()
+          .scim_attributes_map
+          .with_indifferent_case_insensitive_access
 
         rebuilt_schema_instance = nil
 
@@ -298,7 +298,7 @@ module Scimitar
 
               if mapped_attribute.is_a?(String) || mapped_attribute.is_a?(Symbol)
                 has_mapped_reader = instance_including_mixin.respond_to?(mapped_attribute)
-                has_mapped_writer = instance_including_mixin.scim_mutable_attributes().include?(mapped_attribute.to_sym)
+                has_mapped_writer = instance_including_mixin.scim_mutable_attributes.include?(mapped_attribute.to_sym)
               end
 
               # The schema is taken as the primary source of truth, leading to
@@ -370,7 +370,7 @@ module Scimitar
       #                      A renderable duplicate is returned.
       #
       def duplicate_attribute(schema_attribute)
-        duplicated_schema_attribute = schema_attribute.dup()
+        duplicated_schema_attribute = schema_attribute.dup
         duplicated_schema_attribute.remove_instance_variable('@errors')
         duplicated_schema_attribute
       end
