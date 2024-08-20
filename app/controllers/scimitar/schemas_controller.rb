@@ -358,7 +358,7 @@ module Scimitar
           end
         end
 
-        return rebuilt_schema_instance # (meaningless except for topmost call)
+        rebuilt_schema_instance # (meaningless except for topmost call)
       end
 
       # Small helper that duplicates Scimitar::Schema::Attribute instances, but
