@@ -1088,7 +1088,7 @@ module Scimitar
                     # associated collection or clearing a local model attribute
                     # directly to "nil").
                     #
-                    if handled == false
+                    unless handled
                       current_data_at_path[matched_index] = nil
                       compact_after = true
                     end
@@ -1290,7 +1290,7 @@ module Scimitar
                       end
                     end
 
-                    if handled == false
+                    unless handled
                       altering_hash[path_component] = []
                     end
 

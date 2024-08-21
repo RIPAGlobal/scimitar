@@ -342,14 +342,14 @@ module Scimitar
           skip_next_component       = false
 
           components.each.with_index do | component, index |
-            if skip_next_component == true
+            if skip_next_component
               skip_next_component = false
               next
             end
 
             downcased = component.downcase.strip
 
-            if (expecting_attribute)
+            if expecting_attribute
               if downcased.match?(/[^\\]\[/) # Not backslash then literal '['
                 attribute_prefix       = component.match(/(.*?[^\\])\[/   )[1] # Everything before no-backslash-then-literal (unescaped) '['
                 first_attribute_inside = component.match(    /[^\\]\[(.*)/)[1] # Everything  after no-backslash-then-literal (unescaped) '['
@@ -362,7 +362,7 @@ module Scimitar
               expecting_attribute = false
               expecting_operator  = true
 
-            elsif (expecting_operator)
+            elsif expecting_operator
               rewritten << component
               if BINARY_OPERATORS.include?(downcased)
                 expecting_operator = false
@@ -374,7 +374,7 @@ module Scimitar
                 raise 'Expected operator'
               end
 
-            elsif (expecting_value)
+            elsif expecting_value
               matches = downcased.match(/([^\\])\](.*)/) # Contains no-backslash-then-literal (unescaped) ']'; also capture anything after
               unless matches.nil? # Contains no-backslash-then-literal (unescaped) ']'
                 character_before_closing_bracket = matches[1]
@@ -394,11 +394,9 @@ module Scimitar
                 #
                 # So - NOTE RECURSION AND EARLY EXIT POSSIBILITY HEREIN.
                 #
-                if (
-                  ! attribute_prefix.nil? &&
+                if !attribute_prefix.nil? &&
                   OPERATORS.key?(components[index + 1]&.downcase) &&
                   characters_after_closing_bracket.match?(/^\.#{ATTRNAME}$/)
-                )
                   # E.g. '"work"' and '.value' from input '"work"].value'
                   #
                   component_matches           = component.match(/^(.*?[^\\])\](.*)/)
@@ -437,7 +435,7 @@ module Scimitar
               if downcased.start_with?('"')
                 expecting_closing_quote = true
                 downcased = downcased[1..-1] # Strip off opening '"' to avoid false-positive on 'contains closing quote' check below
-              elsif expecting_closing_quote == false # If not expecting a closing quote, then the component must be the entire no-spaces value
+              elsif !expecting_closing_quote # If not expecting a closing quote, then the component must be the entire no-spaces value
                 expecting_value      = false
                 expecting_logic_word = true
               end
@@ -450,7 +448,7 @@ module Scimitar
                 end
               end
 
-            elsif (expecting_logic_word)
+            elsif expecting_logic_word
               if downcased == 'and' || downcased == 'or'
                 rewritten << component
                 next_downcased_component = components[index + 1].downcase.strip
