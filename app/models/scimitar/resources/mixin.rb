@@ -613,7 +613,7 @@ module Scimitar
                 built_dynamic_list = false
                 mapped_array = attrs_map_or_leaf_value.map do |value|
                   if ! value.is_a?(Hash)
-                    raise 'Bad attribute map: Array contains someting other than mapping Hash(es)'
+                    raise 'Bad attribute map: Array contains something other than mapping Hash(es)'
 
                   elsif value.key?(:match) # Static map
                     static_hash = { value[:match] => value[:with] }
@@ -741,7 +741,7 @@ module Scimitar
           # +path+::                    Array of SCIM attribute names giving a
           #                             path into the SCIM schema where
           #                             iteration has reached. Used to find the
-          #                             schema attribute definiton and check
+          #                             schema attribute definition and check
           #                             mutability before writing.
           #
           def from_scim_backend!(
@@ -1445,7 +1445,7 @@ module Scimitar
           #     { value: :work_email }
           #
           # If there was a SCIM entry with a type of something unrecognised,
-          # such as 'holday', then +nil+ would be returned since there is no
+          # such as 'holiday', then +nil+ would be returned since there is no
           # matching attribute map entry.
           #
           # Note that the <tt>:with_attr_map</tt> array can contain dynamic

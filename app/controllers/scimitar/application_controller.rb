@@ -47,7 +47,7 @@ module Scimitar
       #
       # *exception+:: If a Ruby exception was the reason this method is being
       #               called, pass it here. Any configured exception reporting
-      #               mechanism will be invokved with the given parameter.
+      #               mechanism will be invoked with the given parameter.
       #               Otherwise, the +error_response+ value is reported.
       #
       def handle_scim_error(error_response, exception = error_response)

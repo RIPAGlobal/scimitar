@@ -555,7 +555,7 @@ RSpec.describe Scimitar::Resources::Mixin do
 
           expect do
             scim = instance.to_scim(location: 'https://test.com/static_map_test')
-          end.to raise_error(RuntimeError) { |e| expect(e.message).to include('Array contains someting other than mapping Hash(es)') }
+          end.to raise_error(RuntimeError) { |e| expect(e.message).to include('Array contains something other than mapping Hash(es)') }
         end
 
         it 'complains about bad Hash entries in mapping Arrays' do

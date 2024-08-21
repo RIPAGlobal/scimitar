@@ -584,11 +584,11 @@ module Scimitar
 
         # Recursively process an expression tree. Calls itself with nested tree
         # fragments. Each inner expression fragment calculates on the given
-        # base scope, with aggregration at each level into a wider query using
+        # base scope, with aggregation at each level into a wider query using
         # AND or OR depending on the expression tree contents.
         #
         # +base_scope+::      Base scope (ActiveRecord::Relation, e.g. User.all
-        #                     - neverchanges during recursion).
+        #                     - never changes during recursion).
         #
         # +expression_tree+:: Top-level expression tree or fragments inside if
         #                     self-calling recursively.
@@ -746,7 +746,7 @@ module Scimitar
 
         # Returns the mapped-to-your-domain column name(s) that a filter string
         # is operating upon, in an Array. If empty, the attribute is to be
-        # ignored. Raises an exception if entirey unmapped (thus unsupported).
+        # ignored. Raises an exception if entirely unmapped (thus unsupported).
         #
         # Note plural - the return value is always an array any of which should
         # be used (implicit 'OR').
