@@ -473,7 +473,7 @@ module Scimitar
             path_str = operation['path' ]
             value    = operation['value']
 
-            unless ['add', 'remove', 'replace'].include?(nature)
+            unless %w[add remove replace].include?(nature)
               raise Scimitar::InvalidSyntaxError.new("Unrecognised PATCH \"op\" value of \"#{nature}\"")
             end
 
