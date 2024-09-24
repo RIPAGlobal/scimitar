@@ -17,7 +17,7 @@ module Scimitar
 
     def as_json(options = {})
       without_extensions = super(except: 'schemaExtensions')
-      return without_extensions unless schemaExtensions.present?
+      return without_extensions unless schemaExtensions.present? # NOTE EARLY EXIT
 
       extensions = schemaExtensions.map{|extension| {"schema" => extension, "required" => false}}
       without_extensions.merge('schemaExtensions' => extensions)
