@@ -394,9 +394,11 @@ module Scimitar
                 #
                 # So - NOTE RECURSION AND EARLY EXIT POSSIBILITY HEREIN.
                 #
-                if !attribute_prefix.nil? &&
+                if (
+                  !attribute_prefix.nil? &&
                   OPERATORS.key?(components[index + 1]&.downcase) &&
                   characters_after_closing_bracket.match?(/^\.#{ATTRNAME}$/)
+                )
                   # E.g. '"work"' and '.value' from input '"work"].value'
                   #
                   component_matches           = component.match(/^(.*?[^\\])\](.*)/)

@@ -213,8 +213,10 @@ module Scimitar
               if mapped_multivalue_attribute.first&.dig(:list)
                 associated_resource_class = mapped_multivalue_attribute.first[:class]
 
-                if associated_resource_class.nil? &&
+                if (
+                  associated_resource_class.nil? &&
                   instance_including_mixin.is_a?(ActiveRecord::Base)
+                )
                   associated_resource_class = instance_including_mixin
                     .class
                     .reflect_on_association(mapped_multivalue_attribute.first[:list])
