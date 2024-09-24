@@ -73,7 +73,7 @@ module Scimitar
           end
         end
 
-        flattened
+        return flattened
       end
 
       # Can be used to extend an existing resource type's schema. For example:

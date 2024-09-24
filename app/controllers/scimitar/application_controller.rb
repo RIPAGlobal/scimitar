@@ -150,7 +150,7 @@ module Scimitar
           end
         end
 
-        result
+        return result
       end
 
   end

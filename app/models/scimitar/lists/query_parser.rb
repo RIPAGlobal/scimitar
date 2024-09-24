@@ -176,7 +176,7 @@ module Scimitar
       # best attempt at interpreting the SCIM filter string.
       #
       def to_activerecord_query(base_scope)
-        self.to_activerecord_query_backend(
+        return self.to_activerecord_query_backend(
           base_scope:      base_scope,
           expression_tree: self.tree()
         )
@@ -493,7 +493,7 @@ module Scimitar
             end
           end
 
-          rewritten_joined
+          return rewritten_joined
         end
 
         # Service method to DRY up #flatten_filter a little. Applies a prefix
@@ -653,7 +653,7 @@ module Scimitar
             end
           end
 
-          query
+          return query
         end
 
         # Apply a filter to a given base scope. Mandatory named parameters:
@@ -741,7 +741,7 @@ module Scimitar
             end
           end
 
-          query
+          return query
         end
 
         # Returns the mapped-to-your-domain column name(s) that a filter string
@@ -760,11 +760,11 @@ module Scimitar
           raise Scimitar::FilterError.new("Unable to find domain attribute from SCIM attribute: '#{scim_attribute}'") if mapped_attribute.blank?
 
           if mapped_attribute[:ignore]
-            []
+            return []
           elsif mapped_attribute[:column]
-            [mapped_attribute[:column]]
+            return [mapped_attribute[:column]]
           elsif mapped_attribute[:columns]
-            mapped_attribute[:columns]
+            return mapped_attribute[:columns]
           else
             raise "Malformed scim_queryable_attributes entry for #{scim_attribute.inspect}"
           end
@@ -782,11 +782,11 @@ module Scimitar
         #
         def activerecord_parameter(scim_parameter)
           if scim_parameter.blank?
-            ''
+            return ''
           elsif scim_parameter.start_with?('"') && scim_parameter.end_with?('"')
-            scim_parameter[1..-2]
+            return scim_parameter[1..-2]
           else
-            scim_parameter
+            return scim_parameter
           end
         end
 
