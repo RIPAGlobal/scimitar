@@ -132,7 +132,14 @@ module Scimitar
       # more about the return value and other general information.
       #
       def self.find_attribute(*path)
-        self.schemas.lazy.map { |schema| schema.find_attribute(*path) }.find(&:present?)
+        found_attribute = nil
+
+        self.schemas.each do | schema |
+          found_attribute = schema.find_attribute(*path)
+          break unless found_attribute.nil?
+        end
+
+        return found_attribute
       end
 
       def self.complex_scim_attributes
