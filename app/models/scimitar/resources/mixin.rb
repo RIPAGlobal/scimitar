@@ -296,7 +296,7 @@ module Scimitar
         # the result in an instance variable.
         #
         def scim_mutable_attributes
-          @scim_mutable_attributes ||= self.class.scim_mutable_attributes&.map(&:to_sym)
+          @scim_mutable_attributes ||= self.class.scim_mutable_attributes()&.map(&:to_sym)
 
           if @scim_mutable_attributes.nil?
             @scim_mutable_attributes = Set.new
@@ -324,7 +324,7 @@ module Scimitar
               end
             end
 
-            extractor.call(self.class.scim_attributes_map)
+            extractor.call(self.class.scim_attributes_map())
             @scim_mutable_attributes.delete(:id)
           end
 
@@ -337,7 +337,7 @@ module Scimitar
         # for how the return value of ::scim_queryable_attributes is handled.
         #
         def scim_queryable_attributes
-          @scim_queryable_attributes ||= self.class.scim_queryable_attributes
+          @scim_queryable_attributes ||= self.class.scim_queryable_attributes()
         end
 
         # Render self as a SCIM object using ::scim_attributes_map. Fields that
@@ -359,9 +359,9 @@ module Scimitar
         #                        attributes are included.
         #
         def to_scim(location:, include_attributes: [])
-          map             = self.class.scim_attributes_map
-          resource_type   = self.class.scim_resource_type
-          timestamps_map  = self.class.scim_timestamps_map if self.class.respond_to?(:scim_timestamps_map)
+          map             = self.class.scim_attributes_map()
+          resource_type   = self.class.scim_resource_type()
+          timestamps_map  = self.class.scim_timestamps_map() if self.class.respond_to?(:scim_timestamps_map)
           attrs_hash      = self.to_scim_backend(
             data_source:             self,
             resource_type:           resource_type,
@@ -420,8 +420,8 @@ module Scimitar
         # Returns 'self', for convenience of e.g. chaining other methods.
         #
         def from_scim!(scim_hash:, with_clearing: true)
-          scim_hash.freeze
-          map = self.class.scim_attributes_map.freeze
+          scim_hash.freeze()
+          map = self.class.scim_attributes_map().freeze()
 
           self.from_scim_backend!(
             attrs_map_or_leaf_value: map,
@@ -462,8 +462,8 @@ module Scimitar
         # Call ONLY for PATCH. For POST and PUT, see #from_scim!.
         #
         def from_scim_patch!(patch_hash:)
-          frozen_ci_patch_hash = patch_hash.with_indifferent_case_insensitive_access.freeze
-          ci_scim_hash         = self.to_scim(location: '(unused)').as_json.with_indifferent_case_insensitive_access
+          frozen_ci_patch_hash = patch_hash.with_indifferent_case_insensitive_access().freeze()
+          ci_scim_hash         = self.to_scim(location: '(unused)').as_json().with_indifferent_case_insensitive_access()
           operations           = frozen_ci_patch_hash['operations']
 
           raise Scimitar::InvalidSyntaxError.new("Missing PATCH \"operations\"") unless operations
@@ -501,7 +501,7 @@ module Scimitar
             if path_str.blank?
               extract_root = true
               path_str     = 'root'
-              ci_scim_hash = { 'root' => ci_scim_hash }.with_indifferent_case_insensitive_access
+              ci_scim_hash = { 'root' => ci_scim_hash }.with_indifferent_case_insensitive_access()
             end
 
             # Split the path into an array of path components, in a way
@@ -518,7 +518,7 @@ module Scimitar
               path:          paths,
               value:         value,
               altering_hash: ci_scim_hash,
-              with_attr_map: self.class.scim_attributes_map
+              with_attr_map: self.class.scim_attributes_map()
             )
 
             if extract_root
@@ -750,7 +750,7 @@ module Scimitar
             with_clearing:,
             path: []
           )
-            scim_hash_or_leaf_value = scim_hash_or_leaf_value.with_indifferent_case_insensitive_access if scim_hash_or_leaf_value.is_a?(Hash)
+            scim_hash_or_leaf_value = scim_hash_or_leaf_value.with_indifferent_case_insensitive_access() if scim_hash_or_leaf_value.is_a?(Hash)
 
             # We get the schema via this instance's class's resource type, even
             # if we end up in collections of other types - because it's *this*
@@ -759,7 +759,7 @@ module Scimitar
             # within the collection (a User's "groups" per-array-entry schema
             # is quite different from the Group schema).
             #
-            resource_class = self.class.scim_resource_type
+            resource_class = self.class.scim_resource_type()
 
             case attrs_map_or_leaf_value
               when Hash # Nested attribute-value pairs
@@ -1367,7 +1367,7 @@ module Scimitar
             value = value[1..-2] if value.start_with?('"') && value.end_with?('"')
 
             within_array.each.with_index do | hash, index |
-              ci_hash = hash.with_indifferent_case_insensitive_access
+              ci_hash = hash.with_indifferent_case_insensitive_access()
               matched = ci_hash.key?(attribute) && ci_hash[attribute]&.to_s == value&.to_s
 
               yield(hash, index) if matched

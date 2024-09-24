@@ -19,14 +19,14 @@ module Scimitar
     # See also :add_custom_resource and :set_default_resources.
     #
     def self.resources
-      self.default_resources + self.custom_resources
+      self.default_resources() + self.custom_resources()
     end
 
     # Returns a flat array of instances of all resource schema included in the
     # resource classes returned by ::resources.
     #
     def self.schemas
-      self.resources.map(&:schemas).flatten.uniq.map(&:new)
+      self.resources().map(&:schemas).flatten.uniq.map(&:new)
     end
 
     # Returns the list of custom resources, if any.
@@ -53,7 +53,7 @@ module Scimitar
     #     Scimitar::Engine.add_custom_resource Scim::Resources::ShinyResource
     #
     def self.add_custom_resource(resource)
-      self.custom_resources << resource
+      self.custom_resources() << resource
     end
 
     # Resets the resource list to default. This is really only intended for use
@@ -74,7 +74,7 @@ module Scimitar
     #
     def self.default_resources
       @standard_default_resources = [ Resources::User, Resources::Group ]
-      @default_resources        ||= @standard_default_resources.dup
+      @default_resources        ||= @standard_default_resources.dup()
     end
 
     # Override the resources returned by ::default_resources.
@@ -84,7 +84,7 @@ module Scimitar
     #                    Scimitar::Resources::Group, and nothing else.
     #
     def self.set_default_resources(resource_array)
-      self.default_resources
+      self.default_resources()
       unrecognised_resources = resource_array - @standard_default_resources
 
       if unrecognised_resources.any?
@@ -100,7 +100,7 @@ module Scimitar
     # during testing, to avoid one test polluting another.
     #
     def self.reset_default_resources
-      self.default_resources
+      self.default_resources()
       @default_resources = @standard_default_resources
     end
 

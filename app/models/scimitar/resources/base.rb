@@ -53,7 +53,7 @@ module Scimitar
       def flatten_extension_attributes(options)
         flattened             = options.class.new
         lower_case_schema_ids = self.class.extended_schemas.map do | schema |
-          schema.id.downcase
+          schema.id.downcase()
         end
 
         options.each do | key, value |
@@ -63,7 +63,7 @@ module Scimitar
           )
 
           if path.first.include?(':') && lower_case_schema_ids.include?(path.first.downcase)
-            path.shift
+            path.shift()
           end
 
           if path.empty?
