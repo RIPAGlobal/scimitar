@@ -201,7 +201,7 @@ module Scimitar
             if mapped_multivalue_attribute.is_a?(Array)
 
               # A single-entry array with "list using" semantics, for a
-              # collection of an artbirary number of same-class items - e.g.
+              # collection of an arbitrary number of same-class items - e.g.
               # Groups to which a User belongs.
               #
               # If this is an up-to-date mapping, there's a "class" entry that

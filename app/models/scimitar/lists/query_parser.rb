@@ -342,14 +342,14 @@ module Scimitar
           skip_next_component       = false
 
           components.each.with_index do | component, index |
-            if skip_next_component == true
+            if skip_next_component
               skip_next_component = false
               next
             end
 
             downcased = component.downcase.strip
 
-            if (expecting_attribute)
+            if expecting_attribute
               if downcased.match?(/[^\\]\[/) # Not backslash then literal '['
                 attribute_prefix       = component.match(/(.*?[^\\])\[/   )[1] # Everything before no-backslash-then-literal (unescaped) '['
                 first_attribute_inside = component.match(    /[^\\]\[(.*)/)[1] # Everything  after no-backslash-then-literal (unescaped) '['
@@ -362,7 +362,7 @@ module Scimitar
               expecting_attribute = false
               expecting_operator  = true
 
-            elsif (expecting_operator)
+            elsif expecting_operator
               rewritten << component
               if BINARY_OPERATORS.include?(downcased)
                 expecting_operator = false
@@ -374,7 +374,7 @@ module Scimitar
                 raise 'Expected operator'
               end
 
-            elsif (expecting_value)
+            elsif expecting_value
               matches = downcased.match(/([^\\])\](.*)/) # Contains no-backslash-then-literal (unescaped) ']'; also capture anything after
               unless matches.nil? # Contains no-backslash-then-literal (unescaped) ']'
                 character_before_closing_bracket = matches[1]
@@ -395,7 +395,7 @@ module Scimitar
                 # So - NOTE RECURSION AND EARLY EXIT POSSIBILITY HEREIN.
                 #
                 if (
-                  ! attribute_prefix.nil? &&
+                  !attribute_prefix.nil? &&
                   OPERATORS.key?(components[index + 1]&.downcase) &&
                   characters_after_closing_bracket.match?(/^\.#{ATTRNAME}$/)
                 )
@@ -437,7 +437,7 @@ module Scimitar
               if downcased.start_with?('"')
                 expecting_closing_quote = true
                 downcased = downcased[1..-1] # Strip off opening '"' to avoid false-positive on 'contains closing quote' check below
-              elsif expecting_closing_quote == false # If not expecting a closing quote, then the component must be the entire no-spaces value
+              elsif !expecting_closing_quote # If not expecting a closing quote, then the component must be the entire no-spaces value
                 expecting_value      = false
                 expecting_logic_word = true
               end
@@ -450,7 +450,7 @@ module Scimitar
                 end
               end
 
-            elsif (expecting_logic_word)
+            elsif expecting_logic_word
               if downcased == 'and' || downcased == 'or'
                 rewritten << component
                 next_downcased_component = components[index + 1].downcase.strip
@@ -586,11 +586,11 @@ module Scimitar
 
         # Recursively process an expression tree. Calls itself with nested tree
         # fragments. Each inner expression fragment calculates on the given
-        # base scope, with aggregration at each level into a wider query using
+        # base scope, with aggregation at each level into a wider query using
         # AND or OR depending on the expression tree contents.
         #
         # +base_scope+::      Base scope (ActiveRecord::Relation, e.g. User.all
-        #                     - neverchanges during recursion).
+        #                     - never changes during recursion).
         #
         # +expression_tree+:: Top-level expression tree or fragments inside if
         #                     self-calling recursively.
@@ -748,7 +748,7 @@ module Scimitar
 
         # Returns the mapped-to-your-domain column name(s) that a filter string
         # is operating upon, in an Array. If empty, the attribute is to be
-        # ignored. Raises an exception if entirey unmapped (thus unsupported).
+        # ignored. Raises an exception if entirely unmapped (thus unsupported).
         #
         # Note plural - the return value is always an array any of which should
         # be used (implicit 'OR').

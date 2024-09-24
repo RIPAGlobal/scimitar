@@ -36,7 +36,7 @@ module Scimitar
         scim_attributes.map { |scim_attribute| scim_attribute.clone }
       end
 
-      # Find a given attribute this schema, travelling down a path to any
+      # Find a given attribute of this schema, travelling down a path to any
       # sub-attributes within. Given that callers might be dealing with paths
       # into actual SCIM data, array indices for multi-value attributes are
       # allowed (as integers) and simply skipped - only the names are of

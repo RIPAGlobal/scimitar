@@ -158,7 +158,7 @@ module Scimitar
         hash.with_indifferent_access.each_pair do |attr_name, attr_value|
           scim_attribute = self.class.complex_scim_attributes[attr_name].try(:first)
 
-          if scim_attribute && scim_attribute.complexType
+          if scim_attribute&.complexType
             if scim_attribute.multiValued
               self.send("#{attr_name}=", attr_value&.map {|attr_for_each_item| complex_type_from_hash(scim_attribute, attr_for_each_item)})
             else
