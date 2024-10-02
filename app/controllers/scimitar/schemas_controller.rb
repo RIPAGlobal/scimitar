@@ -1,5 +1,5 @@
 module Scimitar
-  class SchemasController < ApplicationController
+  class SchemasController < Scimitar::ApplicationController
     def index
       schemas = Scimitar::Engine.schemas
 

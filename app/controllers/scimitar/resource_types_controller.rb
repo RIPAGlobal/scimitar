@@ -1,5 +1,5 @@
 module Scimitar
-  class ResourceTypesController < ApplicationController
+  class ResourceTypesController < Scimitar::ApplicationController
     def index
       resource_types = Scimitar::Engine.resources.map do |resource|
         resource.resource_type(scim_resource_type_url(name: resource.resource_type_id))
