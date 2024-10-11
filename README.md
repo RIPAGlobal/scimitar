@@ -321,7 +321,7 @@ end
 
 #### Other source types
 
-If you do _not_ use ActiveRecord to store data, or if you have very esoteric read-write requirements, you can subclass [`Scimigar::ResourcesController`](https://www.rubydoc.info/gems/scimitar/Scimitar/ResourcesController) in a manner similar to this:
+If you do _not_ use ActiveRecord to store data, or if you have very esoteric read-write requirements, you can subclass [`Scimitar::ResourcesController`](https://www.rubydoc.info/gems/scimitar/Scimitar/ResourcesController) in a manner similar to this:
 
 ```ruby
 class UsersController < Scimitar::ResourcesController
