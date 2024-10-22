@@ -9,11 +9,15 @@ RSpec.describe Scimitar::ResourceTypesController do
     it 'renders the resource type for user' do
       get :index, format: :scim
       response_hash = JSON.parse(response.body)
-      expected_response = [ Scimitar::Resources::User.resource_type(scim_resource_type_url(name: 'User', test: 1)),
-                            Scimitar::Resources::Group.resource_type(scim_resource_type_url(name: 'Group', test: 1))
-      ].to_json
+      expected_response = {
+        schemas: ['urn:ietf:params:scim:api:messages:2.0:ListResponse'],
+        totalResults: 2,
+        Resources: [
+          Scimitar::Resources::User.resource_type(scim_resource_type_url(name: 'User', test: 1)),
+          Scimitar::Resources::Group.resource_type(scim_resource_type_url(name: 'Group', test: 1))
+        ]
+      }.to_json
 
-      response_hash = JSON.parse(response.body)
       expect(response_hash).to eql(JSON.parse(expected_response))
     end
 
