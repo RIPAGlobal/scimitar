@@ -5,7 +5,13 @@ module Scimitar
         resource.resource_type(scim_resource_type_url(name: resource.resource_type_id))
       end
 
-      render json: resource_types
+      render json: {
+        schemas: [
+            'urn:ietf:params:scim:api:messages:2.0:ListResponse'
+        ],
+        totalResults: resource_types.size,
+        Resources:    resource_types
+      }
     end
 
     def show
