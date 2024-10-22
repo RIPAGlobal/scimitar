@@ -29,6 +29,6 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'pg',             '~>  1.5'
   s.add_development_dependency 'simplecov-rcov', '~>  0.3'
   s.add_development_dependency 'rdoc',           '~>  6.7'
-  s.add_development_dependency 'rspec-rails',    '~>  6.1'
+  s.add_development_dependency 'rspec-rails',    '~>  7.0'
   s.add_development_dependency 'doggo',          '~>  1.3'
 end
