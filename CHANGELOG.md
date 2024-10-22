@@ -10,7 +10,7 @@ Fixes:
 
 Other notes:
 
-* README`.md` typo fix via [#145](https://github.com/RIPAGlobal/scimitar/pull/145) - thanks to `@pavelloz`
+* `README.md` typo fix via [#145](https://github.com/RIPAGlobal/scimitar/pull/145) - thanks to `@pavelloz`
 
 Gem developer notes:
 
