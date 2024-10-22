@@ -1,3 +1,23 @@
+# 2.10.0 (2024-10-22)
+
+Features:
+
+* Custom controller mixins can now override more of the Scimitar base controller since the inclusion has been moved to the end of the file. This is particularly useful for overriding `rescue_from` declarations. See [#148](https://github.com/RIPAGlobal/scimitar/pull/148) for more - thanks to `@hrtshu`
+
+Fixes:
+
+* The `ResourceTypes` endpoint returned an invalid payload; this is now fixed per RFC 7644 via [#147](https://github.com/RIPAGlobal/scimitar/pull/147) - thanks to `@pbouda`
+
+Other notes:
+
+* README`.md` typo fix via [#145](https://github.com/RIPAGlobal/scimitar/pull/145) - thanks to `@pavelloz`
+
+Gem developer notes:
+
+* Local developer Ruby version (for `rbenv` users, at least) bumped to v3.3.5
+* Gemspec development dependency versions bumped to latest, where relevant
+* Dockerfile bumps PostgreSQL to v17
+
 # 2.9.0 (2024-06-27)
 
 Features:
