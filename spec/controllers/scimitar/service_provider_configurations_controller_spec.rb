@@ -15,6 +15,7 @@ RSpec.describe Scimitar::ServiceProviderConfigurationsController do
 
       expect(response).to be_ok
       expect(JSON.parse(response.body)).to include('patch' => {'supported' => true})
+      expect(JSON.parse(response.body)).to_not include('uses_defaults' => true)
       expect(JSON.parse(response.body)).to include('filter' => {'maxResults' => Scimitar::Filter::MAX_RESULTS_DEFAULT, 'supported' => true})
     end
   end
