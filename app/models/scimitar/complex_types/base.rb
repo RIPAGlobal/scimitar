@@ -75,6 +75,7 @@ module Scimitar
       #             attributes of this complex type object.
       #
       def as_json(options={})
+        options = options.dup if options.frozen?
         options[:except] ||= ['errors']
         super.except(options)
       end
