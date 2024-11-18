@@ -75,8 +75,8 @@ module Scimitar
       #             attributes of this complex type object.
       #
       def as_json(options={})
-        options[:except] ||= ['errors']
-        super.except(options)
+        exclusions = options[:except] || ['errors']
+        super(options.merge(except: exclusions))
       end
     end
   end
