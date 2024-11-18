@@ -22,7 +22,16 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = '>= 2.7.0'
 
-  s.add_dependency 'rails', '~> 7.0'
+  # Rails 8 requires Ruby 3.2.0 or later, but Rails 7 has a much wider range of
+  # Ruby versions. GitHub CI tests against a wide matrix to make sure that the
+  # gem functions well for older Rubies so long as the minimum supported Rails
+  # version also works with that.
+  #
+  if Gem::Version.new(RUBY_VERSION) < Gem::Version.new('3.2.0')
+    s.add_dependency 'rails', '~> 7.0' # Major version 7 only
+  else
+    s.add_dependency 'rails', '>= 7.0' # Major version 7 or later
+  end
 
   s.add_development_dependency 'debug',          '~>  1.9'
   s.add_development_dependency 'rake',           '~> 13.2'

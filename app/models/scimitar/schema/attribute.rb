@@ -122,9 +122,10 @@ module Scimitar
       end
 
       def as_json(options = {})
-        options[:except] ||= ['complexType']
-        options[:except] << 'canonicalValues' if canonicalValues.empty?
-        super.except(options)
+        exclusions = options[:except] || ['complexType']
+        exclusions << 'canonicalValues' if canonicalValues.empty?
+
+        super(options.merge(except: exclusions))
       end
 
     end
